@@ -5,7 +5,7 @@ namespace engine {
 	public:
 		inline explicit component(void) noexcept {
 		}
-		inline virtual auto clone(void) noexcept -> component* = 0;
+		//inline virtual auto clone(void) noexcept -> component* = 0;
 		inline explicit component(component const& rhs) noexcept {
 		}
 		inline virtual ~component(void) noexcept {

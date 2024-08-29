@@ -79,6 +79,18 @@
     <Filter Include="engine\scene">
       <UniqueIdentifier>{52f1e072-c417-43f7-87de-ee5e3e9fab1c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="engine\object\light">
+      <UniqueIdentifier>{6acb3e53-3c70-4d94-a91f-d2036b4f1f50}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="client\component">
+      <UniqueIdentifier>{8e7c7265-7ac7-4c54-ab2e-e67d7ab5893d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="client\component\behavior">
+      <UniqueIdentifier>{2fc0e4d6-74ec-4267-bb68-aab302d4d8e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\component\camrea">
+      <UniqueIdentifier>{00c262fb-da79-4ceb-bead-237b33f484fa}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine\engine.h">
@@ -233,6 +245,18 @@
     </ClInclude>
     <ClInclude Include="engine\outliner.h">
       <Filter>engine\editor</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\transform.h">
+      <Filter>engine\component\transform</Filter>
+    </ClInclude>
+    <ClInclude Include="client\client.h">
+      <Filter>client</Filter>
+    </ClInclude>
+    <ClInclude Include="client\player.h">
+      <Filter>client\component\behavior</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\camera.h">
+      <Filter>engine\component\camrea</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -37,6 +37,15 @@ namespace window {
 			return window(hwnd);
 		}
 	public:
+		inline void adjust_window_rect(void) noexcept {
+			RECT rect{ _wsex.x, _wsex.y, _wsex.x + _wsex.nWidth, _wsex.y + _wsex.nHeight };
+			AdjustWindowRect(&rect, _wsex.dwStyle, nullptr == _wsex.hMenu ? false : true);
+			_wsex.x = rect.left;
+			_wsex.y = rect.top;
+			_wsex.nWidth = rect.right - rect.left;
+			_wsex.nHeight = rect.bottom - rect.top;
+		}
+	public:
 		inline void set_extended_style(DWORD const dwExStyle) noexcept {
 			_wsex.dwExStyle = dwExStyle;
 		}

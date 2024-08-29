@@ -18,8 +18,11 @@ namespace window {
 			_wcex.lpfnWndProc = DefWindowProcW;
 			_wcex.hbrBackground = 0;
 		}
-		inline auto register_(void) const noexcept -> ATOM {
-			return RegisterClassExW(&_wcex);
+		inline void register_(void) const noexcept {
+			RegisterClassExW(&_wcex);
+		}
+		inline void unregister(void) const noexcept {
+			UnregisterClassW(_wcex.lpszClassName, _wcex.hInstance);
 		}
 	public:
 		inline void set_style(UINT style) noexcept {

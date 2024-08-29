@@ -28,7 +28,6 @@ namespace engine {
 			//}
 		}
 		inline void fixed_update(void) noexcept {
-
 		}
 	public:
 		inline void create(std::string const key, object* const prototype) noexcept {
@@ -43,6 +42,6 @@ namespace engine {
 		}
 	private:
 		std::unordered_map<std::string, object* const> _prototype;
-		//std::unordered_map<std::string const, std::list<object*>> _object;
+		std::unordered_map<std::string, std::list<object>> _clone;
 	};
 }

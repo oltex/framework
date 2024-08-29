@@ -30,8 +30,8 @@ namespace engine {
 				IDXGIFactory* factory;
 				adapter->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<void**>(&factory));
 				DXGI_SWAP_CHAIN_DESC swap_chain_desc{};
-				swap_chain_desc.BufferDesc.Width = 1600;
-				swap_chain_desc.BufferDesc.Height = 900;
+				swap_chain_desc.BufferDesc.Width = window.get_client_rect().right;
+				swap_chain_desc.BufferDesc.Height = window.get_client_rect().bottom;
 				swap_chain_desc.BufferDesc.RefreshRate.Numerator = 60;
 				swap_chain_desc.BufferDesc.RefreshRate.Denominator = 1;
 				swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -50,7 +50,6 @@ namespace engine {
 				adapter->Release();
 				device->Release();
 			}
-
 			{	//render target view
 				ID3D11Texture2D* texture = nullptr;
 				if (S_OK != _swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&texture)))
@@ -63,8 +62,8 @@ namespace engine {
 			{	// depth stencil view
 				ID3D11Texture2D* texture = nullptr;
 				D3D11_TEXTURE2D_DESC texture_desc{};
-				texture_desc.Width = 1600;
-				texture_desc.Height = 900;
+				texture_desc.Width = window.get_client_rect().right;
+				texture_desc.Height = window.get_client_rect().bottom;
 				texture_desc.MipLevels = 1;
 				texture_desc.ArraySize = 1;
 				texture_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;

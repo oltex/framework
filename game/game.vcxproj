@@ -152,7 +152,10 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="client\client.h" />
+    <ClInclude Include="client\player.h" />
     <ClInclude Include="engine\behavior.h" />
+    <ClInclude Include="engine\camera.h" />
     <ClInclude Include="engine\component.h" />
     <ClInclude Include="engine\component_manager.h" />
     <ClInclude Include="engine\device.h" />
@@ -168,6 +171,7 @@
     <ClInclude Include="engine\sound_manager.h" />
     <ClInclude Include="engine\timer.h" />
     <ClInclude Include="engine\timer_manager.h" />
+    <ClInclude Include="engine\transform.h" />
     <ClInclude Include="library\data-structure\hash.h" />
     <ClInclude Include="library\data-structure\list.h" />
     <ClInclude Include="library\data-structure\map.h" />
