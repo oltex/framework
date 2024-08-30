@@ -1,9 +1,8 @@
 #pragma once
 #include "../library/design-pattern/singleton.h"
-#include "unordered_map"
 #include "component.h"
-
 #include "transform.h"
+#include <unordered_map>
 
 namespace engine {
 	class component_manager final : public design_pattern::singleton<component_manager> {

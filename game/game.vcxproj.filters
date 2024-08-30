@@ -91,6 +91,21 @@
     <Filter Include="engine\component\camrea">
       <UniqueIdentifier>{00c262fb-da79-4ceb-bead-237b33f484fa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="engine\shader">
+      <UniqueIdentifier>{d068b014-3378-40a4-a1a8-5ff9a5150a96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\shader\shader">
+      <UniqueIdentifier>{80a65e45-05e2-4987-a27a-427730aa89e4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\shader\layout">
+      <UniqueIdentifier>{7b9664d8-5f2d-4176-82fe-dc7249897c39}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\shader\state">
+      <UniqueIdentifier>{b611f682-e1f7-481f-adcc-ffa7c22f04f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\shader\hlsl">
+      <UniqueIdentifier>{0d1026a3-08f7-4b47-82ef-6e287f61cb61}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="engine\engine.h">
@@ -258,6 +273,21 @@
     <ClInclude Include="engine\camera.h">
       <Filter>engine\component\camrea</Filter>
     </ClInclude>
+    <ClInclude Include="engine\shader.h">
+      <Filter>engine\shader</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\pixel.h">
+      <Filter>engine\shader\shader</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\vertex.h">
+      <Filter>engine\shader\shader</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\layout.h">
+      <Filter>engine\shader\layout</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\state.h">
+      <Filter>engine\shader\state</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="library\fmod\fmod.dll">
@@ -275,5 +305,13 @@
     <Library Include="library\fmod\fmodL_vc.lib">
       <Filter>library\fmod</Filter>
     </Library>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="engine\vertex.hlsl">
+      <Filter>engine\shader\hlsl</Filter>
+    </FxCompile>
+    <FxCompile Include="engine\pixel.hlsl">
+      <Filter>engine\shader\hlsl</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
