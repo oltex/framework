@@ -9,14 +9,8 @@ namespace engine {
 			: _context(graphic.get_context()) {
 			ID3D10Blob* code;
 			D3DReadFileToBlob(path, &code);
-
-			D3D11_INPUT_ELEMENT_DESC desc2[]{
-				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-				{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			};
-			HRESULT hr = graphic.get_device().CreateInputLayout(desc2, 2, code->GetBufferPointer(), code->GetBufferSize(), &_layout);
-			code.re
-
+			graphic.get_device().CreateInputLayout(desc, size, code->GetBufferPointer(), code->GetBufferSize(), &_layout);
+			code->Release();
 		}
 		inline ~layout(void) noexcept {
 			_layout->Release();

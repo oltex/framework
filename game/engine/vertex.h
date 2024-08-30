@@ -10,7 +10,6 @@ namespace engine {
 			: _context(graphic.get_context()) {
 			ID3D10Blob* code;
 			D3DReadFileToBlob(path, &code);
-			int a = code->GetBufferSize();
 			graphic.get_device().CreateVertexShader(code->GetBufferPointer(), code->GetBufferSize(), nullptr, &_vertex_shader);
 			code->Release();
 		}
