@@ -1,7 +1,7 @@
-
-matrix _inverse_world_matrix;
-matrix _world_matrix;
 matrix _view_matrix, projection_matrix;
+
+matrix _world_matrix;
+matrix _inverse_world_matrix;
 
 struct vertex_shader_in {
     float3 _position : POSITION;

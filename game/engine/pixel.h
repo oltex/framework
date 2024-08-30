@@ -5,13 +5,18 @@
 namespace engine {
 	class pixel {
 	public:
-		inline explicit pixel(graphic& graphic,
-			wchar_t const* const path, char const* const entry, unsigned int const flag, unsigned int flag2) noexcept {
+		inline explicit pixel(graphic& graphic, wchar_t const* const path) noexcept {
 			ID3D10Blob* code;
-			D3DCompileFromFile(path, nullptr, nullptr, entry, "ps_5_0", flag, flag2, &code, nullptr);
-			graphic.get_device().CreatePixelShader(code->GetBufferPointer(), code->GetBufferSize(), nullptr, &_pixelShader);
+			D3DReadFileToBlob(path, &code);
+			graphic.get_device().CreatePixelShader(code->GetBufferPointer(), code->GetBufferSize(), nullptr, &_pixel_shader);
 			code->Release();
 		}
-		ID3D11PixelShader* _pixelShader;
+		inline ~pixel(void) noexcept {
+			_pixel_shader->Release();
+		}
+	public:
+
+	private:
+		ID3D11PixelShader* _pixel_shader;
 	};
 }

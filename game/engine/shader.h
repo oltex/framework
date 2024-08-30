@@ -17,7 +17,14 @@ namespace engine {
 		}
 	private:
 		inline explicit shader(graphic& graphic) noexcept {
-			_vertex.emplace("test", vertex(graphic, L"vertex.cso", "main", 0, 0));
+			_vertex.emplace("test", vertex(graphic, L"vertex.cso"));
+
+			D3D11_INPUT_ELEMENT_DESC desc[]{
+				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+				{ "COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			};
+			unsigned int size = static_cast<unsigned int>(sizeof(desc) / sizeof(D3D11_INPUT_ELEMENT_DESC));
+			_layout.emplace("Test", layout(graphic, desc, size, L"vertex.cso"));
 		}
 		inline explicit shader(shader const& rhs) noexcept = delete;
 		inline auto operator=(shader const& rhs) noexcept -> shader & = delete;

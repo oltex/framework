@@ -285,7 +285,13 @@
     <ClInclude Include="engine\layout.h">
       <Filter>engine\shader\layout</Filter>
     </ClInclude>
-    <ClInclude Include="engine\state.h">
+    <ClInclude Include="engine\blend.h">
+      <Filter>engine\shader\state</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\rasterizer.h">
+      <Filter>engine\shader\state</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\depth.h">
       <Filter>engine\shader\state</Filter>
     </ClInclude>
   </ItemGroup>
