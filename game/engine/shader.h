@@ -1,9 +1,14 @@
 #pragma once
 #include "../library/design-pattern/singleton.h"
 #include "graphic.h"
+
 #include "vertex.h"
 #include "pixel.h"
+
 #include "layout.h"
+
+#include "blend.h"
+
 #include <unordered_map>
 #include <string>
 
@@ -18,6 +23,8 @@ namespace engine {
 	private:
 		inline explicit shader(graphic& graphic) noexcept {
 			_vertex.emplace("test", vertex(graphic, L"vertex.cso"));
+
+
 
 			D3D11_INPUT_ELEMENT_DESC desc[]{
 				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },

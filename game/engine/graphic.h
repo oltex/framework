@@ -1,6 +1,7 @@
 #pragma once
 #pragma comment(lib,"d3d11.lib")
 #include "../library/design-pattern/singleton.h"
+#include "../library/window/window.h"
 #include <d3d11.h>
 
 namespace engine {
@@ -80,6 +81,10 @@ namespace engine {
 				texture->Release();
 			}
 		}
+		inline explicit graphic(graphic const& rhs) noexcept = delete;
+		inline auto operator=(graphic const& rhs) noexcept -> graphic & = delete;
+		inline explicit graphic(graphic&& rhs) noexcept = delete;
+		inline auto operator=(graphic&& rhs) noexcept -> graphic & = delete;
 		inline ~graphic(void) noexcept {
 			_depth_stencil_view->Release();
 			_render_target_view->Release();
@@ -88,10 +93,6 @@ namespace engine {
 			_context->Release();
 			_device->Release();
 		}
-		inline explicit graphic(graphic const& rhs) noexcept = delete;
-		inline auto operator=(graphic const& rhs) noexcept -> graphic & = delete;
-		inline explicit graphic(graphic&& rhs) noexcept = delete;
-		inline auto operator=(graphic&& rhs) noexcept -> graphic & = delete;
 	public:
 		inline void begin_render(void) noexcept {
 			_context->OMSetRenderTargets(1, &_render_target_view, _depth_stencil_view);

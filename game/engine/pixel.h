@@ -5,7 +5,8 @@
 namespace engine {
 	class pixel {
 	public:
-		inline explicit pixel(graphic& graphic, wchar_t const* const path) noexcept {
+		inline explicit pixel(graphic& graphic, wchar_t const* const path) noexcept
+			: _context(graphic.get_context()) {
 			ID3D10Blob* code;
 			D3DReadFileToBlob(path, &code);
 			graphic.get_device().CreatePixelShader(code->GetBufferPointer(), code->GetBufferSize(), nullptr, &_pixel_shader);
@@ -17,6 +18,7 @@ namespace engine {
 	public:
 
 	private:
+		ID3D11DeviceContext& _context;
 		ID3D11PixelShader* _pixel_shader;
 	};
 }

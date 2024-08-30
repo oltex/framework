@@ -10,6 +10,7 @@ namespace engine {
 			: _context(graphic.get_context()) {
 			ID3D10Blob* code;
 			D3DReadFileToBlob(path, &code);
+			//auto& a = graphic::instance().get_device();
 			graphic.get_device().CreateVertexShader(code->GetBufferPointer(), code->GetBufferSize(), nullptr, &_vertex_shader);
 			code->Release();
 		}
@@ -20,6 +21,7 @@ namespace engine {
 		inline void ma(void) noexcept {
 		}
 		inline void set(void) noexcept {
+			//graphic::instance().get_context().VSSetShader();
 			_context.VSSetShader(_vertex_shader, nullptr, 0);
 		}
 	private:
