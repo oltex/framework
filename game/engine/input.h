@@ -11,8 +11,8 @@
 #include <GameInput.h>
 
 namespace engine {
-	class input_manager final : public design_pattern::singleton<input_manager, design_pattern::member_static<input_manager>> {
-		friend class design_pattern::singleton<input_manager, design_pattern::member_static<input_manager>>;
+	class input final : public design_pattern::singleton<input, design_pattern::member_static<input>> {
+		friend class design_pattern::singleton<input, design_pattern::member_static<input>>;
 	public:
 		enum class move : unsigned char {
 			x, y, z
@@ -21,18 +21,16 @@ namespace engine {
 			left, right, wheel
 		};
 	public:
-		inline static auto constructor(window::instance& instance, window::window& window) noexcept -> input_manager& {
-			_instance = new input_manager(instance, window);
+		inline static auto constructor(window::instance& instance, window::window& window) noexcept -> input& {
+			_instance = new input(instance, window);
 			atexit(destructor);
 			return *_instance;
 		}
 	private:
-		inline explicit input_manager(window::instance& instance, window::window& window) noexcept {
+		inline explicit input(window::instance& instance, window::window& window) noexcept {
 			GameInputCreate(&_input);
 			GameInputCallbackToken _token;
-			_input->RegisterDeviceCallback(nullptr,
-				GameInputKindKeyboard, GameInputDeviceAnyStatus, GameInputAsyncEnumeration,
-				(void*)this, keyboard_callback, nullptr);
+			_input->RegisterDeviceCallback(nullptr, GameInputKindKeyboard, GameInputDeviceAnyStatus, GameInputAsyncEnumeration, (void*)this, keyboard_callback, nullptr);
 
 
 			//auto hinstance = instance.data();
@@ -52,11 +50,11 @@ namespace engine {
 			//memset(_mouse_up, 1, 3);
 			//memset(_keyboard_up, 1, 256);
 		};
-		inline explicit input_manager(input_manager const& rhs) noexcept = delete;
-		inline auto operator=(input_manager const& rhs) noexcept -> input_manager & = delete;
-		inline explicit input_manager(input_manager&& rhs) noexcept = delete;
-		inline auto operator=(input_manager&& rhs) noexcept -> input_manager & = delete;
-		inline ~input_manager(void) noexcept {
+		inline explicit input(input const& rhs) noexcept = delete;
+		inline auto operator=(input const& rhs) noexcept -> input & = delete;
+		inline explicit input(input&& rhs) noexcept = delete;
+		inline auto operator=(input&& rhs) noexcept -> input & = delete;
+		inline ~input(void) noexcept {
 			_input->Release();
 			//_keyboard->Unacquire();
 			//_keyboard->Release();
@@ -86,7 +84,7 @@ namespace engine {
 			_In_ GameInputCallbackToken callback_token, _In_ void* context,
 			_In_ IGameInputDevice* device, _In_ uint64_t timestamp,
 			_In_ GameInputDeviceStatus current_status, _In_ GameInputDeviceStatus previous_status) noexcept {
-			auto input_mgr = reinterpret_cast<input_manager*>(context);
+			auto input_mgr = reinterpret_cast<input*>(context);
 			input_mgr->_keyboard.emplace_back(device);
 		}
 		//inline long mouse_move(move const move) const noexcept {

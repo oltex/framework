@@ -53,13 +53,10 @@ namespace engine {
 			}
 			{	//render target view
 				ID3D11Texture2D* texture = nullptr;
-				if (S_OK != _swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&texture)))
-					DebugBreak();
-				if (S_OK != _device->CreateRenderTargetView(texture, nullptr, &_render_target_view))
-					DebugBreak();
+				_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&texture));
+				_device->CreateRenderTargetView(texture, nullptr, (ID3D11RenderTargetView**)&_render_target_view);
 				texture->Release();
 			}
-
 			{	// depth stencil view
 				ID3D11Texture2D* texture = nullptr;
 				D3D11_TEXTURE2D_DESC texture_desc{};
@@ -95,8 +92,8 @@ namespace engine {
 		}
 	public:
 		inline void begin_render(void) noexcept {
-			_context->OMSetRenderTargets(1, &_render_target_view, _depth_stencil_view);
-			_context->ClearRenderTargetView(_render_target_view, _color);
+			_context->OMSetRenderTargets(1, (ID3D11RenderTargetView**)&_render_target_view, _depth_stencil_view);
+			_context->ClearRenderTargetView((ID3D11RenderTargetView*)_render_target_view, _color);
 			_context->ClearDepthStencilView(_depth_stencil_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0);
 		}
 		inline void end_render(void) noexcept {
@@ -114,8 +111,9 @@ namespace engine {
 		ID3D11DeviceContext* _context;
 
 		IDXGISwapChain* _swap_chain;
-		ID3D11RenderTargetView* _render_target_view;
+		ID3D11View* _render_target_view;
 		ID3D11DepthStencilView* _depth_stencil_view;
+
 		float _color[4] = { 0.f, 0.f, 0.5f, 1.f };
 	};
 }

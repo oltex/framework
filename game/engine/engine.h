@@ -4,14 +4,13 @@
 #include "../library/window/window.h"
 
 #include "graphic.h"
-#include "shader.h"
 #include "editor.h"
 
 #include "object_manager.h"
 #include "component_manager.h"
 #include "timer_manager.h"
-#include "input_manager.h"
-#include "sound_manager.h"
+#include "input.h"
+#include "sound.h"
 
 namespace engine {
 	class engine final : public design_pattern::singleton<engine, design_pattern::member_static<engine>> {
@@ -25,13 +24,12 @@ namespace engine {
 	private:
 		inline explicit engine(window::instance& instance, window::window& window) noexcept
 			: _graphic(graphic::constructor(window)),
-			_shader(shader::constructor(_graphic)),
 			_editor(editor::constructor(window, _graphic)),
 			_object_manager(object_manager::instance()),
 			_component_manager(component_manager::instance()),
 			_timer_manager(timer_manager::instance()),
-			_input_manager(input_manager::constructor(instance, window)),
-			_sound_manager(sound_manager::instance()) {
+			_input(input::constructor(instance, window)),
+			_sound(sound::instance()) {
 		};
 		inline explicit engine(engine const& rhs) noexcept = delete;
 		inline auto operator=(engine const& rhs) noexcept -> engine & = delete;
@@ -39,7 +37,6 @@ namespace engine {
 		inline auto operator=(engine&& rhs) noexcept -> engine & = delete;
 		inline ~engine(void) noexcept {
 			_editor.destructor();
-			_shader.destructor();
 			_graphic.destructor();
 		};
 	public:
@@ -58,8 +55,8 @@ namespace engine {
 				}
 				else {
 					//update
-					_input_manager.update();
-					_sound_manager.update();
+					_input.update();
+					_sound.update();
 					_editor.update();
 
 					//render
@@ -68,19 +65,17 @@ namespace engine {
 					_graphic.end_render();
 
 					_timer_manager.update();
-
 				}
 			}
 		};
 	private:
 		graphic& _graphic;
-		shader& _shader;
 		editor& _editor;
 
 		object_manager& _object_manager;
 		component_manager& _component_manager;
 		timer_manager& _timer_manager;
-		input_manager& _input_manager;
-		sound_manager& _sound_manager;
+		input& _input;
+		sound& _sound;
 	};
 }

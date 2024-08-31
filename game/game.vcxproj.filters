@@ -91,20 +91,17 @@
     <Filter Include="engine\component\camrea">
       <UniqueIdentifier>{00c262fb-da79-4ceb-bead-237b33f484fa}</UniqueIdentifier>
     </Filter>
-    <Filter Include="engine\shader">
-      <UniqueIdentifier>{d068b014-3378-40a4-a1a8-5ff9a5150a96}</UniqueIdentifier>
+    <Filter Include="engine\component\renderer">
+      <UniqueIdentifier>{4b3d1fae-7c3e-4ab3-9364-3797bdfd906a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="engine\shader\shader">
-      <UniqueIdentifier>{80a65e45-05e2-4987-a27a-427730aa89e4}</UniqueIdentifier>
+    <Filter Include="engine\graphic\shader">
+      <UniqueIdentifier>{c831bb4e-1ec1-4eda-ab67-437171ffb27b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="engine\shader\layout">
-      <UniqueIdentifier>{7b9664d8-5f2d-4176-82fe-dc7249897c39}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\shader\state">
-      <UniqueIdentifier>{b611f682-e1f7-481f-adcc-ffa7c22f04f4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\shader\hlsl">
+    <Filter Include="engine\graphic\shader\hlsl">
       <UniqueIdentifier>{0d1026a3-08f7-4b47-82ef-6e287f61cb61}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\graphic\view">
+      <UniqueIdentifier>{9cf912ca-c8de-413a-b1b3-79fbf1ec378b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -225,7 +222,7 @@
     <ClInclude Include="engine\device.h">
       <Filter>engine\input</Filter>
     </ClInclude>
-    <ClInclude Include="engine\input_manager.h">
+    <ClInclude Include="engine\input.h">
       <Filter>engine\input</Filter>
     </ClInclude>
     <ClInclude Include="engine\keyboard.h">
@@ -246,7 +243,7 @@
     <ClInclude Include="engine\editor.h">
       <Filter>engine\editor</Filter>
     </ClInclude>
-    <ClInclude Include="engine\sound_manager.h">
+    <ClInclude Include="engine\sound.h">
       <Filter>engine\sound</Filter>
     </ClInclude>
     <ClInclude Include="engine\timer_manager.h">
@@ -274,25 +271,10 @@
       <Filter>engine\component\camrea</Filter>
     </ClInclude>
     <ClInclude Include="engine\shader.h">
-      <Filter>engine\shader</Filter>
+      <Filter>engine\graphic\shader</Filter>
     </ClInclude>
-    <ClInclude Include="engine\pixel.h">
-      <Filter>engine\shader\shader</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\vertex.h">
-      <Filter>engine\shader\shader</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\layout.h">
-      <Filter>engine\shader\layout</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\blend.h">
-      <Filter>engine\shader\state</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\rasterizer.h">
-      <Filter>engine\shader\state</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\depth.h">
-      <Filter>engine\shader\state</Filter>
+    <ClInclude Include="engine\view.h">
+      <Filter>engine\graphic\view</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -314,10 +296,10 @@
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="engine\vertex.hlsl">
-      <Filter>engine\shader\hlsl</Filter>
+      <Filter>engine\graphic\shader\hlsl</Filter>
     </FxCompile>
     <FxCompile Include="engine\pixel.hlsl">
-      <Filter>engine\shader\hlsl</Filter>
+      <Filter>engine\graphic\shader\hlsl</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

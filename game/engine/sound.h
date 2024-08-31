@@ -8,19 +8,19 @@
 #include "../library/fmod/fmod.hpp"
 
 namespace engine {
-	class sound_manager final : public design_pattern::singleton<sound_manager> {
-		friend class design_pattern::singleton<sound_manager>;
+	class sound final : public design_pattern::singleton<sound> {
+		friend class design_pattern::singleton<sound>;
 	private:
-		inline explicit sound_manager(void) noexcept {
+		inline explicit sound(void) noexcept {
 			FMOD::System_Create(&_system);
 			_system->init(FMOD_MAX_CHANNEL_WIDTH, FMOD_INIT_NORMAL, nullptr);
 			_system->set3DSettings(1.f, 0.1f, 1.f);
 		};
-		inline explicit sound_manager(sound_manager const& rhs) noexcept = delete;
-		inline auto operator=(sound_manager const& rhs) noexcept -> sound_manager & = delete;
-		inline explicit sound_manager(sound_manager&& rhs) noexcept = delete;
-		inline auto operator=(sound_manager&& rhs) noexcept -> sound_manager & = delete;
-		inline ~sound_manager(void) {
+		inline explicit sound(sound const& rhs) noexcept = delete;
+		inline auto operator=(sound const& rhs) noexcept -> sound & = delete;
+		inline explicit sound(sound&& rhs) noexcept = delete;
+		inline auto operator=(sound&& rhs) noexcept -> sound & = delete;
+		inline ~sound(void) {
 			_system->close();
 			_system->release();
 		};
