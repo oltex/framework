@@ -28,9 +28,9 @@ namespace engine {
 		}
 	private:
 		inline explicit input(window::instance& instance, window::window& window) noexcept {
-			GameInputCreate(&_input);
-			GameInputCallbackToken _token;
-			_input->RegisterDeviceCallback(nullptr, GameInputKindKeyboard, GameInputDeviceAnyStatus, GameInputAsyncEnumeration, (void*)this, keyboard_callback, nullptr);
+			//GameInputCreate(&_input);
+			//GameInputCallbackToken _token;
+			//_input->RegisterDeviceCallback(nullptr, GameInputKindKeyboard, GameInputDeviceAnyStatus, GameInputAsyncEnumeration, (void*)this, keyboard_callback, nullptr);
 
 
 			//auto hinstance = instance.data();
@@ -55,7 +55,7 @@ namespace engine {
 		inline explicit input(input&& rhs) noexcept = delete;
 		inline auto operator=(input&& rhs) noexcept -> input & = delete;
 		inline ~input(void) noexcept {
-			_input->Release();
+			//_input->Release();
 			//_keyboard->Unacquire();
 			//_keyboard->Release();
 			//_mouse->Unacquire();
@@ -64,8 +64,8 @@ namespace engine {
 		};
 	public:
 		inline void update(void) noexcept {
-			for (auto& iter : _keyboard)
-				iter.update(*_input);
+			//for (auto& iter : _keyboard)
+			//	iter.update(*_input);
 
 			//_reading->Release();
 			//_input->GetCurrentReading(GameInputKindKeyboard, _keyboard, &_keyboard_reading);

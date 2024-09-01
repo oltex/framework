@@ -9,16 +9,18 @@ namespace engine {
 		friend class design_pattern::singleton<component_manager>;
 	private:
 		inline explicit component_manager(void) noexcept {
-
-		};
-		inline ~component_manager(void) noexcept {
-			//for (auto& iter : _prototype)
-			//	delete iter._second;
 		};
 		inline explicit component_manager(component_manager const& rhs) noexcept = delete;
 		inline auto operator=(component_manager const& rhs) noexcept -> component_manager & = delete;
 		inline explicit component_manager(component_manager&& rhs) noexcept = delete;
 		inline auto operator=(component_manager&& rhs) noexcept -> component_manager & = delete;
+		inline ~component_manager(void) noexcept {
+			//for (auto& iter : _prototype)
+			//	delete iter._second;
+		};
+	public:
+		inline void update(void) noexcept {
+		}
 	private:
 		std::unordered_map<std::string, component* const> _prototype;
 	};

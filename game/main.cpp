@@ -7,7 +7,7 @@
 #include "library/window/sct.h"
 
 #include "engine/engine.h"
-#include <iostream>
+#include "client/client.h"
 
 LRESULT CALLBACK procedure(HWND const wnd, UINT const message, WPARAM const wparam, LPARAM const lparam) noexcept;
 int APIENTRY wWinMain(_In_ HINSTANCE hinstance, _In_opt_ HINSTANCE prevhinstance, _In_ LPWSTR cmdline, _In_ int cmdshow) {
@@ -29,8 +29,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hinstance, _In_opt_ HINSTANCE prevhinstance
 	sct.set_instance(instance);
 	sct.set_class_name(L"window");
 	sct.set_style(WS_OVERLAPPEDWINDOW);
-	sct.set_x(500);
-	sct.set_y(500);
+	sct.set_x(16);
+	sct.set_y(16);
 	sct.set_width(1600);
 	sct.set_height(900);
 	sct.adjust_window_rect();
@@ -38,10 +38,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hinstance, _In_opt_ HINSTANCE prevhinstance
 	window::window window = sct.create();
 	window.show(true);
 	window.update();
-
 	cls.unregister();
 
 	engine::engine::constructor(instance, window);
+	client::client::instance();
 	engine::engine::instance().run();
 	return 0;
 }

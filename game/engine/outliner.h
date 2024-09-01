@@ -1,10 +1,15 @@
 #pragma once
 #include "../library/imgui/imgui.h"
-//#include "../library/imgui/imgui_impl_win32.h"
-//#include "../library/imgui/imgui_impl_dx11.h"
 
 namespace engine {
 	class outliner final {
+	public:
+		inline explicit outliner(void)noexcept = default;
+		inline explicit outliner(outliner const& rhs) noexcept = delete;
+		inline auto operator=(outliner const& rhs) noexcept -> outliner & = delete;
+		inline explicit outliner(outliner&& rhs) noexcept = delete;
+		inline auto operator=(outliner&& rhs) noexcept -> outliner & = delete;
+		inline ~outliner(void) noexcept = default;
 	public:
 		inline void update(void) noexcept {
 			ImGui::Begin("outliner", &_open, ImGuiWindowFlags_None);

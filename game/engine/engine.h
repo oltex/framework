@@ -4,13 +4,14 @@
 #include "../library/window/window.h"
 
 #include "graphic.h"
-#include "editor.h"
-
-#include "object_manager.h"
-#include "component_manager.h"
-#include "timer_manager.h"
 #include "input.h"
 #include "sound.h"
+#include "timer.h"
+#include "editor.h"
+
+#include "pipeline_manager.h"
+#include "object_manager.h"
+#include "component_manager.h"
 
 namespace engine {
 	class engine final : public design_pattern::singleton<engine, design_pattern::member_static<engine>> {
@@ -24,12 +25,13 @@ namespace engine {
 	private:
 		inline explicit engine(window::instance& instance, window::window& window) noexcept
 			: _graphic(graphic::constructor(window)),
-			_editor(editor::constructor(window, _graphic)),
-			_object_manager(object_manager::instance()),
-			_component_manager(component_manager::instance()),
-			_timer_manager(timer_manager::instance()),
 			_input(input::constructor(instance, window)),
-			_sound(sound::instance()) {
+			_sound(sound::instance()),
+			_timer(timer::instance()),
+			_editor(editor::constructor(window, _graphic)),
+			_pipeline_manager(pipeline_manager::instance()),
+			_object_manager(object_manager::instance()),
+			_component_manager(component_manager::instance()) {
 		};
 		inline explicit engine(engine const& rhs) noexcept = delete;
 		inline auto operator=(engine const& rhs) noexcept -> engine & = delete;
@@ -43,7 +45,7 @@ namespace engine {
 		inline void initialize(void) noexcept {
 		}
 		inline void run(void) const noexcept {
-			_timer_manager.set_frame(50);
+			_timer.set_frame(50);
 
 			MSG msg;
 			for (;;) {
@@ -57,25 +59,27 @@ namespace engine {
 					//update
 					_input.update();
 					_sound.update();
+
+					_component_manager.update();
 					_editor.update();
 
 					//render
-					_graphic.begin_render();
+					_pipeline_manager.render();
 					_editor.render();
-					_graphic.end_render();
 
-					_timer_manager.update();
+					_timer.update();
 				}
 			}
 		};
 	private:
 		graphic& _graphic;
-		editor& _editor;
-
-		object_manager& _object_manager;
-		component_manager& _component_manager;
-		timer_manager& _timer_manager;
 		input& _input;
 		sound& _sound;
+		timer& _timer;
+		editor& _editor;
+
+		pipeline_manager& _pipeline_manager;
+		object_manager& _object_manager;
+		component_manager& _component_manager;
 	};
 }

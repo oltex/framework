@@ -6,6 +6,7 @@
 #include "../library/imgui/imgui_impl_dx11.h"
 #include "graphic.h"
 #include "outliner.h"
+#include "detail.h"
 
 namespace engine {
 	class editor final : public design_pattern::singleton<editor, design_pattern::member_static<editor>> {
@@ -51,6 +52,7 @@ namespace engine {
 			ImGui::NewFrame();
 
 			_outliner.update();
+			_detail.update();
 		}
 		inline void render(void) noexcept {
 			ImGui::Render();
@@ -58,5 +60,6 @@ namespace engine {
 		}
 	private:
 		outliner _outliner;
+		detail _detail;
 	};
 }

@@ -157,11 +157,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\client.h" />
+    <ClInclude Include="client\pipeline.h" />
     <ClInclude Include="client\player.h" />
     <ClInclude Include="engine\behavior.h" />
     <ClInclude Include="engine\camera.h" />
     <ClInclude Include="engine\component.h" />
     <ClInclude Include="engine\component_manager.h" />
+    <ClInclude Include="engine\content.h" />
+    <ClInclude Include="engine\detail.h" />
     <ClInclude Include="engine\device.h" />
     <ClInclude Include="engine\editor.h" />
     <ClInclude Include="engine\engine.h" />
@@ -172,11 +175,12 @@
     <ClInclude Include="engine\object.h" />
     <ClInclude Include="engine\object_manager.h" />
     <ClInclude Include="engine\outliner.h" />
+    <ClInclude Include="engine\pipeline.h" />
+    <ClInclude Include="engine\pipeline_manager.h" />
     <ClInclude Include="engine\shader.h" />
     <ClInclude Include="engine\sound.h" />
     <ClInclude Include="engine\view.h" />
     <ClInclude Include="engine\timer.h" />
-    <ClInclude Include="engine\timer_manager.h" />
     <ClInclude Include="engine\transform.h" />
     <ClInclude Include="library\data-structure\hash.h" />
     <ClInclude Include="library\data-structure\list.h" />

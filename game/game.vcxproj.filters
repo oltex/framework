@@ -46,62 +46,65 @@
     <Filter Include="library\fmod">
       <UniqueIdentifier>{65d1e0f8-a780-45e1-af00-672640f14070}</UniqueIdentifier>
     </Filter>
-    <Filter Include="engine\component">
-      <UniqueIdentifier>{54682aa6-e22a-4ddc-a1ec-bf5183b04bca}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\input">
-      <UniqueIdentifier>{21a046ae-447a-47a4-98b4-acbcf1f435e4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\graphic">
-      <UniqueIdentifier>{11582598-c400-44b0-90d6-5485bce4039a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\object">
-      <UniqueIdentifier>{900b2a65-d43f-43a6-9c71-0f920a00fd86}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\editor">
-      <UniqueIdentifier>{1d700b3d-4192-4393-bd23-2297958e855d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\sound">
-      <UniqueIdentifier>{48c6033c-1dd9-4fd9-8176-21ce24d3ca1c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\timer">
-      <UniqueIdentifier>{5807b558-ec39-4c27-b3c3-d4530113e7ca}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\component\behavior">
-      <UniqueIdentifier>{a47c5401-3007-4940-9775-e4c47b97e0f7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\component\transform">
-      <UniqueIdentifier>{e2ac37a5-36c8-42df-8e29-92c6724d39c3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\component\audio">
-      <UniqueIdentifier>{dc2fbf3c-357a-4c4c-99c8-9a896fede049}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\scene">
-      <UniqueIdentifier>{52f1e072-c417-43f7-87de-ee5e3e9fab1c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="engine\object\light">
-      <UniqueIdentifier>{6acb3e53-3c70-4d94-a91f-d2036b4f1f50}</UniqueIdentifier>
-    </Filter>
     <Filter Include="client\component">
       <UniqueIdentifier>{8e7c7265-7ac7-4c54-ab2e-e67d7ab5893d}</UniqueIdentifier>
     </Filter>
     <Filter Include="client\component\behavior">
       <UniqueIdentifier>{2fc0e4d6-74ec-4267-bb68-aab302d4d8e0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="engine\component\camrea">
-      <UniqueIdentifier>{00c262fb-da79-4ceb-bead-237b33f484fa}</UniqueIdentifier>
+    <Filter Include="client\pipeline">
+      <UniqueIdentifier>{eff6cb80-365e-4bd8-a077-b3f19804b223}</UniqueIdentifier>
     </Filter>
-    <Filter Include="engine\component\renderer">
-      <UniqueIdentifier>{4b3d1fae-7c3e-4ab3-9364-3797bdfd906a}</UniqueIdentifier>
+    <Filter Include="engine\1.system">
+      <UniqueIdentifier>{50f092b8-85ae-4941-857c-e5ce8ae5e7d3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="engine\graphic\shader">
-      <UniqueIdentifier>{c831bb4e-1ec1-4eda-ab67-437171ffb27b}</UniqueIdentifier>
+    <Filter Include="engine\1.system\graphic">
+      <UniqueIdentifier>{11582598-c400-44b0-90d6-5485bce4039a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="engine\graphic\shader\hlsl">
+    <Filter Include="engine\1.system\input">
+      <UniqueIdentifier>{21a046ae-447a-47a4-98b4-acbcf1f435e4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\1.system\sound">
+      <UniqueIdentifier>{48c6033c-1dd9-4fd9-8176-21ce24d3ca1c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\1.system\timer">
+      <UniqueIdentifier>{5807b558-ec39-4c27-b3c3-d4530113e7ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\1.system\editor">
+      <UniqueIdentifier>{1d700b3d-4192-4393-bd23-2297958e855d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\2.resource">
+      <UniqueIdentifier>{19321a55-452d-48e4-9e1b-8e469f18c9e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\2.resource\hlsl">
       <UniqueIdentifier>{0d1026a3-08f7-4b47-82ef-6e287f61cb61}</UniqueIdentifier>
     </Filter>
-    <Filter Include="engine\graphic\view">
-      <UniqueIdentifier>{9cf912ca-c8de-413a-b1b3-79fbf1ec378b}</UniqueIdentifier>
+    <Filter Include="engine\3.module">
+      <UniqueIdentifier>{38d635f0-0d15-41e2-ab99-e0e476ce0056}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\3.module\scene">
+      <UniqueIdentifier>{52f1e072-c417-43f7-87de-ee5e3e9fab1c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\3.module\component">
+      <UniqueIdentifier>{54682aa6-e22a-4ddc-a1ec-bf5183b04bca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\3.module\component\behavior">
+      <UniqueIdentifier>{a47c5401-3007-4940-9775-e4c47b97e0f7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\3.module\component\transform">
+      <UniqueIdentifier>{e2ac37a5-36c8-42df-8e29-92c6724d39c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\3.module\component\audio">
+      <UniqueIdentifier>{dc2fbf3c-357a-4c4c-99c8-9a896fede049}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\3.module\component\camrea">
+      <UniqueIdentifier>{00c262fb-da79-4ceb-bead-237b33f484fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\3.module\pipeline">
+      <UniqueIdentifier>{4181f871-3a77-45c8-be56-ed9f1c7c8620}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\3.module\object">
+      <UniqueIdentifier>{900b2a65-d43f-43a6-9c71-0f920a00fd86}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -214,52 +217,49 @@
       <Filter>library\fmod</Filter>
     </ClInclude>
     <ClInclude Include="engine\component_manager.h">
-      <Filter>engine\component</Filter>
+      <Filter>engine\3.module\component</Filter>
     </ClInclude>
     <ClInclude Include="engine\component.h">
-      <Filter>engine\component</Filter>
+      <Filter>engine\3.module\component</Filter>
     </ClInclude>
     <ClInclude Include="engine\device.h">
-      <Filter>engine\input</Filter>
+      <Filter>engine\1.system\input</Filter>
     </ClInclude>
     <ClInclude Include="engine\input.h">
-      <Filter>engine\input</Filter>
+      <Filter>engine\1.system\input</Filter>
     </ClInclude>
     <ClInclude Include="engine\keyboard.h">
-      <Filter>engine\input</Filter>
+      <Filter>engine\1.system\input</Filter>
     </ClInclude>
     <ClInclude Include="engine\mouse.h">
-      <Filter>engine\input</Filter>
+      <Filter>engine\1.system\input</Filter>
     </ClInclude>
     <ClInclude Include="engine\graphic.h">
-      <Filter>engine\graphic</Filter>
+      <Filter>engine\1.system\graphic</Filter>
     </ClInclude>
     <ClInclude Include="engine\object.h">
-      <Filter>engine\object</Filter>
+      <Filter>engine\3.module\object</Filter>
     </ClInclude>
     <ClInclude Include="engine\object_manager.h">
-      <Filter>engine\object</Filter>
+      <Filter>engine\3.module\object</Filter>
     </ClInclude>
     <ClInclude Include="engine\editor.h">
-      <Filter>engine\editor</Filter>
+      <Filter>engine\1.system\editor</Filter>
     </ClInclude>
     <ClInclude Include="engine\sound.h">
-      <Filter>engine\sound</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\timer_manager.h">
-      <Filter>engine\timer</Filter>
+      <Filter>engine\1.system\sound</Filter>
     </ClInclude>
     <ClInclude Include="engine\timer.h">
-      <Filter>engine\timer</Filter>
+      <Filter>engine\1.system\timer</Filter>
     </ClInclude>
     <ClInclude Include="engine\behavior.h">
-      <Filter>engine\component\behavior</Filter>
+      <Filter>engine\3.module\component\behavior</Filter>
     </ClInclude>
     <ClInclude Include="engine\outliner.h">
-      <Filter>engine\editor</Filter>
+      <Filter>engine\1.system\editor</Filter>
     </ClInclude>
     <ClInclude Include="engine\transform.h">
-      <Filter>engine\component\transform</Filter>
+      <Filter>engine\3.module\component\transform</Filter>
     </ClInclude>
     <ClInclude Include="client\client.h">
       <Filter>client</Filter>
@@ -268,13 +268,28 @@
       <Filter>client\component\behavior</Filter>
     </ClInclude>
     <ClInclude Include="engine\camera.h">
-      <Filter>engine\component\camrea</Filter>
+      <Filter>engine\3.module\component\camrea</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\detail.h">
+      <Filter>engine\1.system\editor</Filter>
+    </ClInclude>
+    <ClInclude Include="client\pipeline.h">
+      <Filter>client\pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\pipeline.h">
+      <Filter>engine\3.module\pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\pipeline_manager.h">
+      <Filter>engine\3.module\pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="engine\content.h">
+      <Filter>engine\1.system\editor</Filter>
     </ClInclude>
     <ClInclude Include="engine\shader.h">
-      <Filter>engine\graphic\shader</Filter>
+      <Filter>engine\2.resource</Filter>
     </ClInclude>
     <ClInclude Include="engine\view.h">
-      <Filter>engine\graphic\view</Filter>
+      <Filter>engine\2.resource</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -296,10 +311,10 @@
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="engine\vertex.hlsl">
-      <Filter>engine\graphic\shader\hlsl</Filter>
+      <Filter>engine\2.resource\hlsl</Filter>
     </FxCompile>
     <FxCompile Include="engine\pixel.hlsl">
-      <Filter>engine\graphic\shader\hlsl</Filter>
+      <Filter>engine\2.resource\hlsl</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

@@ -17,18 +17,6 @@ namespace engine {
 		inline explicit object_manager(object_manager&& rhs) noexcept = delete;
 		inline auto operator=(object_manager&& rhs) noexcept -> object_manager & = delete;
 	public:
-		inline void update(void) noexcept {
-			//for (auto iter = _object.begin(); iter != _object.end();) {
-			//	if (true == (*iter)->_destory) {
-
-			//	}
-			//	else {
-
-			//	}
-			//}
-		}
-		inline void fixed_update(void) noexcept {
-		}
 	public:
 		inline void create(std::string const key, object* const prototype) noexcept {
 			//_prototype.emplace(key, prototype);
