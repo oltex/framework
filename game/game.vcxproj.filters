@@ -100,11 +100,11 @@
     <Filter Include="engine\3.module\component\camrea">
       <UniqueIdentifier>{00c262fb-da79-4ceb-bead-237b33f484fa}</UniqueIdentifier>
     </Filter>
-    <Filter Include="engine\3.module\pipeline">
-      <UniqueIdentifier>{4181f871-3a77-45c8-be56-ed9f1c7c8620}</UniqueIdentifier>
-    </Filter>
     <Filter Include="engine\3.module\object">
       <UniqueIdentifier>{900b2a65-d43f-43a6-9c71-0f920a00fd86}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="engine\3.module\pipeline">
+      <UniqueIdentifier>{4181f871-3a77-45c8-be56-ed9f1c7c8620}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -286,9 +286,6 @@
       <Filter>engine\1.system\editor</Filter>
     </ClInclude>
     <ClInclude Include="engine\shader.h">
-      <Filter>engine\2.resource</Filter>
-    </ClInclude>
-    <ClInclude Include="engine\view.h">
       <Filter>engine\2.resource</Filter>
     </ClInclude>
   </ItemGroup>

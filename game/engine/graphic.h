@@ -3,6 +3,9 @@
 #include "../library/design-pattern/singleton.h"
 #include "../library/window/window.h"
 #include <d3d11.h>
+#include <d3dcompiler.h>
+#include <string>
+#include <unordered_map>
 
 namespace engine {
 	class graphic final : public design_pattern::singleton<graphic, design_pattern::member_static<graphic>> {
@@ -51,52 +54,52 @@ namespace engine {
 				adapter->Release();
 				device->Release();
 			}
-			{	//render target view
-				ID3D11Texture2D* texture = nullptr;
-				_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&texture));
-				_device->CreateRenderTargetView(texture, nullptr, (ID3D11RenderTargetView**)&_render_target_view);
-				texture->Release();
-			}
-			{	// depth stencil view
-				ID3D11Texture2D* texture = nullptr;
-				D3D11_TEXTURE2D_DESC texture_desc{};
-				texture_desc.Width = window.get_client_rect().right;
-				texture_desc.Height = window.get_client_rect().bottom;
-				texture_desc.MipLevels = 1;
-				texture_desc.ArraySize = 1;
-				texture_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-				texture_desc.SampleDesc.Count = 1;
-				texture_desc.SampleDesc.Quality = 0;
-				texture_desc.Usage = D3D11_USAGE_DEFAULT;
-				texture_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-				texture_desc.CPUAccessFlags = 0;
-				texture_desc.MiscFlags = 0;
-				if (S_OK != _device->CreateTexture2D(&texture_desc, nullptr, &texture))
-					DebugBreak();
-				if (S_OK != _device->CreateDepthStencilView(texture, nullptr, &_depth_stencil_view))
-					DebugBreak();
-				texture->Release();
-			}
+			//{	//render target view
+			//	ID3D11Texture2D* texture = nullptr;
+			//	_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&texture));
+			//	_device->CreateRenderTargetView(texture, nullptr, (ID3D11RenderTargetView**)&_render_target_view);
+			//	texture->Release();
+			//}
+			//{	// depth stencil view
+			//	ID3D11Texture2D* texture = nullptr;
+			//	D3D11_TEXTURE2D_DESC texture_desc{};
+			//	texture_desc.Width = window.get_client_rect().right;
+			//	texture_desc.Height = window.get_client_rect().bottom;
+			//	texture_desc.MipLevels = 1;
+			//	texture_desc.ArraySize = 1;
+			//	texture_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			//	texture_desc.SampleDesc.Count = 1;
+			//	texture_desc.SampleDesc.Quality = 0;
+			//	texture_desc.Usage = D3D11_USAGE_DEFAULT;
+			//	texture_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+			//	texture_desc.CPUAccessFlags = 0;
+			//	texture_desc.MiscFlags = 0;
+			//	if (S_OK != _device->CreateTexture2D(&texture_desc, nullptr, &texture))
+			//		DebugBreak();
+			//	if (S_OK != _device->CreateDepthStencilView(texture, nullptr, &_depth_stencil_view))
+			//		DebugBreak();
+			//	texture->Release();
+			//}
 		}
 		inline explicit graphic(graphic const& rhs) noexcept = delete;
-		inline auto operator=(graphic const& rhs) noexcept -> graphic & = delete;
 		inline explicit graphic(graphic&& rhs) noexcept = delete;
+		inline auto operator=(graphic const& rhs) noexcept -> graphic & = delete;
 		inline auto operator=(graphic&& rhs) noexcept -> graphic & = delete;
 		inline ~graphic(void) noexcept {
-			_depth_stencil_view->Release();
-			_render_target_view->Release();
+			//_depth_stencil_view->Release();
+			//_render_target_view->Release();
 			_swap_chain->Release();
 
 			_context->Release();
 			_device->Release();
 		}
 	public:
-		inline void begin_render(void) noexcept {
-			_context->OMSetRenderTargets(1, (ID3D11RenderTargetView**)&_render_target_view, _depth_stencil_view);
-			_context->ClearRenderTargetView((ID3D11RenderTargetView*)_render_target_view, _color);
-			_context->ClearDepthStencilView(_depth_stencil_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0);
-		}
-		inline void end_render(void) noexcept {
+		//inline void begin_render(void) noexcept {
+		//	_context->OMSetRenderTargets(1, (ID3D11RenderTargetView**)&_render_target_view, _depth_stencil_view);
+		//	_context->ClearRenderTargetView((ID3D11RenderTargetView*)_render_target_view, _color);
+		//	_context->ClearDepthStencilView(_depth_stencil_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.f, 0);
+		//}
+		inline void render(void) noexcept {
 			_swap_chain->Present(0, 0);
 		}
 	public:
@@ -106,13 +109,79 @@ namespace engine {
 		inline auto get_context(void) noexcept -> ID3D11DeviceContext& {
 			return *_context;
 		}
+	public:
+		inline void create_vertex_shader(std::string const& key, std::wstring const& path) noexcept {
+			ID3D10Blob* binary;
+			D3DReadFileToBlob(path.c_str(), &binary);
+			ID3D11VertexShader* vertex;
+			_device->CreateVertexShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &vertex);
+			binary->Release();
+			_vertex_shader.emplace(key, vertex);
+		}
+		inline auto get_vertex_shader(std::string const& key) noexcept -> ID3D11VertexShader* {
+			auto iter = _vertex_shader.find(key);
+			return iter->second;
+		}
+		inline void create_pixel_shader(std::string const& key, std::wstring const& path) noexcept {
+			ID3D10Blob* binary;
+			D3DReadFileToBlob(path.c_str(), &binary);
+			ID3D11PixelShader* pixel;
+			_device->CreatePixelShader(binary->GetBufferPointer(), binary->GetBufferSize(), nullptr, &pixel);
+			binary->Release();
+			_pixel_shader.emplace(key, pixel);
+		}
+		inline auto get_pixel_shader(std::string const& key) noexcept -> ID3D11PixelShader* {
+			auto iter = _pixel_shader.find(key);
+			return iter->second;
+		}
+		inline void create_input_layout(std::string key, D3D11_INPUT_ELEMENT_DESC* desc, unsigned int size, std::wstring const& path) {
+			ID3D10Blob* binary;
+			ID3D11InputLayout* input_layout;
+			//D3D11_INPUT_ELEMENT_DESC desc[]{
+			//	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			//	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			//};
+			//unsigned int size = static_cast<unsigned int>(sizeof(desc) / sizeof(D3D11_INPUT_ELEMENT_DESC));
+			D3DReadFileToBlob(path.c_str(), &binary);
+			_device->CreateInputLayout(desc, size, binary->GetBufferPointer(), binary->GetBufferSize(), &input_layout);
+			binary->Release();
+			_input_layout.emplace(key, input_layout);
+		}
+		inline void create_blend_state(std::string const& key, D3D11_BLEND_DESC& desc) noexcept {
+			ID3D11BlendState* blend_state;
+			_device->CreateBlendState(&desc, &blend_state);
+			_blend_state.emplace(key, blend_state);
+		}
+		inline void create_depth_stencil_state(std::string key) {
+			_device->CreateDepthStencilState();
+		}
+		inline void create_rasterizer_state(std::string key) {
+
+		}
 	private:
 		ID3D11Device* _device;
 		ID3D11DeviceContext* _context;
 
 		IDXGISwapChain* _swap_chain;
-		ID3D11View* _render_target_view;
-		ID3D11DepthStencilView* _depth_stencil_view;
+		//ID3D11View* _render_target_view;
+		//ID3D11DepthStencilView* _depth_stencil_view;
+
+		std::unordered_map<std::string, D3D11_VIEWPORT*> _viewport;
+		std::unordered_map<std::string, ID3D11InputLayout*> _input_layout;
+
+		std::unordered_map<std::string, ID3D11BlendState*> _blend_state;
+		std::unordered_map<std::string, ID3D11DepthStencilState*> _depth_stencil_state;
+		std::unordered_map<std::string, ID3D11RasterizerState*> _rasterizer_state;
+
+		std::unordered_map<std::string, ID3D11VertexShader*> _vertex_shader;
+		std::unordered_map<std::string, ID3D11PixelShader*> _pixel_shader;
+
+		std::unordered_map<std::string, ID3D11RenderTargetView*> _render_target_view;
+		std::unordered_map<std::string, ID3D11DepthStencilView*> _depth_stencil_view;
+		std::unordered_map<std::string, ID3D11ShaderResourceView*> _shader_resource_view;
+		std::unordered_map<std::string, ID3D11UnorderedAccessView*> _unordered_access_view;
+
+		//texture
 
 		float _color[4] = { 0.f, 0.f, 0.5f, 1.f };
 	};

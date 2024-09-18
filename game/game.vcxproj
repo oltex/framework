@@ -177,9 +177,13 @@
     <ClInclude Include="engine\outliner.h" />
     <ClInclude Include="engine\pipeline.h" />
     <ClInclude Include="engine\pipeline_manager.h" />
-    <ClInclude Include="engine\shader.h" />
+    <ClInclude Include="engine\shader.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="engine\sound.h" />
-    <ClInclude Include="engine\view.h" />
     <ClInclude Include="engine\timer.h" />
     <ClInclude Include="engine\transform.h" />
     <ClInclude Include="library\data-structure\hash.h" />
