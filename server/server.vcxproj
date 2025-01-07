@@ -148,6 +148,7 @@
   <ItemGroup>
     <ClInclude Include="library\data-strucutre\lockfree\memory_pool.h" />
     <ClInclude Include="library\data-strucutre\pair.h" />
+    <ClInclude Include="library\data-strucutre\reference_count.h" />
     <ClInclude Include="library\data-strucutre\thread-local\object_pool.h" />
     <ClInclude Include="library\data-strucutre\vector.h" />
     <ClInclude Include="library\design-pattern\thread-local\singleton.h" />

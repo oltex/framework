@@ -41,6 +41,9 @@
     <ClInclude Include="library\design-pattern\thread-local\singleton.h">
       <Filter>library\design-pattern\thread-local</Filter>
     </ClInclude>
+    <ClInclude Include="library\data-strucutre\reference_count.h">
+      <Filter>library\data-strucutre</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="library">
