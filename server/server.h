@@ -477,18 +477,18 @@ public:
 		return true;
 	}
 	inline virtual void on_create_session(unsigned long long key) noexcept {
-		auto& object_pool = data_structure::_thread_local::object_pool<buffer>::instance();
-		data_structure::intrusive::shared_pointer<buffer, 0> message;
-		if (object_pool.empty())
-			message = &object_pool.allocate();
-		else
-			message = &object_pool.acquire();
-		message->initialize();
+		//auto& object_pool = data_structure::_thread_local::object_pool<buffer>::instance();
+		//data_structure::intrusive::shared_pointer<buffer, 0> message;
+		//if (object_pool.empty())
+		//	message = &object_pool.allocate();
+		//else
+		//	message = &object_pool.acquire();
+		//message->initialize();
 
-		header header_{ 8 };
-		message->push(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
-		*message << 0x7fffffffffffffff;
-		do_send(key, message);
+		//header header_{ 8 };
+		//message->push(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
+		//*message << 0x7fffffffffffffff;
+		//do_send(key, message);
 	}
 	inline virtual void on_receive(unsigned long long key, receive_view& receive_view_) {
 		unsigned long long value;
