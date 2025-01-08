@@ -117,7 +117,7 @@ namespace data_structure::_thread_local {
 				_head = _break;
 				_size -= bucket_size;
 			}
-			if (_size > bucket_size)
+			if (_size != bucket_size)
 				__debugbreak();
 			_stack.push(_head, _size);
 		};

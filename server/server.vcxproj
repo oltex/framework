@@ -104,6 +104,8 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -134,6 +136,8 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -146,9 +150,11 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="library\data-strucutre\intrusive\shared_pointer.h" />
     <ClInclude Include="library\data-strucutre\lockfree\memory_pool.h" />
+    <ClInclude Include="library\data-strucutre\lockfree\queue.h" />
     <ClInclude Include="library\data-strucutre\pair.h" />
-    <ClInclude Include="library\data-strucutre\reference_count.h" />
+    <ClInclude Include="library\data-strucutre\serialize_buffer.h" />
     <ClInclude Include="library\data-strucutre\thread-local\object_pool.h" />
     <ClInclude Include="library\data-strucutre\vector.h" />
     <ClInclude Include="library\design-pattern\thread-local\singleton.h" />

@@ -41,8 +41,14 @@
     <ClInclude Include="library\design-pattern\thread-local\singleton.h">
       <Filter>library\design-pattern\thread-local</Filter>
     </ClInclude>
-    <ClInclude Include="library\data-strucutre\reference_count.h">
+    <ClInclude Include="library\data-strucutre\serialize_buffer.h">
       <Filter>library\data-strucutre</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-strucutre\lockfree\queue.h">
+      <Filter>library\data-strucutre\lockfree</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-strucutre\intrusive\shared_pointer.h">
+      <Filter>library\data-strucutre\intrusive</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -78,6 +84,9 @@
     </Filter>
     <Filter Include="library\design-pattern\thread-local">
       <UniqueIdentifier>{a366f2e2-980b-4b78-884b-3b067fc1d0fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\data-strucutre\intrusive">
+      <UniqueIdentifier>{e9ac73de-010a-4402-a086-5dfa08238bae}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

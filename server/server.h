@@ -5,9 +5,12 @@
 #include "library/system-component/network/socket.h"
 
 #include "library/data-strucutre/vector.h"
-#include "library/data-strucutre/reference_count.h"
+#include "library/data-strucutre/serialize_buffer.h"
 #include "library/data-strucutre/thread-local/object_pool.h"
+#include "library/data-strucutre/intrusive/shared_pointer.h"
+#include "library/data-strucutre/lockfree/queue.h"
 #include <optional>
+#include <iostream>
 
 template<typename type>
 concept string_size = std::_Is_any_of_v<type, unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long>;
@@ -21,36 +24,40 @@ private:
 		unsigned short _size;
 	};
 
-	class receive_buffer final : public data_structure::reference_count {
+
+	class buffer final : public data_structure::intrusive::shared_pointer_hook<0>, public data_structure::serialize_buffer {
 	public:
-		inline explicit receive_buffer(void) noexcept = default;
-		inline explicit receive_buffer(receive_buffer const& rhs) noexcept = default;
-		inline explicit receive_buffer(receive_buffer&& rhs) noexcept = default;
-		inline auto operator=(receive_buffer const& rhs) noexcept -> receive_buffer&;
-		inline auto operator=(receive_buffer&& rhs) noexcept -> receive_buffer&;
-		inline ~receive_buffer(void) noexcept = default;
+		inline explicit buffer(void) noexcept = default;
+		inline explicit buffer(buffer const& rhs) noexcept = default;
+		inline explicit buffer(buffer&& rhs) noexcept = default;
+		inline auto operator=(buffer const& rhs) noexcept -> buffer&;
+		inline auto operator=(buffer&& rhs) noexcept -> buffer&;
+		inline ~buffer(void) noexcept = default;
 	public:
-		inline auto data(void) noexcept -> byte* {
-			return _array;
+		inline void initialize(void) noexcept {
+			_front = 0;
+			_rear = 0;
 		}
-	private:
-		byte _array[4096];
+		friend inline static void destructor(buffer* rhs) {
+			auto& object_pool = data_structure::_thread_local::object_pool<buffer>::instance();
+			object_pool.release(*rhs);
+		}
 	};
 	class receive_view final {
 	private:
 		using size_type = unsigned int;
 	public:
 		inline explicit receive_view(void) noexcept
-			: _receive_buffer(nullptr), _front(0), _rear(0) {
+			: _front(0), _rear(0) {
 		}
-		inline explicit receive_view(receive_buffer* receive_buffer) noexcept
-			: _receive_buffer(receive_buffer), _front(0), _rear(0) {
+		inline explicit receive_view(data_structure::intrusive::shared_pointer<buffer, 0> buffer_) noexcept
+			: _buffer(buffer_), _front(0), _rear(0) {
 		}
-		inline explicit receive_view(receive_buffer* receive_buffer, size_type front, size_type rear) noexcept
-			: _receive_buffer(receive_buffer), _front(front), _rear(rear) {
+		inline explicit receive_view(data_structure::intrusive::shared_pointer<buffer, 0> buffer_, size_type front, size_type rear) noexcept
+			: _buffer(buffer_), _front(front), _rear(rear) {
 		}
 		inline explicit receive_view(receive_view const& rhs) noexcept
-			: _receive_buffer(rhs._receive_buffer), _front(rhs._front), _rear(rhs._rear) {
+			: _buffer(rhs._buffer), _front(rhs._front), _rear(rhs._rear) {
 		}
 		inline auto operator=(receive_view const& rhs) noexcept -> receive_view&;
 		inline auto operator=(receive_view&& rhs) noexcept -> receive_view&;
@@ -58,24 +65,24 @@ private:
 	public:
 		template<typename type>
 		inline auto operator>>(type& value) noexcept -> receive_view& requires std::is_arithmetic_v<type> {
-			value = reinterpret_cast<type&>(_receive_buffer->data()[_front]);
+			value = reinterpret_cast<type&>(_buffer->data()[_front]);
 			_front += sizeof(type);
 			return *this;
 		}
 		inline void peek(byte* const buffer, size_type const length) noexcept {
-			memcpy(buffer, _receive_buffer->data() + _front, length);
+			memcpy(buffer, _buffer->data() + _front, length);
 		}
 		template<string_size type>
 		inline void peek(std::string& value) noexcept {
 			type length;
 			peek(reinterpret_cast<byte*>(&length), sizeof(type));
-			value.assign(reinterpret_cast<char*>(_receive_buffer->data() + _front + sizeof(type)), length);
+			value.assign(reinterpret_cast<char*>(_buffer->data() + _front + sizeof(type)), length);
 		}
 		template<string_size type>
 		inline void peek(std::wstring& value) noexcept {
 			type length;
 			peek(reinterpret_cast<byte*>(&length), sizeof(type));
-			value.assign(reinterpret_cast<wchar_t*>(_receive_buffer->data() + _front + sizeof(type)), length);
+			value.assign(reinterpret_cast<wchar_t*>(_buffer->data() + _front + sizeof(type)), length);
 		}
 		inline void pop(size_type const length) noexcept {
 			_front += length;
@@ -104,21 +111,64 @@ private:
 		inline auto size(void) const noexcept -> size_type {
 			return _rear - _front;
 		}
-		inline void assign(receive_buffer* receive_buffer_, size_type const front, size_type const rear) noexcept {
-			_receive_buffer = receive_buffer_;
-			_front = front;
-			_rear = rear;
-		}
-		inline auto data(void) noexcept -> receive_buffer* {
-			return _receive_buffer;
-		}
+		//inline void assign(receive_buffer* receive_buffer_, size_type const front, size_type const rear) noexcept {
+		//	_receive_buffer = receive_buffer_;
+		//	_front = front;
+		//	_rear = rear;
+		//}
+		//inline auto data(void) noexcept -> receive_buffer* {
+		//	return _receive_buffer;
+		//}
 	private:
 		size_type _front, _rear;
-		receive_buffer* _receive_buffer;
+		data_structure::intrusive::shared_pointer<buffer, 0> _buffer;
 	};
-
-	class send_queue final {
-
+	class send_queue final : public data_structure::lockfree::queue<buffer*> {
+	public:
+		inline explicit send_queue(void) noexcept = default;
+		inline explicit send_queue(send_queue const& rhs) noexcept = default;
+		inline explicit send_queue(send_queue&& rhs) noexcept = default;
+		inline auto operator=(send_queue const& rhs) noexcept -> send_queue&;
+		inline auto operator=(send_queue&& rhs) noexcept -> send_queue&;
+		inline ~send_queue(void) noexcept = default;
+	private:
+		class iterator final {
+		public:
+			inline explicit iterator(node* node_) noexcept
+				: _node(node_) {
+			}
+			inline iterator(iterator const& rhs) noexcept
+				: _node(rhs._node) {
+			}
+		public:
+			inline auto operator*(void) const noexcept -> buffer*& {
+				return _node->_value;
+			}
+			inline auto operator++(void) noexcept -> iterator& {
+				_node = reinterpret_cast<node*>(_node->_next);
+				return *this;
+			}
+			inline bool operator==(iterator const& rhs) const noexcept {
+				return _node == rhs._node;
+			}
+		private:
+			node* _node;
+		};
+	public:
+		inline auto begin(void) noexcept -> iterator {
+			return iterator(reinterpret_cast<node*>(reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & _head)->_next));
+		}
+		inline auto end(void) noexcept -> iterator {
+			return iterator(reinterpret_cast<node*>(_nullptr));
+		}
+		inline auto empty(void) const noexcept {
+			unsigned long long head = _head;
+			node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
+			unsigned long long next = address->_next;
+			if (_nullptr == next || 0 == next)
+				return true;
+			return false;
+		}
 	};
 
 	struct session final {
@@ -126,41 +176,56 @@ private:
 		inline static unsigned long long _static_id = 0x10000;
 	public:
 		inline explicit session(void) noexcept {
-			auto& object_pool = data_structure::_thread_local::object_pool<receive_buffer>::instance();
-			receive_buffer* receive_buffer_;
+			auto& object_pool = data_structure::_thread_local::object_pool<buffer>::instance();
+			buffer* receive_buffer_;
 			if (object_pool.empty())
 				receive_buffer_ = &object_pool.allocate();
 			else
 				receive_buffer_ = &object_pool.acquire();
-			receive_buffer_->add_reference();
-			_receive_view.assign(receive_buffer_, 0, 0);
+			_receive_buffer = receive_buffer_;
 		};
 		inline explicit session(session const&) noexcept = delete;
 		inline explicit session(session&&) noexcept = delete;
 		inline auto operator=(session const&) noexcept -> session & = delete;
 		inline auto operator=(session&&) noexcept -> session & = delete;
-		inline ~session(void) noexcept {
-			receive_buffer* receive_buffer_ = _receive_view.data();
-			if (0 == receive_buffer_->release())
-				data_structure::_thread_local::object_pool<receive_buffer>::instance().release(*receive_buffer_);
-		};
+		inline ~session(void) noexcept = default;
 	public:
 		inline void initialize(system_component::network::socket&& socket) noexcept {
 			_key = 0xffff & _key | _static_id;
 			_static_id += 0x10000;
 			_socket = std::move(socket);
 
+			_InterlockedExchange(&_io_count, 1);
+			_InterlockedExchange(&_send_flag, 0);
 		}
 		inline void finalize(void) noexcept {
+			_receive_buffer->clear();
+			while (!_send_queue.empty()) {
+				auto result = _send_queue.pop();
+				if (!result)
+					__debugbreak();
+				data_structure::intrusive::shared_pointer<buffer, 0> data;
+				data.set(*result);
+			}
+			_socket.close();
+			//_key._id = -1;
 		}
 	public:
-		inline bool receive(void) noexcept {
-			//auto& object_pool = data_structure::_thread_local::object_pool<receive_buffer>::instance();
-			//receive_buffer* receive_buffer_ = &object_pool.acquire();
-			//memcpy(receive_buffer_->data(), _receive_view.data()->data() + _receive_view.front(), _receive_view.size());
-			//_receive_view.assign(receive_buffer_, 0, _receive_view.size());
+		inline void create_receive(void) noexcept {
+			auto& object_pool = data_structure::_thread_local::object_pool<buffer>::instance();
+			buffer* receive_buffer_;
+			if (object_pool.empty())
+				receive_buffer_ = &object_pool.allocate();
+			else
+				receive_buffer_ = &object_pool.acquire();
+			receive_buffer_->initialize();
 
-			WSABUF buffer{ 4096 - _receive_view.rear(),  reinterpret_cast<char*>(_receive_view.data()->data() + _receive_view.rear()) };
+			memcpy(receive_buffer_->data(), _receive_buffer->data() + _receive_buffer->front(), _receive_buffer->size());
+			receive_buffer_->move_rear(_receive_buffer->size());
+			_receive_buffer = receive_buffer_;
+		}
+		inline bool excute_receive(void) noexcept {
+			WSABUF buffer{ 8192 - _receive_buffer->rear(),  reinterpret_cast<char*>(_receive_buffer->data() + _receive_buffer->rear()) };
 			unsigned long flag = 0;
 			_recv_overlapped.clear();
 			int result = _socket.wsa_receive(&buffer, 1, &flag, _recv_overlapped);
@@ -168,14 +233,53 @@ private:
 				return true;
 			return false;
 		}
+
+		inline void append_send(data_structure::intrusive::shared_pointer<buffer, 0>& message) noexcept {
+			auto data = message.get();
+			data->add_reference();
+			_send_queue.emplace(data);
+		}
+		inline bool ready_send(void) noexcept {
+			while (!_send_queue.empty() && 0 == InterlockedExchange(&_send_flag, 1)) {
+				if (!_send_queue.empty())
+					return true;
+				InterlockedExchange(&_send_flag, 0);
+			}
+			return false;
+		}
+		inline bool excute_send(void) noexcept {
+			WSABUF wsa_buffer[512];
+			_send_size = 0;
+			for (auto& iter : _send_queue) {
+				wsa_buffer[_send_size].buf = reinterpret_cast<char*>(iter->data());
+				wsa_buffer[_send_size].len = iter->rear();
+				_send_size++;
+			}
+			_send_overlapped.clear();
+			int result = _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped);
+			if (!(SOCKET_ERROR == result && WSA_IO_PENDING != GetLastError()))
+				return true;
+			//InterlockedExchange(&_send_flag, 0);
+			return false;
+		}
+		inline void finish_send(void) noexcept {
+			for (size_type index = 0; index < _send_size; ++index) {
+				auto result = _send_queue.pop();
+				if (!result)
+					__debugbreak();
+				data_structure::intrusive::shared_pointer<buffer, 0> data;
+				data.set(*result);
+			}
+			InterlockedExchange(&_send_flag, 0);
+		}
 		inline auto io_count_decrement(void) noexcept {
 			return _InterlockedDecrement(&_io_count);
 		}
 	public:
 		unsigned long long _key;
 		system_component::network::socket _socket;
-		receive_view _receive_view;
-		//data_structure::circular_queue<data_structure::serialize_buffer*> _send_queue;
+		data_structure::intrusive::shared_pointer<buffer, 0> _receive_buffer;
+		send_queue _send_queue;
 		system_component::input_output::overlapped _recv_overlapped;
 		system_component::input_output::overlapped _send_overlapped;
 		volatile unsigned int _io_count;
@@ -249,7 +353,7 @@ private:
 		inline auto end(void) noexcept -> iterator {
 			return _array + _size;
 		}
-		inline auto operator[](size_type const key) noexcept -> session& {
+		inline auto operator[](unsigned long long const key) noexcept -> session& {
 			return _array[key & 0xffff]._value;
 		}
 	private:
@@ -279,7 +383,7 @@ public:
 
 		system_component::network::socket_address_ipv4 socket_address;
 		socket_address.set_address(INADDR_ANY);
-		socket_address.set_port(20000);
+		socket_address.set_port(6000);
 		_listen_socket.create(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		_listen_socket.set_linger(1, 0);
 		_listen_socket.set_send_buffer(0);
@@ -318,10 +422,10 @@ public:
 				session* session_ = _session_array.acquire();
 				session_->initialize(std::move(socket));
 
-				_complation_port.connect(session_->_socket, reinterpret_cast<ULONG_PTR>(&session_));
+				_complation_port.connect(session_->_socket, reinterpret_cast<ULONG_PTR>(session_));
 				on_create_session(session_->_key);
 
-				if (false == session_->receive())
+				if (false == session_->excute_receive())
 					if (0 == session_->io_count_decrement()) {
 						session_->finalize();
 						_session_array.release(session_);
@@ -336,33 +440,30 @@ public:
 
 			if (0 != transferred) {
 				if (&session_._recv_overlapped.data() == overlapped) {
-					session_._receive_view.move_rear(transferred);
+					session_._receive_buffer->move_rear(transferred);
 
 					for (;;) {
-						if (sizeof(header) > session_._receive_view.size())
+						if (sizeof(header) > session_._receive_buffer->size())
 							break;
 						header header_;
-						session_._receive_view.peek(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
-						if (sizeof(header) + header_._size > session_._receive_view.size())
+						session_._receive_buffer->peek(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
+						if (sizeof(header) + header_._size > session_._receive_buffer->size())
 							break;
-						session_._receive_view.pop(sizeof(header));
+						session_._receive_buffer->pop(sizeof(header));
 
-						receive_view receive_view_(session_._receive_view.data(), session_._receive_view.front(), session_._receive_view.front() + header_._size);
+						receive_view receive_view_(session_._receive_buffer, session_._receive_buffer->front(), session_._receive_buffer->front() + header_._size);
+						session_._receive_buffer->pop(header_._size);
 						on_receive(session_._key, receive_view_);
-						receive_view_.data()->release();
 					}
 
-					auto& object_pool = data_structure::_thread_local::object_pool<receive_buffer>::instance();
-					receive_buffer* receive_buffer_;
-					if (object_pool.empty())
-						receive_buffer_ = &object_pool.allocate();
-					else
-						receive_buffer_ = &object_pool.acquire();
-					receive_buffer_->add_reference();
-					_receive_view.assign(receive_buffer_, 0, 0);
-
+					session_.create_receive();
+					if (session_.excute_receive())
+						continue;
 				}
 				else {
+					session_.finish_send();
+					if (session_.ready_send() && session_.excute_send())
+						continue;
 				}
 			}
 			if (0 == _InterlockedDecrement(&session_._io_count)) {
@@ -371,23 +472,56 @@ public:
 			}
 		}
 	}
-
-	//inline bool receive(session& session_) noexcept {
-	//	WSABUF buffer{ 4096 - session_._receive_buffer->rear(),  reinterpret_cast<char*>(session_._receive_buffer->data() + session_._receive_buffer->rear()) };
-	//	unsigned long flag = 0;
-	//	session_._recv_overlapped.clear();
-	//	int result = session_._socket.wsa_receive(&buffer, 1, &flag, session_._recv_overlapped);
-	//	if (!(SOCKET_ERROR == result && WSA_IO_PENDING != GetLastError()))
-	//		return true;
-	//	return false;
-	//}
 public:
 	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept {
 		return true;
 	}
 	inline virtual void on_create_session(unsigned long long key) noexcept {
+		auto& object_pool = data_structure::_thread_local::object_pool<buffer>::instance();
+		data_structure::intrusive::shared_pointer<buffer, 0> message;
+		if (object_pool.empty())
+			message = &object_pool.allocate();
+		else
+			message = &object_pool.acquire();
+		message->initialize();
+
+		header header_{ 8 };
+		message->push(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
+		*message << 0x7fffffffffffffff;
+		do_send(key, message);
 	}
 	inline virtual void on_receive(unsigned long long key, receive_view& receive_view_) {
+		unsigned long long value;
+		receive_view_ >> value;
+
+		auto& object_pool = data_structure::_thread_local::object_pool<buffer>::instance();
+		data_structure::intrusive::shared_pointer<buffer, 0> message;
+		if (object_pool.empty())
+			message = &object_pool.allocate();
+		else
+			message = &object_pool.acquire();
+		message->initialize();
+
+		header header_{ 8 };
+		message->push(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
+		*message << value;
+		do_send(key, message);
+	}
+	inline virtual void on_destroy_session(unsigned long long session_id) noexcept {
+
+	}
+public:
+	inline void do_send(unsigned long long key, data_structure::intrusive::shared_pointer<buffer, 0>& message) noexcept {
+		session& session_ = _session_array[key];
+		session_.append_send(message);
+		if (session_.ready_send()) {
+			InterlockedIncrement(&session_._io_count);
+			if (session_.excute_send())
+				return;
+			InterlockedDecrement(&session_._io_count);
+		}
+	}
+	inline void do_destroy(unsigned long long session_id) noexcept {
 
 	}
 private:
