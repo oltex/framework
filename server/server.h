@@ -11,6 +11,7 @@
 #include "library/data-strucutre/lockfree/queue.h"
 #include <optional>
 #include <iostream>
+#include <intrin.h>
 
 template<typename type>
 concept string_size = std::_Is_any_of_v<type, unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long>;
@@ -23,8 +24,6 @@ private:
 	struct header final {
 		unsigned short _size;
 	};
-
-
 	class buffer final : public data_structure::intrusive::shared_pointer_hook<0>, public data_structure::serialize_buffer {
 	public:
 		inline explicit buffer(void) noexcept = default;
@@ -43,46 +42,58 @@ private:
 			object_pool.release(*rhs);
 		}
 	};
-	class receive_view final {
+	using message = data_structure::intrusive::shared_pointer<buffer, 0>;
+	class view final {
+	public:
+		struct low {
+			inline explicit low(view& rhs) noexcept {
+				_front = rhs._front;
+				_rear = rhs._rear;
+				_buffer = &*rhs._message;
+			}
+			size_type _front, _rear;
+			buffer* _buffer;
+		};
 	private:
 		using size_type = unsigned int;
 	public:
-		inline explicit receive_view(void) noexcept
+		inline explicit view(void) noexcept
 			: _front(0), _rear(0) {
 		}
-		inline explicit receive_view(data_structure::intrusive::shared_pointer<buffer, 0> buffer_) noexcept
-			: _buffer(buffer_), _front(0), _rear(0) {
+		inline explicit view(message message_) noexcept
+			: _message(message_), _front(0), _rear(0) {
 		}
-		inline explicit receive_view(data_structure::intrusive::shared_pointer<buffer, 0> buffer_, size_type front, size_type rear) noexcept
-			: _buffer(buffer_), _front(front), _rear(rear) {
+		inline explicit view(message message_, size_type front, size_type rear) noexcept
+			: _message(message_), _front(front), _rear(rear) {
 		}
-		inline explicit receive_view(receive_view const& rhs) noexcept
-			: _buffer(rhs._buffer), _front(rhs._front), _rear(rhs._rear) {
+		inline view(view const& rhs) noexcept
+			: _message(rhs._message), _front(rhs._front), _rear(rhs._rear) {
 		}
-		inline auto operator=(receive_view const& rhs) noexcept -> receive_view&;
-		inline auto operator=(receive_view&& rhs) noexcept -> receive_view&;
-		inline ~receive_view(void) noexcept = default;
+		inline auto operator=(view const& rhs) noexcept -> view&;
+		inline auto operator=(view&& rhs) noexcept -> view&;
+		inline ~view(void) noexcept = default;
 	public:
 		template<typename type>
-		inline auto operator>>(type& value) noexcept -> receive_view& requires std::is_arithmetic_v<type> {
-			value = reinterpret_cast<type&>(_buffer->data()[_front]);
+			requires std::is_arithmetic_v<type>
+		inline auto operator>>(type& value) noexcept -> view& {
+			value = reinterpret_cast<type&>(_message->data()[_front]);
 			_front += sizeof(type);
 			return *this;
 		}
 		inline void peek(byte* const buffer, size_type const length) noexcept {
-			memcpy(buffer, _buffer->data() + _front, length);
+			memcpy(buffer, _message->data() + _front, length);
 		}
 		template<string_size type>
 		inline void peek(std::string& value) noexcept {
 			type length;
 			peek(reinterpret_cast<byte*>(&length), sizeof(type));
-			value.assign(reinterpret_cast<char*>(_buffer->data() + _front + sizeof(type)), length);
+			value.assign(reinterpret_cast<char*>(_message->data() + _front + sizeof(type)), length);
 		}
 		template<string_size type>
 		inline void peek(std::wstring& value) noexcept {
 			type length;
 			peek(reinterpret_cast<byte*>(&length), sizeof(type));
-			value.assign(reinterpret_cast<wchar_t*>(_buffer->data() + _front + sizeof(type)), length);
+			value.assign(reinterpret_cast<wchar_t*>(_message->data() + _front + sizeof(type)), length);
 		}
 		inline void pop(size_type const length) noexcept {
 			_front += length;
@@ -111,19 +122,21 @@ private:
 		inline auto size(void) const noexcept -> size_type {
 			return _rear - _front;
 		}
-		//inline void assign(receive_buffer* receive_buffer_, size_type const front, size_type const rear) noexcept {
-		//	_receive_buffer = receive_buffer_;
-		//	_front = front;
-		//	_rear = rear;
-		//}
-		//inline auto data(void) noexcept -> receive_buffer* {
-		//	return _receive_buffer;
-		//}
+
+		inline void set(view::low& rhs) noexcept {
+			_front = rhs._front;
+			_rear = rhs._rear;
+			_message.set(rhs._buffer);
+		}
+		inline auto reset(void) noexcept {
+			_message.reset();
+		}
 	private:
 		size_type _front, _rear;
-		data_structure::intrusive::shared_pointer<buffer, 0> _buffer;
+		message _message;
 	};
-	class send_queue final : public data_structure::lockfree::queue<buffer*> {
+
+	class send_queue final : protected data_structure::lockfree::queue<buffer*> {
 	public:
 		inline explicit send_queue(void) noexcept = default;
 		inline explicit send_queue(send_queue const& rhs) noexcept = default;
@@ -155,6 +168,37 @@ private:
 			node* _node;
 		};
 	public:
+		inline void push(message message_) noexcept {
+			auto buf = message_.get();
+			emplace(buf);
+			message_.reset();
+		}
+		inline auto pop(void) noexcept -> message {
+			unsigned long long head = _head;
+			node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
+			unsigned long long next = address->_next;
+
+			if (_nullptr == next)
+				__debugbreak();
+			for (;;) {
+				unsigned long long tail = _tail;
+				node* tail_address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & tail);
+				if (reinterpret_cast<unsigned long long>(tail_address) == reinterpret_cast<unsigned long long>(address)) {
+					unsigned long long tail_next = tail_address->_next;
+					if (_nullptr != tail_next)
+						_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), tail_next + (0xFFFF800000000000ULL & tail) + 0x0000800000000000ULL, tail);
+				}
+				else
+					break;
+			}
+
+			message result;
+			result.set(reinterpret_cast<node*>(next)->_value);
+			_head = next;
+			_memory_pool.deallocate(*address);
+			return result;
+		}
+	public:
 		inline auto begin(void) noexcept -> iterator {
 			return iterator(reinterpret_cast<node*>(reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & _head)->_next));
 		}
@@ -168,6 +212,24 @@ private:
 			if (_nullptr == next || 0 == next)
 				return true;
 			return false;
+		}
+	};
+	class receive_queue final : protected data_structure::lockfree::queue<view::low> {
+	public:
+		using base = data_structure::lockfree::queue<view::low>;
+	public:
+		inline void push(view view_) noexcept {
+			view::low low_view(view_);
+			emplace(low_view);
+			view_.reset();
+		}
+		inline auto pop(void) noexcept -> std::optional<view> {
+			std::optional<view::low> low_view = base::pop();
+			if (!low_view)
+				return std::nullopt;
+			view view_;
+			view_.set(*low_view);
+			return view_;
 		}
 	};
 
@@ -194,21 +256,20 @@ private:
 			_key = 0xffff & _key | _static_id;
 			_static_id += 0x10000;
 			_socket = std::move(socket);
-
-			_InterlockedExchange(&_io_count, 1);
 			_InterlockedExchange(&_send_flag, 0);
 		}
 		inline void finalize(void) noexcept {
 			_receive_buffer->clear();
-			while (!_send_queue.empty()) {
-				auto result = _send_queue.pop();
-				if (!result)
-					__debugbreak();
-				data_structure::intrusive::shared_pointer<buffer, 0> data;
-				data.set(*result);
-			}
+			while (!_send_queue.empty())
+				_send_queue.pop();
 			_socket.close();
 			//_key._id = -1;
+		}
+		inline auto acquire(void) noexcept -> unsigned int {
+			return _InterlockedIncrement(&_io_count);
+		}
+		inline bool release(void) noexcept {
+			return 0 == _InterlockedDecrement(&_io_count) && 0 == _InterlockedCompareExchange(&_io_count, 0x80000000, 0);
 		}
 	public:
 		inline void create_receive(void) noexcept {
@@ -224,7 +285,7 @@ private:
 			receive_buffer_->move_rear(_receive_buffer->size());
 			_receive_buffer = receive_buffer_;
 		}
-		inline bool excute_receive(void) noexcept {
+		inline bool receive(void) noexcept {
 			WSABUF buffer{ 8192 - _receive_buffer->rear(),  reinterpret_cast<char*>(_receive_buffer->data() + _receive_buffer->rear()) };
 			unsigned long flag = 0;
 			_recv_overlapped.clear();
@@ -234,11 +295,7 @@ private:
 			return false;
 		}
 
-		inline void append_send(data_structure::intrusive::shared_pointer<buffer, 0>& message) noexcept {
-			auto data = message.get();
-			data->add_reference();
-			_send_queue.emplace(data);
-		}
+
 		inline bool ready_send(void) noexcept {
 			while (!_send_queue.empty() && 0 == InterlockedExchange(&_send_flag, 1)) {
 				if (!_send_queue.empty())
@@ -247,7 +304,7 @@ private:
 			}
 			return false;
 		}
-		inline bool excute_send(void) noexcept {
+		inline bool send(void) noexcept {
 			WSABUF wsa_buffer[512];
 			_send_size = 0;
 			for (auto& iter : _send_queue) {
@@ -259,26 +316,18 @@ private:
 			int result = _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped);
 			if (!(SOCKET_ERROR == result && WSA_IO_PENDING != GetLastError()))
 				return true;
-			//InterlockedExchange(&_send_flag, 0);
 			return false;
 		}
 		inline void finish_send(void) noexcept {
-			for (size_type index = 0; index < _send_size; ++index) {
-				auto result = _send_queue.pop();
-				if (!result)
-					__debugbreak();
-				data_structure::intrusive::shared_pointer<buffer, 0> data;
-				data.set(*result);
-			}
-			InterlockedExchange(&_send_flag, 0);
+			for (size_type index = 0; index < _send_size; ++index)
+				message message_ = _send_queue.pop();
+			_InterlockedExchange(&_send_flag, 0);
 		}
-		inline auto io_count_decrement(void) noexcept {
-			return _InterlockedDecrement(&_io_count);
-		}
+
 	public:
 		unsigned long long _key;
 		system_component::network::socket _socket;
-		data_structure::intrusive::shared_pointer<buffer, 0> _receive_buffer;
+		message _receive_buffer;
 		send_queue _send_queue;
 		system_component::input_output::overlapped _recv_overlapped;
 		system_component::input_output::overlapped _send_overlapped;
@@ -376,7 +425,7 @@ public:
 	inline void start(void) noexcept { // concurrent_thread, worker_thread, ip, port, backlog_queue,   session_max
 		_complation_port.create(0);
 		_thread.emplace_back(&server::accept, CREATE_SUSPENDED, this);
-		for (size_type index = 0; index < 16; ++index)
+		for (size_type index = 0; index < 1; ++index)
 			_thread.emplace_back(&server::worker, 0, this);
 
 		_session_array.initialize(10000);
@@ -404,7 +453,7 @@ public:
 		//	_completion.post_queue_state(0, 0, nullptr);
 		//	handle[index] = _thread[index].data();
 		//}
-		system_component::multi::thread::wait_for_multiple(_thread, true, INFINITE);
+		//system_component::multi::thread::wait_for_multiple(_thread, true, INFINITE);
 		//_thread.clear();
 
 		//_completion.close();
@@ -415,20 +464,21 @@ public:
 			auto [socket, socket_address] = _listen_socket.accept();
 			if (INVALID_SOCKET == socket.data())
 				break;
-
 			if (false == on_accept_socket(socket_address))
 				socket.close();
 			else {
-				session* session_ = _session_array.acquire();
-				session_->initialize(std::move(socket));
+				session& session_ = *_session_array.acquire();
+				session_.initialize(std::move(socket));
+				session_.acquire(); //io증가
+				_InterlockedAnd((long*)&session_._io_count, 0x7FFFFFFF);//릴리즈
 
-				_complation_port.connect(session_->_socket, reinterpret_cast<ULONG_PTR>(session_));
-				on_create_session(session_->_key);
+				_complation_port.connect(session_._socket, reinterpret_cast<ULONG_PTR>(&session_));
+				on_create_session(session_._key);
 
-				if (false == session_->excute_receive())
-					if (0 == session_->io_count_decrement()) {
-						session_->finalize();
-						_session_array.release(session_);
+				if (false == session_.receive())
+					if (session_.release()) {
+						session_.finalize();
+						_session_array.release(&session_);
 					}
 			}
 		}
@@ -451,22 +501,22 @@ public:
 							break;
 						session_._receive_buffer->pop(sizeof(header));
 
-						receive_view receive_view_(session_._receive_buffer, session_._receive_buffer->front(), session_._receive_buffer->front() + header_._size);
+						view view_(session_._receive_buffer, session_._receive_buffer->front(), session_._receive_buffer->front() + header_._size);
 						session_._receive_buffer->pop(header_._size);
-						on_receive(session_._key, receive_view_);
+						on_receive(session_._key, view_);
 					}
 
 					session_.create_receive();
-					if (session_.excute_receive())
+					if (session_.receive())
 						continue;
 				}
 				else {
 					session_.finish_send();
-					if (session_.ready_send() && session_.excute_send())
+					if (session_.ready_send() && session_.send())
 						continue;
 				}
 			}
-			if (0 == _InterlockedDecrement(&session_._io_count)) {
+			if (session_.release()) {
 				session_.finalize();
 				_session_array.release(&session_);
 			}
@@ -477,52 +527,54 @@ public:
 		return true;
 	}
 	inline virtual void on_create_session(unsigned long long key) noexcept {
-		//auto& object_pool = data_structure::_thread_local::object_pool<buffer>::instance();
-		//data_structure::intrusive::shared_pointer<buffer, 0> message;
-		//if (object_pool.empty())
-		//	message = &object_pool.allocate();
-		//else
-		//	message = &object_pool.acquire();
-		//message->initialize();
-
-		//header header_{ 8 };
-		//message->push(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
-		//*message << 0x7fffffffffffffff;
-		//do_send(key, message);
-	}
-	inline virtual void on_receive(unsigned long long key, receive_view& receive_view_) {
-		unsigned long long value;
-		receive_view_ >> value;
-
-		auto& object_pool = data_structure::_thread_local::object_pool<buffer>::instance();
-		data_structure::intrusive::shared_pointer<buffer, 0> message;
-		if (object_pool.empty())
-			message = &object_pool.allocate();
-		else
-			message = &object_pool.acquire();
-		message->initialize();
+		message message_ = make_message();
 
 		header header_{ 8 };
-		message->push(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
-		*message << value;
-		do_send(key, message);
+		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
+		*message_ << 0x7fffffffffffffff;
+		do_send(key, message_);
+	}
+	inline virtual void on_receive(unsigned long long key, view& view_) {
+		unsigned long long value;
+		view_ >> value;
+		message message_ = make_message();
+
+		header header_{ 8 };
+		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
+		*message_ << value;
+		do_send(key, message_);
 	}
 	inline virtual void on_destroy_session(unsigned long long session_id) noexcept {
 
 	}
 public:
-	inline void do_send(unsigned long long key, data_structure::intrusive::shared_pointer<buffer, 0>& message) noexcept {
+	inline void do_send(unsigned long long key, message& message_) noexcept {
 		session& session_ = _session_array[key];
-		session_.append_send(message);
-		if (session_.ready_send()) {
-			InterlockedIncrement(&session_._io_count);
-			if (session_.excute_send())
-				return;
-			InterlockedDecrement(&session_._io_count);
+		auto io_count = session_.acquire();
+		if ((0x80000000 & io_count) || session_._key != key)
+			session_.release();
+
+		session_._send_queue.push(message_);
+		if (session_.ready_send() && session_.send())
+			return;
+		if (session_.release()) {
+			session_.finalize();
+			_session_array.release(&session_);
 		}
 	}
 	inline void do_destroy(unsigned long long session_id) noexcept {
 
+	}
+public:
+	inline auto make_message(void) noexcept -> message {
+		auto& object_pool = data_structure::_thread_local::object_pool<buffer>::instance();
+		message message_;
+		if (object_pool.empty())
+			message_ = &object_pool.allocate();
+		else
+			message_ = &object_pool.acquire();
+		message_->initialize();
+		return message_;
 	}
 private:
 	system_component::input_output::completion_port _complation_port;
