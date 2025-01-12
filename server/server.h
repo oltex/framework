@@ -6,7 +6,7 @@
 
 #include "library/data-strucutre/vector.h"
 #include "library/data-strucutre/serialize_buffer.h"
-#include "library/data-strucutre/thread-local/object_pool.h"
+#include "library/data-strucutre/thread-local/memory_pool.h"
 #include "library/data-strucutre/intrusive/shared_pointer.h"
 #include "library/data-strucutre/lockfree/queue.h"
 #include <optional>
@@ -26,34 +26,24 @@ private:
 	};
 	class buffer final : public data_structure::intrusive::shared_pointer_hook<0>, public data_structure::serialize_buffer {
 	public:
-		inline explicit buffer(void) noexcept = default;
-		inline explicit buffer(buffer const& rhs) noexcept = default;
-		inline explicit buffer(buffer&& rhs) noexcept = default;
-		inline auto operator=(buffer const& rhs) noexcept -> buffer&;
-		inline auto operator=(buffer&& rhs) noexcept -> buffer&;
-		inline ~buffer(void) noexcept = default;
+		inline explicit buffer(void) noexcept = delete;
+		inline explicit buffer(buffer const& rhs) noexcept = delete;
+		inline explicit buffer(buffer&& rhs) noexcept = delete;
+		inline auto operator=(buffer const& rhs) noexcept -> buffer & = delete;
+		inline auto operator=(buffer&& rhs) noexcept -> buffer & = delete;
+		inline ~buffer(void) noexcept = delete;
 	public:
 		inline void initialize(void) noexcept {
 			_front = 0;
 			_rear = 0;
 		}
 		friend inline static void destructor(buffer* rhs) {
-			auto& object_pool = data_structure::_thread_local::object_pool<buffer>::instance();
-			object_pool.release(*rhs);
+			auto& memory_pool = data_structure::_thread_local::memory_pool<buffer>::instance();
+			memory_pool.deallocate(*rhs);
 		}
 	};
 	using message = data_structure::intrusive::shared_pointer<buffer, 0>;
 	class view final {
-	public:
-		struct low {
-			inline explicit low(view& rhs) noexcept {
-				_front = rhs._front;
-				_rear = rhs._rear;
-				_buffer = &*rhs._message;
-			}
-			size_type _front, _rear;
-			buffer* _buffer;
-		};
 	private:
 		using size_type = unsigned int;
 	public:
@@ -122,11 +112,13 @@ private:
 		inline auto size(void) const noexcept -> size_type {
 			return _rear - _front;
 		}
-
-		inline void set(view::low& rhs) noexcept {
-			_front = rhs._front;
-			_rear = rhs._rear;
-			_message.set(rhs._buffer);
+		inline auto data(void) noexcept -> message& {
+			return _message;
+		}
+		inline void set(buffer* buffer_, size_type front, size_type rear) noexcept {
+			_front = front;
+			_rear = rear;
+			_message.set(buffer_);
 		}
 		inline auto reset(void) noexcept {
 			_message.reset();
@@ -214,37 +206,48 @@ private:
 			return false;
 		}
 	};
-	class receive_queue final : protected data_structure::lockfree::queue<view::low> {
+	class receive_queue final {
+	private:
+		struct receive_data {
+			unsigned long long _key;
+			size_type _front, _rear;
+			buffer* _buffer;
+		};
 	public:
-		using base = data_structure::lockfree::queue<view::low>;
-	public:
-		inline void push(view view_) noexcept {
-			view::low low_view(view_);
-			emplace(low_view);
+		inline void push(unsigned long long key, view view_) noexcept {
+			receive_data receive_data_;
+			receive_data_._buffer = &*view_.data();
+			receive_data_._front = view_.front();
+			receive_data_._rear = view_.rear();
+			receive_data_._key = key;
+			_queue.emplace(receive_data_);
+			_InterlockedIncrement(&_size);
 			view_.reset();
 		}
-		inline auto pop(void) noexcept -> std::optional<view> {
-			std::optional<view::low> low_view = base::pop();
-			if (!low_view)
-				return std::nullopt;
-			view view_;
-			view_.set(*low_view);
-			return view_;
+		inline auto pop(void) noexcept -> data_structure::pair<unsigned long long, view> {
+			auto receive_data_ = _queue.pop();
+			data_structure::pair<unsigned long long, view> result;
+			if (receive_data_) {
+				result._first = receive_data_->_key;
+				result._second.set(receive_data_->_buffer, receive_data_->_front, receive_data_->_rear);
+				_InterlockedDecrement(&_size);
+			}
+			return result;
 		}
+	private:
+		data_structure::lockfree::queue<receive_data> _queue;
+	public:
+		volatile long _size;
 	};
-
 	struct session final {
 	private:
 		inline static unsigned long long _static_id = 0x10000;
 	public:
 		inline explicit session(void) noexcept {
-			auto& object_pool = data_structure::_thread_local::object_pool<buffer>::instance();
-			buffer* receive_buffer_;
-			if (object_pool.empty())
-				receive_buffer_ = &object_pool.allocate();
-			else
-				receive_buffer_ = &object_pool.acquire();
-			_receive_buffer = receive_buffer_;
+			auto& memory_pool = data_structure::_thread_local::memory_pool<buffer>::instance();
+			buffer* receive_buffer = &memory_pool.allocate();
+			receive_buffer->initialize();
+			_receive_message = message(receive_buffer);
 		};
 		inline explicit session(session const&) noexcept = delete;
 		inline explicit session(session&&) noexcept = delete;
@@ -257,83 +260,96 @@ private:
 			_static_id += 0x10000;
 			_socket = std::move(socket);
 			_InterlockedExchange(&_send_flag, 0);
+			_InterlockedExchange(&_cancel_flag, 0);
+			_InterlockedIncrement(&_io_count);
+			_InterlockedAnd((long*)&_io_count, 0x7FFFFFFF);
 		}
-		inline void finalize(void) noexcept {
-			_receive_buffer->clear();
-			while (!_send_queue.empty())
-				_send_queue.pop();
-			_socket.close();
-			//_key._id = -1;
-		}
-		inline auto acquire(void) noexcept -> unsigned int {
-			return _InterlockedIncrement(&_io_count);
+		inline auto acquire(unsigned long long key) noexcept -> bool {
+			auto io_count = _InterlockedIncrement(&_io_count);
+			if ((0x80000000 & io_count) || _key != key)
+				return false;
+			return true;
 		}
 		inline bool release(void) noexcept {
-			return 0 == _InterlockedDecrement(&_io_count) && 0 == _InterlockedCompareExchange(&_io_count, 0x80000000, 0);
-		}
-	public:
-		inline void create_receive(void) noexcept {
-			auto& object_pool = data_structure::_thread_local::object_pool<buffer>::instance();
-			buffer* receive_buffer_;
-			if (object_pool.empty())
-				receive_buffer_ = &object_pool.allocate();
-			else
-				receive_buffer_ = &object_pool.acquire();
-			receive_buffer_->initialize();
-
-			memcpy(receive_buffer_->data(), _receive_buffer->data() + _receive_buffer->front(), _receive_buffer->size());
-			receive_buffer_->move_rear(_receive_buffer->size());
-			_receive_buffer = receive_buffer_;
-		}
-		inline bool receive(void) noexcept {
-			WSABUF buffer{ 8192 - _receive_buffer->rear(),  reinterpret_cast<char*>(_receive_buffer->data() + _receive_buffer->rear()) };
-			unsigned long flag = 0;
-			_recv_overlapped.clear();
-			int result = _socket.wsa_receive(&buffer, 1, &flag, _recv_overlapped);
-			if (!(SOCKET_ERROR == result && WSA_IO_PENDING != GetLastError()))
+			if (0 == _InterlockedDecrement(&_io_count) && 0 == _InterlockedCompareExchange(&_io_count, 0x80000000, 0)) {
+				_receive_message->clear();
+				while (!_send_queue.empty())
+					_send_queue.pop();
+				_socket.close();
 				return true;
+			}
 			return false;
 		}
-
-
-		inline bool ready_send(void) noexcept {
-			while (!_send_queue.empty() && 0 == InterlockedExchange(&_send_flag, 1)) {
-				if (!_send_queue.empty())
+		inline bool receive(void) noexcept {
+			if (0 == _cancel_flag) {
+				WSABUF wsa_buffer{ 8192 - _receive_message->rear(),  reinterpret_cast<char*>(_receive_message->data() + _receive_message->rear()) };
+				unsigned long flag = 0;
+				_recv_overlapped.clear();
+				int result = _socket.wsa_receive(&wsa_buffer, 1, &flag, _recv_overlapped);
+				if (result != SOCKET_ERROR || GetLastError() == WSA_IO_PENDING) { //동기io일때는 cancel flag 안해줘도됨
+					if (1 == _cancel_flag)
+						_socket.cancel_io_ex();
 					return true;
-				InterlockedExchange(&_send_flag, 0);
+				}
 			}
 			return false;
 		}
 		inline bool send(void) noexcept {
-			WSABUF wsa_buffer[512];
-			_send_size = 0;
-			for (auto& iter : _send_queue) {
-				wsa_buffer[_send_size].buf = reinterpret_cast<char*>(iter->data());
-				wsa_buffer[_send_size].len = iter->rear();
-				_send_size++;
+			if (1 == _cancel_flag) {
+				return false;
 			}
-			_send_overlapped.clear();
-			int result = _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped);
-			if (!(SOCKET_ERROR == result && WSA_IO_PENDING != GetLastError()))
-				return true;
+
+			while (!_send_queue.empty() && 0 == _InterlockedExchange(&_send_flag, 1)) {
+				if (_send_queue.empty())
+					_InterlockedExchange(&_send_flag, 0);
+				else {
+					WSABUF wsa_buffer[512];
+					_send_size = 0;
+					for (auto& iter : _send_queue) {
+						wsa_buffer[_send_size].buf = reinterpret_cast<char*>(iter->data());
+						wsa_buffer[_send_size].len = iter->rear();
+						_send_size++;
+					}
+					_send_overlapped.clear();
+					int result = _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped);
+					if (!(SOCKET_ERROR == result && WSA_IO_PENDING != GetLastError())) {
+						if (1 == _cancel_flag)
+							_socket.cancel_io_ex();
+						return true;
+					}
+					return false;
+				}
+			}
 			return false;
+		}
+		inline void cancel(void) noexcept {
+			_InterlockedExchange(&_cancel_flag, 1);
+			_socket.cancel_io_ex();
+		}
+	public:
+		inline void create_receive(void) noexcept {
+			buffer* receive_buffer = &data_structure::_thread_local::memory_pool<buffer>::instance().allocate();
+			receive_buffer->initialize();
+			memcpy(receive_buffer->data(), _receive_message->data() + _receive_message->front(), _receive_message->size());
+			receive_buffer->move_rear(_receive_message->size());
+			_receive_message = message(receive_buffer);
 		}
 		inline void finish_send(void) noexcept {
 			for (size_type index = 0; index < _send_size; ++index)
 				message message_ = _send_queue.pop();
 			_InterlockedExchange(&_send_flag, 0);
 		}
-
 	public:
 		unsigned long long _key;
 		system_component::network::socket _socket;
-		message _receive_buffer;
+		message _receive_message;
 		send_queue _send_queue;
 		system_component::input_output::overlapped _recv_overlapped;
 		system_component::input_output::overlapped _send_overlapped;
-		volatile unsigned int _io_count;
+		volatile unsigned int _io_count; // release_flag
 		volatile unsigned int _send_flag;
 		volatile unsigned int _send_size;
+		volatile unsigned int _cancel_flag;
 	};
 	class session_array final {
 	private:
@@ -424,9 +440,9 @@ public:
 public:
 	inline void start(void) noexcept { // concurrent_thread, worker_thread, ip, port, backlog_queue,   session_max
 		_complation_port.create(0);
-		_thread.emplace_back(&server::accept, CREATE_SUSPENDED, this);
-		for (size_type index = 0; index < 1; ++index)
-			_thread.emplace_back(&server::worker, 0, this);
+		_accept_thread.begin(&server::accept, CREATE_SUSPENDED, this);
+		for (size_type index = 0; index < 16; ++index)
+			_worker_thread.emplace_back(&server::worker, 0, this);
 
 		_session_array.initialize(10000);
 
@@ -439,10 +455,11 @@ public:
 		_listen_socket.bind(socket_address);
 		_listen_socket.listen(65535);
 
-		_thread[0].resume();
+		_accept_thread.resume();
 	}
 	inline void stop(void) noexcept {
-		//_listen_socket.close();
+		_listen_socket.close();
+		_accept_thread.wait_for_single(INFINITE);
 		//for (auto& iter : _session) {
 		//	iter._value._socket.close();
 		//	_session.release(iter._value);
@@ -469,17 +486,12 @@ public:
 			else {
 				session& session_ = *_session_array.acquire();
 				session_.initialize(std::move(socket));
-				session_.acquire(); //io증가
-				_InterlockedAnd((long*)&session_._io_count, 0x7FFFFFFF);//릴리즈
 
 				_complation_port.connect(session_._socket, reinterpret_cast<ULONG_PTR>(&session_));
 				on_create_session(session_._key);
 
-				if (false == session_.receive())
-					if (session_.release()) {
-						session_.finalize();
-						_session_array.release(&session_);
-					}
+				if (!session_.receive() && session_.release())
+					_session_array.release(&session_);
 			}
 		}
 	}
@@ -490,19 +502,19 @@ public:
 
 			if (0 != transferred) {
 				if (&session_._recv_overlapped.data() == overlapped) {
-					session_._receive_buffer->move_rear(transferred);
+					session_._receive_message->move_rear(transferred);
 
 					for (;;) {
-						if (sizeof(header) > session_._receive_buffer->size())
+						if (sizeof(header) > session_._receive_message->size())
 							break;
 						header header_;
-						session_._receive_buffer->peek(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
-						if (sizeof(header) + header_._size > session_._receive_buffer->size())
+						session_._receive_message->peek(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
+						if (sizeof(header) + header_._size > session_._receive_message->size())
 							break;
-						session_._receive_buffer->pop(sizeof(header));
+						session_._receive_message->pop(sizeof(header));
 
-						view view_(session_._receive_buffer, session_._receive_buffer->front(), session_._receive_buffer->front() + header_._size);
-						session_._receive_buffer->pop(header_._size);
+						view view_(session_._receive_message, session_._receive_message->front(), session_._receive_message->front() + header_._size);
+						session_._receive_message->pop(header_._size);
 						on_receive(session_._key, view_);
 					}
 
@@ -512,14 +524,12 @@ public:
 				}
 				else {
 					session_.finish_send();
-					if (session_.ready_send() && session_.send())
+					if (session_.send())
 						continue;
 				}
 			}
-			if (session_.release()) {
-				session_.finalize();
+			if (session_.release())
 				_session_array.release(&session_);
-			}
 		}
 	}
 public:
@@ -542,6 +552,10 @@ public:
 		header header_{ 8 };
 		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
 		*message_ << value;
+
+		if (rand() % 2 == 0)
+			do_destroy(key);
+
 		do_send(key, message_);
 	}
 	inline virtual void on_destroy_session(unsigned long long session_id) noexcept {
@@ -550,36 +564,32 @@ public:
 public:
 	inline void do_send(unsigned long long key, message& message_) noexcept {
 		session& session_ = _session_array[key];
-		auto io_count = session_.acquire();
-		if ((0x80000000 & io_count) || session_._key != key)
-			session_.release();
-
-		session_._send_queue.push(message_);
-		if (session_.ready_send() && session_.send())
-			return;
-		if (session_.release()) {
-			session_.finalize();
-			_session_array.release(&session_);
+		if (session_.acquire(key)) {
+			session_._send_queue.push(message_);
+			if (session_.send())
+				return;
 		}
+		if (session_.release())
+			_session_array.release(&session_);
 	}
-	inline void do_destroy(unsigned long long session_id) noexcept {
-
+	inline void do_destroy(unsigned long long key) noexcept {
+		session& session_ = _session_array[key];
+		if (session_.acquire(key))
+			session_.cancel();
+		if (session_.release())
+			_session_array.release(&session_);
 	}
 public:
-	inline auto make_message(void) noexcept -> message {
-		auto& object_pool = data_structure::_thread_local::object_pool<buffer>::instance();
-		message message_;
-		if (object_pool.empty())
-			message_ = &object_pool.allocate();
-		else
-			message_ = &object_pool.acquire();
+	inline static auto make_message(void) noexcept -> message {
+		auto& memory_pool = data_structure::_thread_local::memory_pool<buffer>::instance();
+		message message_(&memory_pool.allocate());
 		message_->initialize();
 		return message_;
 	}
 private:
 	system_component::input_output::completion_port _complation_port;
-	data_structure::vector<system_component::multi::thread> _thread;
 	system_component::network::socket _listen_socket;
-
+	system_component::multi::thread _accept_thread;
+	data_structure::vector<system_component::multi::thread> _worker_thread;
 	session_array _session_array;
 };

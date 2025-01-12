@@ -53,10 +53,6 @@ namespace data_structure::intrusive {
 			: _node(rhs._node) {
 			rhs._node = nullptr;
 		};
-		inline auto operator=(type* value) noexcept -> shared_pointer& {
-			shared_pointer(value).swap(*this);
-			return *this;
-		}
 		inline auto operator=(shared_pointer const& rhs) noexcept -> shared_pointer& {
 			shared_pointer(rhs).swap(*this);
 			return *this;

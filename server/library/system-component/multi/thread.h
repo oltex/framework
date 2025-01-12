@@ -21,9 +21,7 @@ namespace system_component::multi {
 			return &invoke<tuple, index...>;
 		}
 	public:
-		inline explicit thread(void) noexcept
-			: object(GetCurrentThread()) {
-		}
+		inline explicit thread(void) noexcept = default;
 		template <typename function, typename... argument>
 		inline explicit thread(function&& func, unsigned int flag, argument&&... arg) noexcept {
 			using tuple = std::tuple<std::decay_t<function>, std::decay_t<argument>...>;
@@ -47,6 +45,18 @@ namespace system_component::multi {
 		};
 		inline virtual ~thread(void) noexcept override = default;
 	public:
+		template <typename function, typename... argument>
+		inline void begin(function&& func, unsigned int flag, argument&&... arg) noexcept {
+			using tuple = std::tuple<std::decay_t<function>, std::decay_t<argument>...>;
+			auto copy = std::make_unique<tuple>(std::forward<function>(func), std::forward<argument>(arg)...);
+			constexpr auto proc = make<tuple>(std::make_index_sequence<1 + sizeof...(argument)>());
+			_handle = (HANDLE)_beginthreadex(nullptr, 0, proc, copy.get(), flag, 0);
+
+			if (_handle)
+				copy.release();
+			else
+				__debugbreak();
+		}
 		inline void join(unsigned long milli_second) noexcept {
 			WaitForSingleObject(_handle, milli_second);
 		}
@@ -84,12 +94,6 @@ namespace system_component::multi {
 		}
 		inline static auto current_id(void) noexcept {
 			return GetCurrentThreadId();
-		}
-		inline static auto wait_for_multiple(data_structure::vector<thread>& vector, bool const wait_all, unsigned long const milli_second) noexcept -> unsigned long {
-			HANDLE handle[128];
-			for (unsigned int index = 0; index < vector.size(); ++index)
-				handle[index] = vector[index].data();
-			return WaitForMultipleObjects(vector.size(), handle, wait_all, milli_second);
 		}
 	};
 }

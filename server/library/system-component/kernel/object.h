@@ -1,7 +1,7 @@
 #pragma once
+#include "../input_output/overlapped.h"
 #include <Windows.h>
 #include <concepts>
-#include "../../data-strucutre/vector.h"
 
 namespace system_component::kernel {
 	class object {
@@ -32,25 +32,34 @@ namespace system_component::kernel {
 			CloseHandle(_handle);
 			_handle = INVALID_HANDLE_VALUE;
 		}
-		inline auto wait_single(unsigned long const milli_second) noexcept -> unsigned long {
+		inline void cancel_io(void) const noexcept {
+			CancelIo(_handle);
+		}
+		inline void cancel_io_ex(void) const noexcept {
+			CancelIoEx(_handle, nullptr);
+		}
+		inline void cancel_io_ex(input_output::overlapped overlapped) const noexcept {
+			CancelIoEx(_handle, &overlapped.data());
+		}
+		inline auto wait_for_single(unsigned long const milli_second) noexcept -> unsigned long {
 			return WaitForSingleObject(_handle, milli_second);
 		}
-		inline auto wait_single_ex(unsigned long const milli_second, bool alertable) noexcept -> unsigned long {
+		inline auto wait_for_single_ex(unsigned long const milli_second, bool alertable) noexcept -> unsigned long {
 			return WaitForSingleObjectEx(_handle, milli_second, alertable);
 		}
 		inline auto data(void) noexcept -> HANDLE& {
 			return _handle;
 		}
 	public:
-		inline static auto wait_multiple(unsigned long const count, HANDLE* handle, bool const wait_all, unsigned long const milli_second) noexcept -> unsigned long {
+		inline static auto wait_for_multiple(unsigned long const count, HANDLE* handle, bool const wait_all, unsigned long const milli_second) noexcept -> unsigned long {
 			return WaitForMultipleObjects(count, handle, wait_all, milli_second);
 		}
 		template<std::derived_from<object>... object_>
-		inline static auto wait_multiple(bool const wait_all, unsigned long const milli_second, object_&... object) noexcept -> unsigned long {
+		inline static auto wait_for_multiple(bool const wait_all, unsigned long const milli_second, object_&... object) noexcept -> unsigned long {
 			HANDLE handle[] = { object.data()... };
 			return WaitForMultipleObjects(sizeof...(object_), handle, wait_all, milli_second);
 		}
-		inline static auto wait_multiple_ex(unsigned long const count, HANDLE* handle, bool const wait_all, unsigned long const milli_second, bool alertable) noexcept {
+		inline static auto wait_for_multiple_ex(unsigned long const count, HANDLE* handle, bool const wait_all, unsigned long const milli_second, bool alertable) noexcept {
 			return WaitForMultipleObjectsEx(count, handle, wait_all, milli_second, alertable);
 		}
 	protected:

@@ -50,6 +50,9 @@
     <ClInclude Include="library\data-strucutre\intrusive\shared_pointer.h">
       <Filter>library\data-strucutre\intrusive</Filter>
     </ClInclude>
+    <ClInclude Include="library\data-strucutre\thread-local\memory_pool.h">
+      <Filter>library\data-strucutre\thread-local</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="library">

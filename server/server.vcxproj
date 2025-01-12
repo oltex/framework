@@ -157,6 +157,7 @@
     <ClInclude Include="library\data-strucutre\lockfree\queue.h" />
     <ClInclude Include="library\data-strucutre\pair.h" />
     <ClInclude Include="library\data-strucutre\serialize_buffer.h" />
+    <ClInclude Include="library\data-strucutre\thread-local\memory_pool.h" />
     <ClInclude Include="library\data-strucutre\thread-local\object_pool.h" />
     <ClInclude Include="library\data-strucutre\vector.h" />
     <ClInclude Include="library\design-pattern\thread-local\singleton.h" />
