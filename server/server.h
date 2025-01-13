@@ -286,8 +286,8 @@ private:
 				unsigned long flag = 0;
 				_recv_overlapped.clear();
 				int result = _socket.wsa_receive(&wsa_buffer, 1, &flag, _recv_overlapped);
-				if (result != SOCKET_ERROR || GetLastError() == WSA_IO_PENDING) { //µø±‚io¿œ∂ß¥¬ cancel flag æ»«ÿ¡‡µµµ 
-					if (1 == _cancel_flag)
+				if (result != SOCKET_ERROR || GetLastError() == WSA_IO_PENDING) {
+					if (result == SOCKET_ERROR && 1 == _cancel_flag)
 						_socket.cancel_io_ex();
 					return true;
 				}
@@ -312,7 +312,7 @@ private:
 					}
 					_send_overlapped.clear();
 					int result = _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped);
-					if (!(SOCKET_ERROR == result && WSA_IO_PENDING != GetLastError())) {
+					if (result != SOCKET_ERROR || GetLastError() == WSA_IO_PENDING) {
 						if (1 == _cancel_flag)
 							_socket.cancel_io_ex();
 						return true;

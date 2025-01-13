@@ -155,11 +155,10 @@ namespace system_component::network {
 			if (SOCKET_ERROR == result) {
 				switch (GetLastError()) {
 				case WSA_IO_PENDING:
-					break;
 				case WSAECONNRESET:
 				case WSAECONNABORTED:
-				case 10004:
-				case 10022:
+				case WSAEINTR:
+				case WSAEINVAL:
 					break;
 				case WSAENOTSOCK:
 				default:
@@ -210,7 +209,6 @@ namespace system_component::network {
 			if (SOCKET_ERROR == result) {
 				switch (GetLastError()) {
 				case WSA_IO_PENDING:
-					break;
 				case WSAECONNRESET:
 				case WSAECONNABORTED:
 					break;
