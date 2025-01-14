@@ -18,7 +18,7 @@ namespace data_structure {
 				emplace_back(iter);
 		}
 		inline explicit vector(iterator const& begin, iterator const& end) noexcept {
-			reserve(end - begin);
+			reserve(static_cast<size_type>(end - begin));
 			for (auto iter = begin; iter != end; ++iter)
 				emplace_back(*iter);
 		}

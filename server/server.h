@@ -9,6 +9,9 @@
 #include "library/data-strucutre/thread-local/memory_pool.h"
 #include "library/data-strucutre/intrusive/shared_pointer.h"
 #include "library/data-strucutre/lockfree/queue.h"
+
+#include "library/design-pattern/singleton.h"
+
 #include <optional>
 #include <iostream>
 #include <intrin.h>
@@ -16,8 +19,9 @@
 template<typename type>
 concept string_size = std::_Is_any_of_v<type, unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long>;
 
-class server final {
+class server final : public design_pattern::singleton<server> {
 private:
+	friend class design_pattern::singleton<server>;
 	using size_type = unsigned int;
 	using byte = unsigned char;
 
@@ -426,7 +430,7 @@ private:
 		node* _array;
 		size_type _size;
 	};
-public:
+private:
 	inline explicit server(void) noexcept {
 		system_component::network::window_socket_api::start_up();
 	};

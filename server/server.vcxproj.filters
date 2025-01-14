@@ -32,9 +32,6 @@
     <ClInclude Include="library\data-strucutre\vector.h">
       <Filter>library\data-strucutre</Filter>
     </ClInclude>
-    <ClInclude Include="library\data-strucutre\thread-local\object_pool.h">
-      <Filter>library\data-strucutre\thread-local</Filter>
-    </ClInclude>
     <ClInclude Include="library\data-strucutre\lockfree\memory_pool.h">
       <Filter>library\data-strucutre\lockfree</Filter>
     </ClInclude>
@@ -52,6 +49,28 @@
     </ClInclude>
     <ClInclude Include="library\data-strucutre\thread-local\memory_pool.h">
       <Filter>library\data-strucutre\thread-local</Filter>
+    </ClInclude>
+    <ClInclude Include="command.h" />
+    <ClInclude Include="library\design-pattern\singleton.h">
+      <Filter>library\design-pattern</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-strucutre\unordered_map.h">
+      <Filter>library\data-strucutre</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-strucutre\hash.h">
+      <Filter>library\data-strucutre</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-strucutre\list.h">
+      <Filter>library\data-strucutre</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-strucutre\memory_pool.h">
+      <Filter>library\data-strucutre</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\file.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="library\utility\parser.h">
+      <Filter>library\utility</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -91,5 +110,12 @@
     <Filter Include="library\data-strucutre\intrusive">
       <UniqueIdentifier>{e9ac73de-010a-4402-a086-5dfa08238bae}</UniqueIdentifier>
     </Filter>
+    <Filter Include="library\utility">
+      <UniqueIdentifier>{5af8e7e7-d5ae-4ed0-8ca7-52e16751cae6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="command.server.h" />
+    <None Include="command.default.h" />
   </ItemGroup>
 </Project>

@@ -1,7 +1,13 @@
-#include "server.h"
+#include "command.server.h"
+#include "command.default.h"
 
 int main(void) noexcept {
-	server _server;
-	_server.start();
+	command_default();
+	command_server();
+
+	command& _command = command::instance();
+	command::parameter param("server.cfg");
+	_command.execute("include", &param);
+
 	Sleep(INFINITE);
 }

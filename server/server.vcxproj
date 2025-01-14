@@ -106,7 +106,7 @@
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,7 +139,7 @@
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -152,15 +152,21 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="command.h" />
+    <ClInclude Include="library\data-strucutre\hash.h" />
     <ClInclude Include="library\data-strucutre\intrusive\shared_pointer.h" />
+    <ClInclude Include="library\data-strucutre\list.h" />
     <ClInclude Include="library\data-strucutre\lockfree\memory_pool.h" />
     <ClInclude Include="library\data-strucutre\lockfree\queue.h" />
+    <ClInclude Include="library\data-strucutre\memory_pool.h" />
     <ClInclude Include="library\data-strucutre\pair.h" />
     <ClInclude Include="library\data-strucutre\serialize_buffer.h" />
     <ClInclude Include="library\data-strucutre\thread-local\memory_pool.h" />
-    <ClInclude Include="library\data-strucutre\thread-local\object_pool.h" />
+    <ClInclude Include="library\data-strucutre\unordered_map.h" />
     <ClInclude Include="library\data-strucutre\vector.h" />
+    <ClInclude Include="library\design-pattern\singleton.h" />
     <ClInclude Include="library\design-pattern\thread-local\singleton.h" />
+    <ClInclude Include="library\system-component\file.h" />
     <ClInclude Include="library\system-component\input_output\completion_port.h" />
     <ClInclude Include="library\system-component\input_output\overlapped.h" />
     <ClInclude Include="library\system-component\kernel\object.h" />
@@ -168,7 +174,12 @@
     <ClInclude Include="library\system-component\network\socket.h" />
     <ClInclude Include="library\system-component\network\socket_address.h" />
     <ClInclude Include="library\system-component\network\window_socket_api.h" />
+    <ClInclude Include="library\utility\parser.h" />
     <ClInclude Include="server.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="command.default.h" />
+    <None Include="command.server.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
