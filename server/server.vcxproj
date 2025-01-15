@@ -152,7 +152,6 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="command.h" />
     <ClInclude Include="library\data-strucutre\hash.h" />
     <ClInclude Include="library\data-strucutre\intrusive\shared_pointer.h" />
     <ClInclude Include="library\data-strucutre\list.h" />
@@ -176,10 +175,6 @@
     <ClInclude Include="library\system-component\network\window_socket_api.h" />
     <ClInclude Include="library\utility\parser.h" />
     <ClInclude Include="server.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="command.default.h" />
-    <None Include="command.server.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

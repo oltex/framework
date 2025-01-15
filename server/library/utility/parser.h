@@ -48,9 +48,7 @@ namespace utility {
 							if (true == encoding && begin_index != index)
 								item.emplace_back(std::string(buffer + begin_index, index - begin_index));
 							if (!item.empty()) {
-								auto res = _parsing.emplace(std::piecewise_construct, std::forward_as_tuple(item[0]), std::forward_as_tuple());
-								for (size_type i = 1; i < item.size(); ++i)
-									res.first->second.emplace_back(item[i]);
+								_parsing.emplace_back(item);
 								item.clear();
 							}
 							begin_index = index + 1;
@@ -82,6 +80,6 @@ namespace utility {
 			return _parsing.end();
 		}
 	private:
-		std::unordered_map<std::string, data_structure::vector<std::string>> _parsing;
+		std::list<data_structure::vector<std::string>> _parsing;
 	};
 }

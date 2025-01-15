@@ -9,12 +9,16 @@
 #include "library/data-strucutre/thread-local/memory_pool.h"
 #include "library/data-strucutre/intrusive/shared_pointer.h"
 #include "library/data-strucutre/lockfree/queue.h"
+#include "library/data-strucutre/unordered_map.h"
 
 #include "library/design-pattern/singleton.h"
+
+#include "library/utility/parser.h"
 
 #include <optional>
 #include <iostream>
 #include <intrin.h>
+#include <functional>
 
 template<typename type>
 concept string_size = std::_Is_any_of_v<type, unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long>;
@@ -24,7 +28,7 @@ private:
 	friend class design_pattern::singleton<server>;
 	using size_type = unsigned int;
 	using byte = unsigned char;
-
+private:
 	struct header final {
 		unsigned short _size;
 	};
@@ -333,6 +337,7 @@ private:
 	public:
 		inline void create_receive(void) noexcept {
 			buffer* receive_buffer = &data_structure::_thread_local::memory_pool<buffer>::instance().allocate();
+
 			receive_buffer->initialize();
 			memcpy(receive_buffer->data(), _receive_message->data() + _receive_message->front(), _receive_message->size());
 			receive_buffer->move_rear(_receive_message->size());
@@ -393,6 +398,9 @@ private:
 			_head = reinterpret_cast<unsigned long long>(_array);
 		}
 		inline void finalize(void) noexcept {
+			for (size_type index = 0; index < _size; ++index)
+				_array[index]._value.~session();
+			free(_array);
 		}
 	public:
 		inline auto acquire(void) noexcept -> session* {
@@ -431,8 +439,115 @@ private:
 		size_type _size;
 	};
 private:
+	class command final {
+	public:
+		class parameter final {
+		public:
+			template<typename... argument>
+			inline explicit parameter(argument&&... arg) noexcept {
+				(_argument.emplace_back(std::forward<argument>(arg)), ...);
+			}
+			inline explicit parameter(data_structure::vector<std::string>& argument) noexcept
+				: _argument(argument) {
+			}
+			inline explicit parameter(parameter const& rhs) noexcept = delete;
+			inline explicit parameter(parameter&& rhs) noexcept = delete;
+			inline auto operator=(parameter const& rhs) noexcept -> parameter & = delete;
+			inline auto operator=(parameter&& rhs) noexcept -> parameter & = delete;
+			inline ~parameter(void) noexcept = default;
+		public:
+			inline auto get_string(size_type index) noexcept -> std::string& {
+				return _argument[index];
+			}
+			inline auto get_int(size_type index) noexcept -> int {
+				return std::stoi(_argument[index]);
+			}
+			inline auto get_float(size_type index) noexcept -> float {
+				return std::stof(_argument[index]);
+			}
+			inline auto get_bool(size_type index) noexcept -> bool {
+				std::string& arg = _argument[index];
+				if (arg == "true" || arg == "on" || arg == "1")
+					return true;
+				return false;
+			}
+		private:
+			data_structure::vector<std::string> _argument;
+		};
+	public:
+		inline explicit command(void) noexcept {
+			add("include", [&](command::parameter* param) noexcept -> int {
+				std::string path = param->get_string(1);
+				utility::parser parser(std::wstring(path.begin(), path.end()));
+
+				for (auto& iter : parser) {
+					command::parameter param(iter);
+					execute(iter[0], &param);
+				}
+				return 0;
+				});
+		};
+		inline explicit command(command const& rhs) noexcept = delete;
+		inline explicit command(command&& rhs) noexcept = delete;
+		inline auto operator=(command const& rhs) noexcept -> command & = delete;
+		inline auto operator=(command&& rhs) noexcept -> command & = delete;
+		inline ~command(void) noexcept = default;
+	public:
+		inline void add(std::string_view name, std::function<int(parameter*)> function) noexcept {
+			_function.emplace(name.data(), function);
+		}
+		inline int execute(std::string name, parameter* par) noexcept {
+			auto res = _function.find(name.data());
+			if (res == _function.end())
+				return 0;
+			return res->_second(par);
+		}
+	private:
+		data_structure::unordered_map<std::string, std::function<int(parameter*)>> _function;
+	};
+	class monitor final {
+	private:
+		//std::function<void(void)>
+	};
+private:
 	inline explicit server(void) noexcept {
 		system_component::network::window_socket_api::start_up();
+
+		_command.add("iocp_concurrent", [&](command::parameter* param) noexcept -> int {
+			_concurrent_thread_count = param->get_int(1);
+			return 0;
+			});
+		_command.add("iocp_worker", [&](command::parameter* param) noexcept -> int {
+			_worker_thread_count = param->get_int(1);
+			return 0;
+			});
+		_command.add("session_max", [&](command::parameter* param) noexcept -> int {
+			_session_array_max = param->get_int(1);
+			return 0;
+			});
+		_command.add("tcp_ip", [&](command::parameter* param) noexcept -> int {
+			_listen_socket_ip = param->get_string(1);
+			return 0;
+			});
+		_command.add("tcp_port", [&](command::parameter* param) noexcept -> int {
+			_listen_socket_port = param->get_int(1);
+			return 0;
+			});
+		_command.add("tcp_backlog", [&](command::parameter* param) noexcept -> int {
+			_listen_socket_backlog = param->get_int(1);
+			return 0;
+			});
+		_command.add("server_start", [&](command::parameter* param) noexcept -> int {
+			start();
+			return 0;
+			});
+		_command.add("server_stop", [&](command::parameter* param) noexcept -> int {
+			stop();
+			return 0;
+			});
+
+		 command::parameter param("include", "server.cfg");
+		_command.execute("include", &param);
 	};
 	inline explicit server(server const& rhs) noexcept = delete;
 	inline explicit server(server&& rhs) noexcept = delete;
@@ -442,22 +557,22 @@ private:
 		system_component::network::window_socket_api::clean_up();
 	};
 public:
-	inline void start(void) noexcept { // concurrent_thread, worker_thread, ip, port, backlog_queue,   session_max
-		_complation_port.create(0);
+	inline void start(void) noexcept {
+		_complation_port.create(_concurrent_thread_count);
 		_accept_thread.begin(&server::accept, CREATE_SUSPENDED, this);
-		for (size_type index = 0; index < 16; ++index)
+		for (size_type index = 0; index < _worker_thread_count; ++index)
 			_worker_thread.emplace_back(&server::worker, 0, this);
 
-		_session_array.initialize(10000);
+		_session_array.initialize(_session_array_max);
 
 		system_component::network::socket_address_ipv4 socket_address;
-		socket_address.set_address(INADDR_ANY);
-		socket_address.set_port(6000);
+		socket_address.set_address(_listen_socket_ip.c_str());
+		socket_address.set_port(_listen_socket_port);
 		_listen_socket.create(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		_listen_socket.set_linger(1, 0);
 		_listen_socket.set_send_buffer(0);
 		_listen_socket.bind(socket_address);
-		_listen_socket.listen(65535);
+		_listen_socket.listen(_listen_socket_backlog);
 
 		_accept_thread.resume();
 	}
@@ -479,7 +594,6 @@ public:
 
 		//_completion.close();
 	}
-public:
 	inline void accept(void) noexcept {
 		for (;;) {
 			auto [socket, socket_address] = _listen_socket.accept();
@@ -557,15 +671,14 @@ public:
 		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
 		*message_ << value;
 
-		if (rand() % 2 == 0)
-			do_destroy(key);
+		//if (rand() % 2 == 0)
+		//	do_destroy(key);
 
 		do_send(key, message_);
 	}
 	inline virtual void on_destroy_session(unsigned long long session_id) noexcept {
 
 	}
-public:
 	inline void do_send(unsigned long long key, message& message_) noexcept {
 		session& session_ = _session_array[key];
 		if (session_.acquire(key)) {
@@ -596,4 +709,16 @@ private:
 	system_component::multi::thread _accept_thread;
 	data_structure::vector<system_component::multi::thread> _worker_thread;
 	session_array _session_array;
+public:
+	size_type _concurrent_thread_count = 0;
+	size_type _worker_thread_count = 0;
+	size_type _session_array_max = 0;
+	std::string _listen_socket_ip;
+	size_type _listen_socket_port = 0;
+	size_type _listen_socket_backlog = 0;
+
+	command _command;
+	monitor _monitor;
+
+	//function(unsigned long long key, view& view_);
 };
