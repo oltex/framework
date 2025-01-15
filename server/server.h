@@ -361,7 +361,7 @@ private:
 		send_queue _send_queue;
 		system_component::input_output::overlapped _recv_overlapped;
 		system_component::input_output::overlapped _send_overlapped;
-		volatile unsigned int _io_count; // release_flag
+		volatile unsigned int _io_count = 0x80000000; // release_flag
 		volatile unsigned int _send_flag;
 		volatile unsigned int _send_size;
 		volatile unsigned int _cancel_flag;
@@ -565,9 +565,9 @@ private:
 			_accept_thread.begin(&server::accept, CREATE_SUSPENDED, this);
 			for (size_type index = 0; index < _worker_thread_count; ++index)
 				_worker_thread.emplace_back(&server::worker, 0, this);
+			_session_array.initialize(_session_array_max);
 			_send_thread.begin(&server::send, 0, this);
 
-			_session_array.initialize(_session_array_max);
 			system_component::network::socket_address_ipv4 socket_address;
 			socket_address.set_address(_listen_socket_ip.c_str());
 			socket_address.set_port(_listen_socket_port);
@@ -668,8 +668,8 @@ private:
 				else {
 					session_.finish_send();
 					_interlockedadd((volatile long*)&_send_tps, session_._send_size);
-					if (session_.send())
-						continue;
+					//if (session_.send())
+					//	continue;
 				}
 			}
 			if (session_.release()) {
@@ -686,8 +686,9 @@ private:
 				"accept tps : %u\n"\
 				"session count : %u\n"\
 				"receive tps : %u\n"\
-				"send tps : %u\n",
-				_accept_total_count, _accept_tps, _session_count, _receive_tps, _send_tps);
+				"send tps : %u\n"\
+				"i : %d",
+				_accept_total_count, _accept_tps, _session_count, _receive_tps, _send_tps, _i);
 			_accept_tps = 0;
 			_receive_tps = 0;
 			_send_tps = 0;
@@ -704,12 +705,13 @@ private:
 						continue;
 				}
 				if (iter._value.release()) {
+					_i++;
 					on_destroy_session(iter._value._key);
 					_InterlockedDecrement(&_session_count);
 					_session_array.release(&iter._value);
 				}
 			}
-			Sleep(20);
+			//Sleep(20);
 		}
 	}
 public:
@@ -745,8 +747,8 @@ public:
 		session& session_ = _session_array[key];
 		if (session_.acquire(key)) {
 			session_._send_queue.push(message_);
-			if (session_.send())
-				return;
+			//if (session_.send())
+			//	return;
 		}
 		if (session_.release()) {
 			on_destroy_session(session_._key);
@@ -797,4 +799,6 @@ public:
 	size_type _accept_tps = 0;
 	size_type _receive_tps = 0;
 	size_type _send_tps = 0;
+
+	size_type _i = 0;
 };
