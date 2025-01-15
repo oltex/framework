@@ -22,7 +22,7 @@ namespace utility {
 			auto size = file.get_size_ex().QuadPart;
 
 			char* buffer = reinterpret_cast<char*>(malloc(sizeof(char) * size + 1));
-			file.read(buffer, size);
+			file.read(buffer, static_cast<unsigned long>(size));
 			buffer[size] = 0;
 
 			data_structure::vector<std::string> item;

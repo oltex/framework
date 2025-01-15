@@ -26,31 +26,32 @@ concept string_size = std::_Is_any_of_v<type, unsigned char, unsigned short, uns
 class server final : public design_pattern::singleton<server> {
 private:
 	friend class design_pattern::singleton<server>;
+	friend class command;
 	using size_type = unsigned int;
 	using byte = unsigned char;
 private:
 	struct header final {
 		unsigned short _size;
 	};
-	class buffer final : public data_structure::intrusive::shared_pointer_hook<0>, public data_structure::serialize_buffer {
+	class packet final : public data_structure::intrusive::shared_pointer_hook<0>, public data_structure::serialize_buffer {
 	public:
-		inline explicit buffer(void) noexcept = delete;
-		inline explicit buffer(buffer const& rhs) noexcept = delete;
-		inline explicit buffer(buffer&& rhs) noexcept = delete;
-		inline auto operator=(buffer const& rhs) noexcept -> buffer & = delete;
-		inline auto operator=(buffer&& rhs) noexcept -> buffer & = delete;
-		inline ~buffer(void) noexcept = delete;
+		inline explicit packet(void) noexcept = delete;
+		inline explicit packet(packet const& rhs) noexcept = delete;
+		inline explicit packet(packet&& rhs) noexcept = delete;
+		inline auto operator=(packet const& rhs) noexcept -> packet & = delete;
+		inline auto operator=(packet&& rhs) noexcept -> packet & = delete;
+		inline ~packet(void) noexcept = delete;
 	public:
 		inline void initialize(void) noexcept {
 			_front = 0;
 			_rear = 0;
 		}
-		friend inline static void destructor(buffer* rhs) {
-			auto& memory_pool = data_structure::_thread_local::memory_pool<buffer>::instance();
+		friend inline static void destructor(packet* rhs) {
+			auto& memory_pool = data_structure::_thread_local::memory_pool<packet>::instance();
 			memory_pool.deallocate(*rhs);
 		}
 	};
-	using message = data_structure::intrusive::shared_pointer<buffer, 0>;
+	using message = data_structure::intrusive::shared_pointer<packet, 0>;
 	class view final {
 	private:
 		using size_type = unsigned int;
@@ -123,10 +124,10 @@ private:
 		inline auto data(void) noexcept -> message& {
 			return _message;
 		}
-		inline void set(buffer* buffer_, size_type front, size_type rear) noexcept {
+		inline void set(packet* packet_, size_type front, size_type rear) noexcept {
 			_front = front;
 			_rear = rear;
-			_message.set(buffer_);
+			_message.set(packet_);
 		}
 		inline auto reset(void) noexcept {
 			_message.reset();
@@ -136,7 +137,7 @@ private:
 		message _message;
 	};
 
-	class send_queue final : protected data_structure::lockfree::queue<buffer*> {
+	class send_queue final : protected data_structure::lockfree::queue<packet*> {
 	public:
 		inline explicit send_queue(void) noexcept = default;
 		inline explicit send_queue(send_queue const& rhs) noexcept = default;
@@ -154,7 +155,7 @@ private:
 				: _node(rhs._node) {
 			}
 		public:
-			inline auto operator*(void) const noexcept -> buffer*& {
+			inline auto operator*(void) const noexcept -> packet*& {
 				return _node->_value;
 			}
 			inline auto operator++(void) noexcept -> iterator& {
@@ -219,12 +220,12 @@ private:
 		struct receive_data {
 			unsigned long long _key;
 			size_type _front, _rear;
-			buffer* _buffer;
+			packet* _packet;
 		};
 	public:
 		inline void push(unsigned long long key, view view_) noexcept {
 			receive_data receive_data_;
-			receive_data_._buffer = &*view_.data();
+			receive_data_._packet = &*view_.data();
 			receive_data_._front = view_.front();
 			receive_data_._rear = view_.rear();
 			receive_data_._key = key;
@@ -237,7 +238,7 @@ private:
 			data_structure::pair<unsigned long long, view> result;
 			if (receive_data_) {
 				result._first = receive_data_->_key;
-				result._second.set(receive_data_->_buffer, receive_data_->_front, receive_data_->_rear);
+				result._second.set(receive_data_->_packet, receive_data_->_front, receive_data_->_rear);
 				_InterlockedDecrement(&_size);
 			}
 			return result;
@@ -247,15 +248,16 @@ private:
 	public:
 		volatile long _size;
 	};
-	struct session final {
+	class session final {
 	private:
 		inline static unsigned long long _static_id = 0x10000;
 	public:
-		inline explicit session(void) noexcept {
-			auto& memory_pool = data_structure::_thread_local::memory_pool<buffer>::instance();
-			buffer* receive_buffer = &memory_pool.allocate();
-			receive_buffer->initialize();
-			_receive_message = message(receive_buffer);
+		inline explicit session(size_type const index) noexcept
+			: _key(index) {
+			auto& memory_pool = data_structure::_thread_local::memory_pool<packet>::instance();
+			packet* receive_packet = &memory_pool.allocate();
+			receive_packet->initialize();
+			_receive_message = message(receive_packet);
 		};
 		inline explicit session(session const&) noexcept = delete;
 		inline explicit session(session&&) noexcept = delete;
@@ -271,6 +273,12 @@ private:
 			_InterlockedExchange(&_cancel_flag, 0);
 			_InterlockedIncrement(&_io_count);
 			_InterlockedAnd((long*)&_io_count, 0x7FFFFFFF);
+		}
+		inline auto acquire(void) noexcept -> bool {
+			auto io_count = _InterlockedIncrement(&_io_count);
+			if ((0x80000000 & io_count))
+				return false;
+			return true;
 		}
 		inline auto acquire(unsigned long long key) noexcept -> bool {
 			auto io_count = _InterlockedIncrement(&_io_count);
@@ -303,29 +311,27 @@ private:
 			return false;
 		}
 		inline bool send(void) noexcept {
-			if (1 == _cancel_flag) {
-				return false;
-			}
-
-			while (!_send_queue.empty() && 0 == _InterlockedExchange(&_send_flag, 1)) {
-				if (_send_queue.empty())
-					_InterlockedExchange(&_send_flag, 0);
-				else {
-					WSABUF wsa_buffer[512];
-					_send_size = 0;
-					for (auto& iter : _send_queue) {
-						wsa_buffer[_send_size].buf = reinterpret_cast<char*>(iter->data());
-						wsa_buffer[_send_size].len = iter->rear();
-						_send_size++;
+			if (0 == _cancel_flag) {
+				while (!_send_queue.empty() && 0 == _InterlockedExchange(&_send_flag, 1)) {
+					if (_send_queue.empty())
+						_InterlockedExchange(&_send_flag, 0);
+					else {
+						WSABUF wsa_buffer[512];
+						_send_size = 0;
+						for (auto& iter : _send_queue) {
+							wsa_buffer[_send_size].buf = reinterpret_cast<char*>(iter->data());
+							wsa_buffer[_send_size].len = iter->rear();
+							_send_size++;
+						}
+						_send_overlapped.clear();
+						int result = _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped);
+						if (result != SOCKET_ERROR || GetLastError() == WSA_IO_PENDING) {
+							if (1 == _cancel_flag)
+								_socket.cancel_io_ex();
+							return true;
+						}
+						return false;
 					}
-					_send_overlapped.clear();
-					int result = _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped);
-					if (result != SOCKET_ERROR || GetLastError() == WSA_IO_PENDING) {
-						if (1 == _cancel_flag)
-							_socket.cancel_io_ex();
-						return true;
-					}
-					return false;
 				}
 			}
 			return false;
@@ -336,12 +342,12 @@ private:
 		}
 	public:
 		inline void create_receive(void) noexcept {
-			buffer* receive_buffer = &data_structure::_thread_local::memory_pool<buffer>::instance().allocate();
+			packet* receive_packet = &data_structure::_thread_local::memory_pool<packet>::instance().allocate();
 
-			receive_buffer->initialize();
-			memcpy(receive_buffer->data(), _receive_message->data() + _receive_message->front(), _receive_message->size());
-			receive_buffer->move_rear(_receive_message->size());
-			_receive_message = message(receive_buffer);
+			receive_packet->initialize();
+			memcpy(receive_packet->data(), _receive_message->data() + _receive_message->front(), _receive_message->size());
+			receive_packet->move_rear(_receive_message->size());
+			_receive_message = message(receive_packet);
 		}
 		inline void finish_send(void) noexcept {
 			for (size_type index = 0; index < _send_size; ++index)
@@ -388,12 +394,10 @@ private:
 			node* next = current + 1;
 			for (size_type index = 0; index < size - 1; ++index, current = next++) {
 				current->_next = next;
-				::new(reinterpret_cast<void*>(&current->_value)) session();
-				current->_value._key = index;
+				::new(reinterpret_cast<void*>(&current->_value)) session(index);
 			}
 			current->_next = nullptr;
-			::new(reinterpret_cast<void*>(&current->_value)) session();
-			current->_value._key = size - 1;
+			::new(reinterpret_cast<void*>(&current->_value)) session(size - 1);
 
 			_head = reinterpret_cast<unsigned long long>(_array);
 		}
@@ -506,12 +510,31 @@ private:
 		data_structure::unordered_map<std::string, std::function<int(parameter*)>> _function;
 	};
 	class monitor final {
-	private:
-		//std::function<void(void)>
+	public:
+		inline explicit monitor(void) noexcept = default;
+		inline explicit monitor(monitor const& rhs) noexcept = delete;
+		inline explicit monitor(monitor&& rhs) noexcept = delete;
+		inline auto operator=(monitor const& rhs) noexcept -> monitor & = delete;
+		inline auto operator=(monitor&& rhs) noexcept -> monitor & = delete;
+		inline ~monitor(void) noexcept = default;
+	public:
+		inline void add(std::string_view name, std::function<void(void)> function) noexcept {
+			_function.emplace(name.data(), function);
+		}
+		inline void update(void) noexcept {
+			for (auto& iter : _function) {
+				iter._second();
+			}
+		}
+	public:
+		data_structure::unordered_map<std::string, std::function<void(void)>> _function;
 	};
 private:
 	inline explicit server(void) noexcept {
 		system_component::network::window_socket_api::start_up();
+
+		//_monitor.add("server_monitor", [&](void) -> void {
+		//	});
 
 		_command.add("iocp_concurrent", [&](command::parameter* param) noexcept -> int {
 			_concurrent_thread_count = param->get_int(1);
@@ -538,15 +561,47 @@ private:
 			return 0;
 			});
 		_command.add("server_start", [&](command::parameter* param) noexcept -> int {
-			start();
+			_complation_port.create(_concurrent_thread_count);
+			_accept_thread.begin(&server::accept, CREATE_SUSPENDED, this);
+			for (size_type index = 0; index < _worker_thread_count; ++index)
+				_worker_thread.emplace_back(&server::worker, 0, this);
+			_send_thread.begin(&server::send, 0, this);
+
+			_session_array.initialize(_session_array_max);
+			system_component::network::socket_address_ipv4 socket_address;
+			socket_address.set_address(_listen_socket_ip.c_str());
+			socket_address.set_port(_listen_socket_port);
+			_listen_socket.create(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			_listen_socket.set_linger(1, 0);
+			_listen_socket.set_send_buffer(0);
+			_listen_socket.bind(socket_address);
+			_listen_socket.listen(_listen_socket_backlog);
+			_accept_thread.resume();
+
+			_monitor_thread.begin(&server::util, 0, this);
 			return 0;
 			});
 		_command.add("server_stop", [&](command::parameter* param) noexcept -> int {
-			stop();
+			_listen_socket.close();
+			_accept_thread.wait_for_single(INFINITE);
+			//for (auto& iter : _session) {
+			//	iter._value._socket.close();
+			//	_session.release(iter._value);
+			//}
+
+			//HANDLE handle[128];
+			//for (unsigned int index = 0; index < _thread.size(); ++index) {
+			//	_completion.post_queue_state(0, 0, nullptr);
+			//	handle[index] = _thread[index].data();
+			//}
+			//system_component::multi::thread::wait_for_multiple(_thread, true, INFINITE);
+			//_thread.clear();
+
+			//_completion.close();
 			return 0;
 			});
 
-		 command::parameter param("include", "server.cfg");
+		command::parameter param("include", "server.cfg");
 		_command.execute("include", &param);
 	};
 	inline explicit server(server const& rhs) noexcept = delete;
@@ -556,47 +611,12 @@ private:
 	inline ~server(void) noexcept {
 		system_component::network::window_socket_api::clean_up();
 	};
-public:
-	inline void start(void) noexcept {
-		_complation_port.create(_concurrent_thread_count);
-		_accept_thread.begin(&server::accept, CREATE_SUSPENDED, this);
-		for (size_type index = 0; index < _worker_thread_count; ++index)
-			_worker_thread.emplace_back(&server::worker, 0, this);
-
-		_session_array.initialize(_session_array_max);
-
-		system_component::network::socket_address_ipv4 socket_address;
-		socket_address.set_address(_listen_socket_ip.c_str());
-		socket_address.set_port(_listen_socket_port);
-		_listen_socket.create(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-		_listen_socket.set_linger(1, 0);
-		_listen_socket.set_send_buffer(0);
-		_listen_socket.bind(socket_address);
-		_listen_socket.listen(_listen_socket_backlog);
-
-		_accept_thread.resume();
-	}
-	inline void stop(void) noexcept {
-		_listen_socket.close();
-		_accept_thread.wait_for_single(INFINITE);
-		//for (auto& iter : _session) {
-		//	iter._value._socket.close();
-		//	_session.release(iter._value);
-		//}
-
-		//HANDLE handle[128];
-		//for (unsigned int index = 0; index < _thread.size(); ++index) {
-		//	_completion.post_queue_state(0, 0, nullptr);
-		//	handle[index] = _thread[index].data();
-		//}
-		//system_component::multi::thread::wait_for_multiple(_thread, true, INFINITE);
-		//_thread.clear();
-
-		//_completion.close();
-	}
+private:
 	inline void accept(void) noexcept {
 		for (;;) {
 			auto [socket, socket_address] = _listen_socket.accept();
+			_accept_total_count++;
+			_InterlockedIncrement(&_accept_tps);
 			if (INVALID_SOCKET == socket.data())
 				break;
 			if (false == on_accept_socket(socket_address))
@@ -604,12 +624,16 @@ public:
 			else {
 				session& session_ = *_session_array.acquire();
 				session_.initialize(std::move(socket));
+				_InterlockedIncrement(&_session_count);
 
 				_complation_port.connect(session_._socket, reinterpret_cast<ULONG_PTR>(&session_));
 				on_create_session(session_._key);
 
-				if (!session_.receive() && session_.release())
+				if (!session_.receive() && session_.release()) {
+					on_destroy_session(session_._key);
+					_InterlockedDecrement(&_session_count);
 					_session_array.release(&session_);
+				}
 			}
 		}
 	}
@@ -633,7 +657,8 @@ public:
 
 						view view_(session_._receive_message, session_._receive_message->front(), session_._receive_message->front() + header_._size);
 						session_._receive_message->pop(header_._size);
-						on_receive(session_._key, view_);
+						on_receive_session(session_._key, view_);
+						_InterlockedIncrement(&_receive_tps);
 					}
 
 					session_.create_receive();
@@ -642,12 +667,49 @@ public:
 				}
 				else {
 					session_.finish_send();
+					_interlockedadd((volatile long*)&_send_tps, session_._send_size);
 					if (session_.send())
 						continue;
 				}
 			}
-			if (session_.release())
+			if (session_.release()) {
+				on_destroy_session(session_._key);
+				_InterlockedDecrement(&_session_count);
 				_session_array.release(&session_);
+			}
+		}
+	}
+	inline void util(void) noexcept {
+		for (;;) {
+			system("cls");
+			printf("accept total : %llu\n"\
+				"accept tps : %u\n"\
+				"session count : %u\n"\
+				"receive tps : %u\n"\
+				"send tps : %u\n",
+				_accept_total_count, _accept_tps, _session_count, _receive_tps, _send_tps);
+			_accept_tps = 0;
+			_receive_tps = 0;
+			_send_tps = 0;
+
+			Sleep(1000);
+			_monitor.update();
+		}
+	}
+	inline void send(void) noexcept {
+		for (;;) {
+			for (auto& iter : _session_array) {
+				if (iter._value.acquire()) {
+					if (iter._value.send())
+						continue;
+				}
+				if (iter._value.release()) {
+					on_destroy_session(iter._value._key);
+					_InterlockedDecrement(&_session_count);
+					_session_array.release(&iter._value);
+				}
+			}
+			Sleep(20);
 		}
 	}
 public:
@@ -655,14 +717,14 @@ public:
 		return true;
 	}
 	inline virtual void on_create_session(unsigned long long key) noexcept {
-		message message_ = make_message();
+		//message message_ = make_message();
 
-		header header_{ 8 };
-		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
-		*message_ << 0x7fffffffffffffff;
-		do_send(key, message_);
+		//header header_{ 8 };
+		//message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
+		//*message_ << 0x7fffffffffffffff;
+		//do_send_session(key, message_);
 	}
-	inline virtual void on_receive(unsigned long long key, view& view_) {
+	inline virtual void on_receive_session(unsigned long long key, view& view_) {
 		unsigned long long value;
 		view_ >> value;
 		message message_ = make_message();
@@ -674,31 +736,37 @@ public:
 		//if (rand() % 2 == 0)
 		//	do_destroy(key);
 
-		do_send(key, message_);
+		do_send_session(key, message_);
 	}
-	inline virtual void on_destroy_session(unsigned long long session_id) noexcept {
+	inline virtual void on_destroy_session(unsigned long long key) noexcept {
 
 	}
-	inline void do_send(unsigned long long key, message& message_) noexcept {
+	inline void do_send_session(unsigned long long key, message& message_) noexcept {
 		session& session_ = _session_array[key];
 		if (session_.acquire(key)) {
 			session_._send_queue.push(message_);
 			if (session_.send())
 				return;
 		}
-		if (session_.release())
+		if (session_.release()) {
+			on_destroy_session(session_._key);
+			_InterlockedDecrement(&_session_count);
 			_session_array.release(&session_);
+		}
 	}
-	inline void do_destroy(unsigned long long key) noexcept {
+	inline void do_destroy_session(unsigned long long key) noexcept {
 		session& session_ = _session_array[key];
 		if (session_.acquire(key))
 			session_.cancel();
-		if (session_.release())
+		if (session_.release()) {
+			on_destroy_session(session_._key);
+			_InterlockedDecrement(&_session_count);
 			_session_array.release(&session_);
+		}
 	}
 public:
 	inline static auto make_message(void) noexcept -> message {
-		auto& memory_pool = data_structure::_thread_local::memory_pool<buffer>::instance();
+		auto& memory_pool = data_structure::_thread_local::memory_pool<packet>::instance();
 		message message_(&memory_pool.allocate());
 		message_->initialize();
 		return message_;
@@ -708,17 +776,25 @@ private:
 	system_component::network::socket _listen_socket;
 	system_component::multi::thread _accept_thread;
 	data_structure::vector<system_component::multi::thread> _worker_thread;
+	system_component::multi::thread _send_thread;
 	session_array _session_array;
+
+
+	system_component::multi::thread _monitor_thread;
 public:
+	command _command;
 	size_type _concurrent_thread_count = 0;
 	size_type _worker_thread_count = 0;
 	size_type _session_array_max = 0;
 	std::string _listen_socket_ip;
 	size_type _listen_socket_port = 0;
 	size_type _listen_socket_backlog = 0;
+	unsigned char _header_fixed_key;
 
-	command _command;
 	monitor _monitor;
-
-	//function(unsigned long long key, view& view_);
+	unsigned long long _accept_total_count = 0;
+	size_type _session_count = 0;
+	size_type _accept_tps = 0;
+	size_type _receive_tps = 0;
+	size_type _send_tps = 0;
 };
