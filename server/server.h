@@ -745,11 +745,8 @@ public:
 	}
 	inline void do_send_session(unsigned long long key, message& message_) noexcept {
 		session& session_ = _session_array[key];
-		if (session_.acquire(key)) {
+		if (session_.acquire(key))
 			session_._send_queue.push(message_);
-			//if (session_.send())
-			//	return;
-		}
 		if (session_.release()) {
 			on_destroy_session(session_._key);
 			_InterlockedDecrement(&_session_count);
