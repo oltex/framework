@@ -12,6 +12,7 @@ int main(void) noexcept {
 		_server._command.execute("include", &param);
 	}
 	Sleep(5000);
+	//system("pause");
 	{
 		server::command::parameter param("server_stop");
 		_server._command.execute("server_stop", &param);

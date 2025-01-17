@@ -5,7 +5,7 @@
 #include <iostream>
 
 namespace data_structure::_thread_local {
-	template<typename type, size_t bucket_size = 4>
+	template<typename type, size_t bucket_size = 1024>
 	class memory_pool final : public design_pattern::_thread_local::singleton<memory_pool<type, bucket_size>> {
 	private:
 		friend class design_pattern::_thread_local::singleton<memory_pool<type, bucket_size>>;
@@ -48,7 +48,6 @@ namespace data_structure::_thread_local {
 			inline auto operator=(stack&& rhs) noexcept -> stack & = delete;
 			inline ~stack(void) noexcept {
 				node** _node_array = reinterpret_cast<node**>(malloc(sizeof(node*) * _capacity));
-				memset(_node_array, 0, sizeof(node*) * _capacity);
 				size_type _node_array_index = 0;
 
 				bucket* head = reinterpret_cast<bucket*>(0x00007FFFFFFFFFFFULL & _head);
@@ -57,20 +56,16 @@ namespace data_structure::_thread_local {
 
 					node* _node = head->_value;
 					for (size_type index = 0; index < head->_size; ++index) {
-
 						if (0 == (reinterpret_cast<uintptr_t>(_node) & (_align - 1))) {
 							_node_array[_node_array_index] = _node;
 							_node_array_index++;
 						}
 						_node = _node->_next;
 					}
-
 					_memory_pool.deallocate(*head);
 					head = next;
 				}
 
-				if (_node_array_index != _capacity)
-					__debugbreak();
 				for (size_type index = 0; index < _node_array_index; ++index)
 					_aligned_free(_node_array[index]);
 				free(_node_array);
@@ -95,11 +90,6 @@ namespace data_structure::_thread_local {
 					bucket* address = reinterpret_cast<bucket*>(0x00007FFFFFFFFFFFULL & head);
 					if (nullptr == address) {
 						pair<node*, size_type> result{ reinterpret_cast<node*>(_aligned_malloc(sizeof(node) * bucket_size, _align)), bucket_size };
-						if (bucket_size == 1024) {
-							printf("receive_packet : %p\n", result._first);
-						}
-						else
-							printf("send_queue_node : %p\n", result._first);
 
 						_InterlockedIncrement(&_capacity);
 
@@ -132,21 +122,10 @@ namespace data_structure::_thread_local {
 		inline auto operator=(memory_pool&& rhs) noexcept -> memory_pool & = delete;
 		inline ~memory_pool(void) noexcept {
 			if (_size > bucket_size) {
-
-				node* temp = _head;
-				for (int i = 0; i < bucket_size; ++i) {
-					temp = temp->_next;
-				}
-				if (temp != _break)
-					__debugbreak();
-
-				_stack.push(_head, bucket_size);
-
+				_stack.push(_head, _size - bucket_size);
 				_head = _break;
-				_size -= bucket_size;
+				_size = bucket_size;
 			}
-			if (_size > bucket_size)
-				__debugbreak();
 			_stack.push(_head, _size);
 		};
 	public:

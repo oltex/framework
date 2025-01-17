@@ -514,6 +514,7 @@ public:
 			auto res = _function.find(name.data());
 			if (res == _function.end())
 				return 0;
+
 			return res->second(par);
 		}
 		inline void update(void) noexcept {
