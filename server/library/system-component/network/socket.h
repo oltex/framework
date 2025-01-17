@@ -80,9 +80,9 @@ namespace system_component::network {
 			if (INVALID_SOCKET == sock) {
 				switch (GetLastError()) {
 				case WSAEWOULDBLOCK:
-					break;
 				case WSAEINVAL:
 				case WSAENOTSOCK:
+				case WSAEINTR:
 					break;
 				default:
 					__debugbreak();

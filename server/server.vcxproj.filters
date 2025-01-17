@@ -32,9 +32,6 @@
     <ClInclude Include="library\data-strucutre\vector.h">
       <Filter>library\data-strucutre</Filter>
     </ClInclude>
-    <ClInclude Include="library\data-strucutre\lockfree\memory_pool.h">
-      <Filter>library\data-strucutre\lockfree</Filter>
-    </ClInclude>
     <ClInclude Include="library\design-pattern\thread-local\singleton.h">
       <Filter>library\design-pattern\thread-local</Filter>
     </ClInclude>
@@ -70,6 +67,9 @@
     </ClInclude>
     <ClInclude Include="library\utility\parser.h">
       <Filter>library\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-strucutre\lockfree\memory_pool.h">
+      <Filter>library\data-strucutre\lockfree</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

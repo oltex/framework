@@ -2,9 +2,10 @@
 #include "../../design-pattern/thread-local/singleton.h"
 #include "../lockfree/memory_pool.h"
 #include "../pair.h"
+#include <iostream>
 
 namespace data_structure::_thread_local {
-	template<typename type, size_t bucket_size = 1024>
+	template<typename type, size_t bucket_size = 4>
 	class memory_pool final : public design_pattern::_thread_local::singleton<memory_pool<type, bucket_size>> {
 	private:
 		friend class design_pattern::_thread_local::singleton<memory_pool<type, bucket_size>>;
@@ -19,6 +20,7 @@ namespace data_structure::_thread_local {
 			node* _next;
 			type _value;
 		};
+
 		class stack final {
 		private:
 			struct bucket final {
@@ -32,6 +34,10 @@ namespace data_structure::_thread_local {
 				node* _value;
 				size_type _size;
 			};
+			inline static consteval size_type power_of_two(size_type number, size_type square = 1) noexcept {
+				return square >= number ? square : power_of_two(number, square << 1);
+			}
+			static constexpr size_type _align = power_of_two(sizeof(node) * bucket_size);
 		public:
 			inline explicit stack(void) noexcept
 				: _head(0) {
@@ -41,12 +47,33 @@ namespace data_structure::_thread_local {
 			inline auto operator=(stack const& rhs) noexcept -> stack & = delete;
 			inline auto operator=(stack&& rhs) noexcept -> stack & = delete;
 			inline ~stack(void) noexcept {
+				node** _node_array = reinterpret_cast<node**>(malloc(sizeof(node*) * _capacity));
+				memset(_node_array, 0, sizeof(node*) * _capacity);
+				size_type _node_array_index = 0;
+
 				bucket* head = reinterpret_cast<bucket*>(0x00007FFFFFFFFFFFULL & _head);
 				while (nullptr != head) {
 					bucket* next = head->_next;
+
+					node* _node = head->_value;
+					for (size_type index = 0; index < head->_size; ++index) {
+
+						if (0 == (reinterpret_cast<uintptr_t>(_node) & (_align - 1))) {
+							_node_array[_node_array_index] = _node;
+							_node_array_index++;
+						}
+						_node = _node->_next;
+					}
+
 					_memory_pool.deallocate(*head);
 					head = next;
 				}
+
+				if (_node_array_index != _capacity)
+					__debugbreak();
+				for (size_type index = 0; index < _node_array_index; ++index)
+					_aligned_free(_node_array[index]);
+				free(_node_array);
 			};
 		public:
 			inline void push(node* value, size_type size) noexcept {
@@ -67,7 +94,14 @@ namespace data_structure::_thread_local {
 					unsigned long long head = _head;
 					bucket* address = reinterpret_cast<bucket*>(0x00007FFFFFFFFFFFULL & head);
 					if (nullptr == address) {
-						pair<node*, size_type> result{ reinterpret_cast<node*>(malloc(sizeof(node) * bucket_size)), bucket_size };
+						pair<node*, size_type> result{ reinterpret_cast<node*>(_aligned_malloc(sizeof(node) * bucket_size, _align)), bucket_size };
+						if (bucket_size == 1024) {
+							printf("receive_packet : %p\n", result._first);
+						}
+						else
+							printf("send_queue_node : %p\n", result._first);
+
+						_InterlockedIncrement(&_capacity);
 
 						node* current = result._first;
 						node* next = current + 1;
@@ -87,6 +121,7 @@ namespace data_structure::_thread_local {
 			}
 		private:
 			unsigned long long _head;
+			size_type _capacity = 0;
 			lockfree::memory_pool<bucket> _memory_pool;
 		};
 	private:
@@ -97,7 +132,16 @@ namespace data_structure::_thread_local {
 		inline auto operator=(memory_pool&& rhs) noexcept -> memory_pool & = delete;
 		inline ~memory_pool(void) noexcept {
 			if (_size > bucket_size) {
+
+				node* temp = _head;
+				for (int i = 0; i < bucket_size; ++i) {
+					temp = temp->_next;
+				}
+				if (temp != _break)
+					__debugbreak();
+
 				_stack.push(_head, bucket_size);
+
 				_head = _break;
 				_size -= bucket_size;
 			}

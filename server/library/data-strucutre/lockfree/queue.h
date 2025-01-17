@@ -17,13 +17,14 @@ namespace data_structure::lockfree {
 			inline auto operator=(node const&) noexcept = delete;
 			inline auto operator=(node&&) noexcept = delete;
 			inline ~node(void) noexcept = delete;
-			type _value;
 			unsigned long long _next;
+			type _value;
 		};
+		using _memory_pool = data_structure::_thread_local::memory_pool<node, 100>;
 	public:
 		inline explicit queue(void) noexcept {
-			node* current = &_memory_pool.allocate();
-			current->_next = _nullptr = _InterlockedIncrement(&_static_nullptr);
+			node* current = &_memory_pool::instance().allocate();
+			current->_next = _nullptr = _InterlockedIncrement(&_static_nullptr) - 1;
 			_head = _tail = reinterpret_cast<unsigned long long>(current);
 		}
 		inline explicit queue(queue const& rhs) noexcept = delete;
@@ -33,11 +34,11 @@ namespace data_structure::lockfree {
 		inline ~queue(void) noexcept {
 			node* head = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & _head);
 			while (_nullptr != reinterpret_cast<unsigned long long>(head)) {
-				unsigned long long next = head->_next;
+				node* next = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head->_next);
 				if constexpr (std::is_destructible_v<type> && !std::is_trivially_destructible_v<type>)
 					head->_value.~type();
-				_memory_pool.deallocate(*head);
-				head = reinterpret_cast<node*>(next);
+				_memory_pool::instance().deallocate(*head);
+				head = next;
 			}
 		};
 	public:
@@ -47,8 +48,7 @@ namespace data_structure::lockfree {
 		}
 		template<typename... argument>
 		inline void emplace(argument&&... arg) noexcept {
-			node* current = &_memory_pool.allocate();
-			current->_next = _nullptr;
+			node* current = &_memory_pool::instance().allocate();
 			if constexpr (std::is_class_v<type>) {
 				if constexpr (std::is_constructible_v<type, argument...>)
 					::new(reinterpret_cast<void*>(&current->_value)) type(std::forward<argument>(arg)...);
@@ -59,13 +59,19 @@ namespace data_structure::lockfree {
 
 			for (;;) {
 				unsigned long long tail = _tail;
+				unsigned long long count = 0xFFFF800000000000ULL & tail;
 				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & tail);
 				unsigned long long next = address->_next;
 
-				if (_nullptr != next)
-					_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next + (0xFFFF800000000000ULL & tail) + 0x0000800000000000ULL, tail);
-				else if (_nullptr == _InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&address->_next), (unsigned long long)current, _nullptr))
-					break;
+				if (0x10000 <= (0x00007FFFFFFFFFFFULL & next))
+					_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
+				else if (_nullptr == (0x00007FFFFFFFFFFFULL & next) && count == (0xFFFF800000000000ULL & next)) {
+					unsigned long long next_count = count + 0x0000800000000000ULL;
+					unsigned long long next_tail = reinterpret_cast<unsigned long long>(current) + next_count;
+					current->_next = next_count + _nullptr;
+					if (next == _InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&address->_next), next_tail, next))
+						break;
+				}
 			}
 		}
 		inline auto pop(void) noexcept -> std::optional<type> {
@@ -74,23 +80,22 @@ namespace data_structure::lockfree {
 				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
 				unsigned long long next = address->_next;
 
-				if (_nullptr == next || 0 == next)
+				if (_nullptr == (0x00007FFFFFFFFFFFULL & next))
 					return std::nullopt;
-				else {
+				else if (0x10000 <= (0x00007FFFFFFFFFFFULL & next)) {
 					unsigned long long tail = _tail;
-					node* tail_address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & tail);
-					if (reinterpret_cast<unsigned long long>(tail_address) == reinterpret_cast<unsigned long long>(address)) {
+					if (tail == head) {
+						node* tail_address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & tail);
 						unsigned long long tail_next = tail_address->_next;
-						if (_nullptr != tail_next)
-							_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), tail_next + (0xFFFF800000000000ULL & tail) + 0x0000800000000000ULL, tail);
+						if (0x10000 <= (0x00007FFFFFFFFFFFULL & tail_next))
+							_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
 					}
 					else {
-						type result = reinterpret_cast<node*>(next)->_value; // next 다른 숫자일때 추가적인 작업이 필요함
-						unsigned long long change = next + (0xFFFF800000000000ULL & head) + 0x0000800000000000ULL;
-						if (head == _InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_head), change, head)) {
+						type result = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value;
+						if (head == _InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_head), next, head)) {
 							if constexpr (std::is_destructible_v<type> && !std::is_trivially_destructible_v<type>)
 								address->_value.~type();
-							_memory_pool.deallocate(*address);
+							_memory_pool::instance().deallocate(*address);
 							return result;
 						}
 					}
@@ -102,6 +107,5 @@ namespace data_structure::lockfree {
 		unsigned long long _tail;
 		unsigned long long _nullptr;
 		inline static unsigned long long _static_nullptr = 0;
-		memory_pool<node> _memory_pool;
 	};
 }
