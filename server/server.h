@@ -790,9 +790,6 @@ public:
 		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
 		*message_ << value;
 
-		//if (rand() % 2 == 0)
-		//	do_destroy(key);
-
 		do_send_session(key, message_);
 	}
 	inline virtual void on_destroy_session(unsigned long long key) noexcept {

@@ -84,9 +84,6 @@ namespace data_structure::intrusive {
 		inline auto get(void) const noexcept -> type* {
 			return static_cast<type*>(_node);
 		}
-		inline auto data(void) noexcept -> node* {
-			return _node;
-		}
 		inline auto set(type* value) noexcept {
 			_node = static_cast<node*>(value);
 		}

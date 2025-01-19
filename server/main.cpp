@@ -17,4 +17,6 @@ int main(void) noexcept {
 		server::command::parameter param("server_stop");
 		_server._command.execute("server_stop", &param);
 	}
+	Sleep(INFINITE);
+
 }
