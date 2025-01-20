@@ -14,6 +14,7 @@
 #include "library/design-pattern/singleton.h"
 
 #include "library/utility/parser.h"
+#include "library/utility/performance_monitor.h"
 
 #include <optional>
 #include <iostream>
@@ -252,6 +253,7 @@ private:
 	private:
 		inline static unsigned long long _static_id = 0x10000;
 	public:
+#pragma warning(suppress: 26495)
 		inline explicit session(size_type const index) noexcept
 			: _key(index) {
 			auto& memory_pool = data_structure::_thread_local::memory_pool<packet>::instance();
@@ -397,6 +399,7 @@ private:
 				current->_next = next;
 				::new(reinterpret_cast<void*>(&current->_value)) session(index);
 			}
+#pragma warning(suppress: 6011)
 			current->_next = nullptr;
 			::new(reinterpret_cast<void*>(&current->_value)) session(capacity - 1);
 
@@ -445,12 +448,11 @@ private:
 		}
 	public:
 		unsigned long long _head;
-		node* _array;
+		node* _array = nullptr;
 		size_type _size;
 		size_type _capacity;
 		size_type _acquire_count = 0;
 		size_type _release_count = 0;
-
 	};
 public:
 	class command final {
@@ -676,6 +678,7 @@ private:
 		_command.add("command_stop", [&](command::parameter* param) noexcept ->int {
 			return 0;
 			});
+
 	};
 	inline explicit server(server const& rhs) noexcept = delete;
 	inline explicit server(server&& rhs) noexcept = delete;
@@ -714,42 +717,54 @@ private:
 		for (;;) {
 			auto [result, transferred, key, overlapped] = _complation_port.get_queue_state(INFINITE);
 			if (0 == key)
-				return;
-			session& session_ = *reinterpret_cast<session*>(key);
-			if (0 != transferred) {
-				if (&session_._recv_overlapped.data() == overlapped) {
-					session_._receive_message->move_rear(transferred);
-
-					for (;;) {
-						if (sizeof(header) > session_._receive_message->size())
-							break;
-						header header_;
-						session_._receive_message->peek(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
-						if (sizeof(header) + header_._size > session_._receive_message->size())
-							break;
-						session_._receive_message->pop(sizeof(header));
-
-						view view_(session_._receive_message, session_._receive_message->front(), session_._receive_message->front() + header_._size);
-						session_._receive_message->pop(header_._size);
-						on_receive_session(session_._key, view_);
-						_InterlockedIncrement(&_monitor._receive_tps);
-					}
-
-					session_.create_receive();
-					if (session_.receive())
-						continue;
-				}
-				else {
-					session_.finish_send();
-					_interlockedadd((volatile long*)&_monitor._send_tps, session_._send_size);
-					//if (session_.send())
-					//	continue;
+				break;
+			else if (1 == key) {
+				session& session_ = *reinterpret_cast<session*>(overlapped);
+				if (session_.send())
+					continue;
+				if (session_.release()) {
+					on_destroy_session(session_._key);
+					_InterlockedDecrement(&_monitor._session_count);
+					_session_array.release(&session_);
 				}
 			}
-			if (session_.release()) {
-				on_destroy_session(session_._key);
-				_InterlockedDecrement(&_monitor._session_count);
-				_session_array.release(&session_);
+			else {
+				session& session_ = *reinterpret_cast<session*>(key);
+				if (0 != transferred) {
+					if (&session_._recv_overlapped.data() == overlapped) {
+						session_._receive_message->move_rear(transferred);
+
+						for (;;) {
+							if (sizeof(header) > session_._receive_message->size())
+								break;
+							header header_;
+							session_._receive_message->peek(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
+							if (sizeof(header) + header_._size > session_._receive_message->size())
+								break;
+							session_._receive_message->pop(sizeof(header));
+
+							view view_(session_._receive_message, session_._receive_message->front(), session_._receive_message->front() + header_._size);
+							session_._receive_message->pop(header_._size);
+							on_receive_session(session_._key, view_);
+							_InterlockedIncrement(&_monitor._receive_tps);
+						}
+
+						session_.create_receive();
+						if (session_.receive())
+							continue;
+					}
+					else {
+						session_.finish_send();
+						_interlockedadd((volatile long*)&_monitor._send_tps, session_._send_size);
+						//if (session_.send())
+						//	continue;
+					}
+				}
+				if (session_.release()) {
+					on_destroy_session(session_._key);
+					_InterlockedDecrement(&_monitor._session_count);
+					_session_array.release(&session_);
+				}
 			}
 		}
 	}
@@ -757,8 +772,10 @@ private:
 		while (_send_thread_run) {
 			for (auto& iter : _session_array) {
 				if (iter._value.acquire()) {
-					if (iter._value.send())
+					if (!iter._value._send_queue.empty()) {
+						_complation_port.post_queue_state(0, 1, (OVERLAPPED*)&iter._value);
 						continue;
+					}
 				}
 				if (iter._value.release()) {
 					on_destroy_session(iter._value._key);
@@ -838,7 +855,7 @@ public:
 	std::string _listen_socket_ip;
 	size_type _listen_socket_port = 0;
 	size_type _listen_socket_backlog = 0;
-	unsigned char _header_fixed_key;
+	unsigned char _header_fixed_key = 0;
 
 	monitor _monitor;
 };

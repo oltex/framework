@@ -42,8 +42,8 @@ namespace system_component::input_output {
 		//inline auto get_queue_state_ex(void) noexcept {
 		//	GetQueuedCompletionStatusEx()
 		//}
-		inline void post_queue_state(unsigned long byte, uintptr_t key, OVERLAPPED* overlapped) noexcept {
-			PostQueuedCompletionStatus(_handle, byte, key, overlapped);
+		inline void post_queue_state(unsigned long transferred, uintptr_t key, OVERLAPPED* overlapped) noexcept {
+			PostQueuedCompletionStatus(_handle, transferred, key, overlapped);
 		}
 	};
 }

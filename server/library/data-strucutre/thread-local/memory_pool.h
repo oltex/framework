@@ -57,6 +57,7 @@ namespace data_structure::_thread_local {
 					node* _node = head->_value;
 					for (size_type index = 0; index < head->_size; ++index) {
 						if (0 == (reinterpret_cast<uintptr_t>(_node) & (_align - 1))) {
+#pragma warning(suppress: 6011)
 							_node_array[_node_array_index] = _node;
 							_node_array_index++;
 						}
@@ -96,6 +97,7 @@ namespace data_structure::_thread_local {
 						node* current = result._first;
 						node* next = current + 1;
 						for (size_type index = 0; index < bucket_size - 1; ++index, current = next++)
+#pragma warning(suppress: 6011)
 							current->_next = next;
 						current->_next = nullptr;
 

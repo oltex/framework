@@ -60,6 +60,7 @@ namespace data_structure::lockfree {
 			}
 			else if constexpr (1 == sizeof...(arg))
 				current->_value = type(std::forward<argument>(arg)...);
+#pragma warning(suppress: 6011)
 			return current->_value;
 		}
 		inline void deallocate(type& value) noexcept {

@@ -23,6 +23,7 @@ namespace utility {
 
 			char* buffer = reinterpret_cast<char*>(malloc(sizeof(char) * size + 1));
 			file.read(buffer, static_cast<unsigned long>(size));
+#pragma warning(suppress: 6011)
 			buffer[size] = 0;
 
 			data_structure::vector<std::string> item;
@@ -37,6 +38,7 @@ namespace utility {
 				bool finish = false;
 
 				// comment
+#pragma warning(suppress: 6011)
 				if (*current == comment_char) {
 					encoding = false;
 					finish = true;
