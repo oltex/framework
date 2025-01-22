@@ -24,7 +24,7 @@ namespace data_structure::lockfree {
 	public:
 		inline explicit queue(void) noexcept {
 			node* current = &_memory_pool::instance().allocate();
-			current->_next = _nullptr = _InterlockedIncrement(&_static_nullptr) - 1;
+			current->_next = _nullptr = _InterlockedIncrement(&_static_nullptr);
 			_head = _tail = reinterpret_cast<unsigned long long>(current);
 		}
 		inline explicit queue(queue const& rhs) noexcept = delete;
