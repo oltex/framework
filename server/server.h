@@ -772,10 +772,12 @@ private:
 		while (_send_thread_run) {
 			for (auto& iter : _session_array) {
 				if (iter._value.acquire()) {
-					if (!iter._value._send_queue.empty()) {
-						_complation_port.post_queue_state(0, 1, (OVERLAPPED*)&iter._value);
+					//if (!iter._value._send_queue.empty() /*&& 0 == iter._value._send_flag*/) {
+					//	_complation_port.post_queue_state(0, 1, (OVERLAPPED*)&iter._value);
+					//	continue;
+					//}
+					if (iter._value.send())
 						continue;
-					}
 				}
 				if (iter._value.release()) {
 					on_destroy_session(iter._value._key);
@@ -783,7 +785,7 @@ private:
 					_session_array.release(&iter._value);
 				}
 			}
-			Sleep(20);
+			//Sleep(20);
 		}
 	}
 public:
