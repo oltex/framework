@@ -30,7 +30,10 @@ private:
 	friend class command;
 	using size_type = unsigned int;
 	using byte = unsigned char;
-private:
+	enum class post_queue_state {
+		close_worker, destory_session, send_session
+	};
+public:
 	struct header final {
 		unsigned short _size;
 	};
@@ -304,8 +307,10 @@ private:
 				unsigned long flag = 0;
 				_recv_overlapped.clear();
 				int result = _socket.wsa_receive(&wsa_buffer, 1, &flag, _recv_overlapped);
-				if (result != SOCKET_ERROR || GetLastError() == WSA_IO_PENDING) {
-					if (/*result == SOCKET_ERROR && */1 == _cancel_flag)
+				if (result != SOCKET_ERROR)
+					return true;
+				else if (GetLastError() == WSA_IO_PENDING) {
+					if (1 == _cancel_flag)
 						_socket.cancel_io_ex();
 					return true;
 				}
@@ -327,8 +332,10 @@ private:
 						}
 						_send_overlapped.clear();
 						int result = _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped);
-						if (result != SOCKET_ERROR || GetLastError() == WSA_IO_PENDING) {
-							if (/*result == SOCKET_ERROR &&*/ 1 == _cancel_flag)
+						if (result != SOCKET_ERROR)
+							return true;
+						else if (GetLastError() == WSA_IO_PENDING) {
+							if (1 == _cancel_flag)
 								_socket.cancel_io_ex();
 							return true;
 						}
@@ -454,7 +461,7 @@ private:
 		size_type _acquire_count = 0;
 		size_type _release_count = 0;
 	};
-public:
+
 	class command final {
 	public:
 		class parameter final {
@@ -716,9 +723,17 @@ private:
 	inline void worker(void) noexcept {
 		for (;;) {
 			auto [result, transferred, key, overlapped] = _complation_port.get_queue_state(INFINITE);
-			if (0 == key)
-				break;
-			else if (1 == key) {
+			switch (static_cast<post_queue_state>(key)) {
+				using enum post_queue_state;
+			case close_worker:
+				return;
+			case destory_session: {
+				session& session_ = *reinterpret_cast<session*>(overlapped);
+				on_destroy_session(session_._key);
+				_InterlockedDecrement(&_monitor._session_count);
+				_session_array.release(&session_);
+			} break;
+			case send_session: {
 				session& session_ = *reinterpret_cast<session*>(overlapped);
 				if (session_.send())
 					continue;
@@ -727,8 +742,8 @@ private:
 					_InterlockedDecrement(&_monitor._session_count);
 					_session_array.release(&session_);
 				}
-			}
-			else {
+			} break;
+			default: {
 				session& session_ = *reinterpret_cast<session*>(key);
 				if (0 != transferred) {
 					if (&session_._recv_overlapped.data() == overlapped) {
@@ -765,6 +780,7 @@ private:
 					_InterlockedDecrement(&_monitor._session_count);
 					_session_array.release(&session_);
 				}
+			} break;
 			}
 		}
 	}
@@ -772,12 +788,12 @@ private:
 		while (_send_thread_run) {
 			for (auto& iter : _session_array) {
 				if (iter._value.acquire()) {
-					//if (!iter._value._send_queue.empty() /*&& 0 == iter._value._send_flag*/) {
-					//	_complation_port.post_queue_state(0, 1, (OVERLAPPED*)&iter._value);
-					//	continue;
-					//}
-					if (iter._value.send())
+					if (!iter._value._send_queue.empty() && 0 == iter._value._send_flag) {
+						_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::send_session), reinterpret_cast<OVERLAPPED*>(&iter._value));
 						continue;
+					}
+					//if (iter._value.send())
+						//continue;
 				}
 				if (iter._value.release()) {
 					on_destroy_session(iter._value._key);
@@ -786,6 +802,19 @@ private:
 				}
 			}
 			//Sleep(20);
+		}
+	}
+	inline void timeout(void) noexcept {
+		for (auto& iter : _session_array) {
+			if (iter._value.acquire()) {
+				// 타임아웃 시간을 측정해서 
+				// 타임아웃시 cancelioex를 호출한다
+			}
+			if (iter._value.release()) {
+				on_destroy_session(iter._value._key);
+				_InterlockedDecrement(&_monitor._session_count);
+				_session_array.release(&iter._value);
+			}
 		}
 	}
 public:
@@ -819,9 +848,10 @@ public:
 		if (session_.acquire(key))
 			session_._send_queue.push(message_);
 		if (session_.release()) {
-			on_destroy_session(session_._key);
-			_InterlockedDecrement(&_monitor._session_count);
-			_session_array.release(&session_);
+			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
+			//on_destroy_session(session_._key);
+			//_InterlockedDecrement(&_monitor._session_count);
+			//_session_array.release(&session_);
 		}
 	}
 	inline void do_destroy_session(unsigned long long key) noexcept {
@@ -829,11 +859,14 @@ public:
 		if (session_.acquire(key))
 			session_.cancel();
 		if (session_.release()) {
-			on_destroy_session(session_._key);
-			_InterlockedDecrement(&_monitor._session_count);
-			_session_array.release(&session_);
+			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
+			//on_destroy_session(session_._key);
+			//_InterlockedDecrement(&_monitor._session_count);
+			//_session_array.release(&session_);
 		}
 	}
+	inline void do_timeout_session(unsigned long long key, unsigned long long timeout) noexcept {
+	};
 public:
 	inline static auto make_message(void) noexcept -> message {
 		auto& memory_pool = data_structure::_thread_local::memory_pool<packet>::instance();
