@@ -805,16 +805,19 @@ private:
 		}
 	}
 	inline void timeout(void) noexcept {
-		for (auto& iter : _session_array) {
-			if (iter._value.acquire()) {
-				// 타임아웃 시간을 측정해서 
-				// 타임아웃시 cancelioex를 호출한다
+		while (_timeout_thread_run) {
+			for (auto& iter : _session_array) {
+				if (iter._value.acquire()) {
+					// 타임아웃 시간을 측정해서 
+					// 타임아웃시 cancelioex를 호출한다
+				}
+				if (iter._value.release()) {
+					on_destroy_session(iter._value._key);
+					_InterlockedDecrement(&_monitor._session_count);
+					_session_array.release(&iter._value);
+				}
 			}
-			if (iter._value.release()) {
-				on_destroy_session(iter._value._key);
-				_InterlockedDecrement(&_monitor._session_count);
-				_session_array.release(&iter._value);
-			}
+			Sleep(_timeout_thread_interval);
 		}
 	}
 public:
@@ -893,4 +896,8 @@ public:
 	unsigned char _header_fixed_key = 0;
 
 	monitor _monitor;
+
+public:
+	bool _timeout_thread_run = false;
+	int _timeout_thread_interval = 20;
 };
