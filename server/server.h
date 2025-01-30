@@ -741,6 +741,13 @@ private:
 			_scheduler_wait_on_address.wait(compare, compare, INFINITE);
 			for (;;) {
 				auto result = _scheduler_queue.pop();
+
+				_scheduler_queue2.push();
+
+				_scheduler_queue2.top();
+				_scheduler_queue2.pop();
+
+				//GetTickCount64();
 			}
 		}
 	}
