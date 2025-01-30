@@ -3,6 +3,7 @@
 #include "library/system-component/input_output/completion_port.h"
 #include "library/system-component/multi/thread.h"
 #include "library/system-component/network/socket.h"
+#include "library/system-component/multi/wait_on_address.h"
 
 #include "library/data-strucutre/vector.h"
 #include "library/data-strucutre/serialize_buffer.h"
@@ -10,6 +11,7 @@
 #include "library/data-strucutre/intrusive/shared_pointer.h"
 #include "library/data-strucutre/lockfree/queue.h"
 #include "library/data-strucutre/unordered_map.h"
+#include "library/data-strucutre/priority_queue.h"
 
 #include "library/design-pattern/singleton.h"
 
@@ -31,7 +33,7 @@ private:
 	using size_type = unsigned int;
 	using byte = unsigned char;
 	enum class post_queue_state {
-		close_worker, destory_session, send_session
+		close_worker, destory_session
 	};
 public:
 	struct header final {
@@ -56,6 +58,10 @@ public:
 		}
 	};
 	using message = data_structure::intrusive::shared_pointer<packet, 0>;
+	class packet_view final : public data_structure::intrusive::shared_pointer_hook<0> {
+
+	};
+	using message_view = data_structure::intrusive::shared_pointer<packet_view, 0>;
 	class view final {
 	private:
 		using size_type = unsigned int;
@@ -185,21 +191,13 @@ public:
 
 			if (0x10000 > (0x00007FFFFFFFFFFFULL & next))
 				__debugbreak();
-			for (;;) {
-				unsigned long long tail = _tail;
-				if (tail == head) {
-					node* tail_address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & tail);
-					unsigned long long tail_next = tail_address->_next;
-					if (_nullptr != (0x00007FFFFFFFFFFFULL & tail_next))
-						_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
-				}
-				else
-					break;
-			}
+			unsigned long long tail = _tail;
+			if (tail == head)
+				_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next + (0xFFFF800000000000ULL & tail) + 0x0000800000000000ULL, tail);
 
 			message result;
-			result.set(reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value);
-			_head = next;
+			result.set(reinterpret_cast<node*>(next)->_value);
+			_head = next + (0xFFFF800000000000ULL & head) + 0x0000800000000000ULL;
 			_memory_pool::instance().deallocate(*address);
 			return result;
 		}
@@ -218,39 +216,6 @@ public:
 				return true;
 			return false;
 		}
-	};
-	class receive_queue final {
-	private:
-		struct receive_data {
-			unsigned long long _key;
-			size_type _front, _rear;
-			packet* _packet;
-		};
-	public:
-		inline void push(unsigned long long key, view view_) noexcept {
-			receive_data receive_data_;
-			receive_data_._packet = &*view_.data();
-			receive_data_._front = view_.front();
-			receive_data_._rear = view_.rear();
-			receive_data_._key = key;
-			_queue.emplace(receive_data_);
-			_InterlockedIncrement(&_size);
-			view_.reset();
-		}
-		inline auto pop(void) noexcept -> data_structure::pair<unsigned long long, view> {
-			auto receive_data_ = _queue.pop();
-			data_structure::pair<unsigned long long, view> result;
-			if (receive_data_) {
-				result._first = receive_data_->_key;
-				result._second.set(receive_data_->_packet, receive_data_->_front, receive_data_->_rear);
-				_InterlockedDecrement(&_size);
-			}
-			return result;
-		}
-	private:
-		data_structure::lockfree::queue<receive_data> _queue;
-	public:
-		volatile long _size;
 	};
 	class session final {
 	private:
@@ -417,7 +382,6 @@ public:
 				_array[index]._value.~session();
 			free(_array);
 		}
-	public:
 		inline auto acquire(void) noexcept -> session* {
 			for (;;) {
 				unsigned long long head = _head;
@@ -444,10 +408,10 @@ public:
 			_InterlockedDecrement(&_size);
 			_InterlockedIncrement(&_release_count);
 		}
-		inline auto begin(void) noexcept -> iterator {
+		inline auto begin(void) const noexcept -> iterator {
 			return _array;
 		}
-		inline auto end(void) noexcept -> iterator {
+		inline auto end(void) const noexcept -> iterator {
 			return _array + _capacity;
 		}
 		inline auto operator[](unsigned long long const key) noexcept -> session& {
@@ -460,6 +424,10 @@ public:
 		size_type _capacity;
 		size_type _acquire_count = 0;
 		size_type _release_count = 0;
+	};
+
+	class task final {
+		std::function<int(void)> _function;
 	};
 
 	class command final {
@@ -733,16 +701,6 @@ private:
 				_InterlockedDecrement(&_monitor._session_count);
 				_session_array.release(&session_);
 			} break;
-			case send_session: {
-				session& session_ = *reinterpret_cast<session*>(overlapped);
-				if (session_.send())
-					continue;
-				if (session_.release()) {
-					on_destroy_session(session_._key);
-					_InterlockedDecrement(&_monitor._session_count);
-					_session_array.release(&session_);
-				}
-			} break;
 			default: {
 				session& session_ = *reinterpret_cast<session*>(key);
 				if (0 != transferred) {
@@ -788,12 +746,8 @@ private:
 		while (_send_thread_run) {
 			for (auto& iter : _session_array) {
 				if (iter._value.acquire()) {
-					if (!iter._value._send_queue.empty() && 0 == iter._value._send_flag) {
-						_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::send_session), reinterpret_cast<OVERLAPPED*>(&iter._value));
+					if (iter._value.send())
 						continue;
-					}
-					//if (iter._value.send())
-						//continue;
 				}
 				if (iter._value.release()) {
 					on_destroy_session(iter._value._key);
@@ -804,22 +758,29 @@ private:
 			//Sleep(20);
 		}
 	}
-	inline void timeout(void) noexcept {
-		while (_timeout_thread_run) {
-			for (auto& iter : _session_array) {
-				if (iter._value.acquire()) {
-					// 타임아웃 시간을 측정해서 
-					// 타임아웃시 cancelioex를 호출한다
-				}
-				if (iter._value.release()) {
-					on_destroy_session(iter._value._key);
-					_InterlockedDecrement(&_monitor._session_count);
-					_session_array.release(&iter._value);
-				}
-			}
-			Sleep(_timeout_thread_interval);
+	inline void scheduler(void) {
+		long compare = 0;
+		for (;;) {
+			_scheduler_wait_on_address.wait(compare, compare, INFINITE);
+			_scheduler_queue.pop();
 		}
 	}
+	//inline void timeout(void) noexcept {
+	//	while (_timeout_thread_run) {
+	//		for (auto& iter : _session_array) {
+	//			if (iter._value.acquire()) {
+	//				// 타임아웃 시간을 측정해서 
+	//				// 타임아웃시 cancelioex를 호출한다
+	//			}
+	//			if (iter._value.release()) {
+	//				on_destroy_session(iter._value._key);
+	//				_InterlockedDecrement(&_monitor._session_count);
+	//				_session_array.release(&iter._value);
+	//			}
+	//		}
+	//		Sleep(_timeout_thread_interval);
+	//	}
+	//}
 public:
 	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept {
 		return true;
@@ -850,7 +811,7 @@ public:
 		session& session_ = _session_array[key];
 		if (session_.acquire(key))
 			session_._send_queue.push(message_);
-		if (session_.release()) 
+		if (session_.release())
 			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
 	}
 	inline void do_destroy_session(unsigned long long key) noexcept {
@@ -888,4 +849,9 @@ public:
 	unsigned char _header_fixed_key = 0;
 
 	monitor _monitor;
+
+	system_component::multi::thread _scheduler_thread;
+	system_component::multi::wait_on_address _scheduler_wait_on_address;
+	data_structure::lockfree::queue<int> _scheduler_queue;
+	data_structure::priority_queue<int> _scheduler_queue2;
 };

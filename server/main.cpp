@@ -2,11 +2,13 @@
 #include <stdlib.h>
 #include <crtdbg.h>
 #include "server.h"
+#include "library/utility/crash_dump.h"
 
 int main(void) noexcept {
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-	server& _server = server::instance();
+	utility::crash_dump();
 
+	server& _server = server::instance();
 	{
 		server::command::parameter param("include", "server.cfg");
 		_server._command.execute("include", &param);
@@ -18,5 +20,4 @@ int main(void) noexcept {
 		_server._command.execute("server_stop", &param);
 	}
 	Sleep(INFINITE);
-
 }
