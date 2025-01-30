@@ -850,23 +850,15 @@ public:
 		session& session_ = _session_array[key];
 		if (session_.acquire(key))
 			session_._send_queue.push(message_);
-		if (session_.release()) {
+		if (session_.release()) 
 			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
-			//on_destroy_session(session_._key);
-			//_InterlockedDecrement(&_monitor._session_count);
-			//_session_array.release(&session_);
-		}
 	}
 	inline void do_destroy_session(unsigned long long key) noexcept {
 		session& session_ = _session_array[key];
 		if (session_.acquire(key))
 			session_.cancel();
-		if (session_.release()) {
+		if (session_.release())
 			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
-			//on_destroy_session(session_._key);
-			//_InterlockedDecrement(&_monitor._session_count);
-			//_session_array.release(&session_);
-		}
 	}
 	inline void do_timeout_session(unsigned long long key, unsigned long long timeout) noexcept {
 	};
@@ -896,8 +888,4 @@ public:
 	unsigned char _header_fixed_key = 0;
 
 	monitor _monitor;
-
-public:
-	bool _timeout_thread_run = false;
-	int _timeout_thread_interval = 20;
 };
