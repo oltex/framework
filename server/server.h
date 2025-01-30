@@ -193,11 +193,11 @@ public:
 				__debugbreak();
 			unsigned long long tail = _tail;
 			if (tail == head)
-				_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next + (0xFFFF800000000000ULL & tail) + 0x0000800000000000ULL, tail);
+				_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
 
 			message result;
-			result.set(reinterpret_cast<node*>(next)->_value);
-			_head = next + (0xFFFF800000000000ULL & head) + 0x0000800000000000ULL;
+			result.set(reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value);
+			_head = next;
 			_memory_pool::instance().deallocate(*address);
 			return result;
 		}
@@ -762,7 +762,9 @@ private:
 		long compare = 0;
 		for (;;) {
 			_scheduler_wait_on_address.wait(compare, compare, INFINITE);
-			_scheduler_queue.pop();
+			for (;;) {
+				auto result = _scheduler_queue.pop();
+			}
 		}
 	}
 	//inline void timeout(void) noexcept {
