@@ -58,10 +58,6 @@ public:
 		}
 	};
 	using message = data_structure::intrusive::shared_pointer<packet, 0>;
-	class packet_view final : public data_structure::intrusive::shared_pointer_hook<0> {
-
-	};
-	using message_view = data_structure::intrusive::shared_pointer<packet_view, 0>;
 	class view final {
 	private:
 		using size_type = unsigned int;
@@ -494,17 +490,8 @@ public:
 
 			return res->second(par);
 		}
-		inline void update(void) noexcept {
-			while (_run) {
-				std::string _input;
-				std::cin >> _input;
-				int a = 10;
-			}
-		}
 	public:
 		std::unordered_map<std::string, std::function<int(parameter*)>> _function;
-		system_component::multi::thread _update_thread;
-		bool _run = false;
 	};
 	class monitor final {
 	public:
@@ -644,16 +631,6 @@ private:
 			_monitor._update_thread.close();
 			return 0;
 			});
-
-		_command.add("command_start", [&](command::parameter* param) noexcept ->int {
-			_command._run = true;
-			_command._update_thread.begin(&command::update, 0, &_command);
-			return 0;
-			});
-		_command.add("command_stop", [&](command::parameter* param) noexcept ->int {
-			return 0;
-			});
-
 	};
 	inline explicit server(server const& rhs) noexcept = delete;
 	inline explicit server(server&& rhs) noexcept = delete;
