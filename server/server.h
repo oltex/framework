@@ -33,7 +33,7 @@ private:
 	using size_type = unsigned int;
 	using byte = unsigned char;
 	enum class post_queue_state {
-		close_worker, destory_session
+		close_worker, destory_session, excute_task
 	};
 public:
 	struct header final {
@@ -144,13 +144,6 @@ public:
 	};
 
 	class send_queue final : protected data_structure::lockfree::queue<packet*> {
-	public:
-		inline explicit send_queue(void) noexcept = default;
-		inline explicit send_queue(send_queue const& rhs) noexcept = default;
-		inline explicit send_queue(send_queue&& rhs) noexcept = default;
-		inline auto operator=(send_queue const& rhs) noexcept -> send_queue&;
-		inline auto operator=(send_queue&& rhs) noexcept -> send_queue&;
-		inline ~send_queue(void) noexcept = default;
 	private:
 		class iterator final {
 		public:
@@ -175,6 +168,13 @@ public:
 			node* _node;
 		};
 	public:
+		inline explicit send_queue(void) noexcept = default;
+		inline explicit send_queue(send_queue const& rhs) noexcept = default;
+		inline explicit send_queue(send_queue&& rhs) noexcept = default;
+		inline auto operator=(send_queue const& rhs) noexcept -> send_queue&;
+		inline auto operator=(send_queue&& rhs) noexcept -> send_queue&;
+		inline ~send_queue(void) noexcept = default;
+	public:
 		inline void push(message message_) noexcept {
 			auto buf = message_.get();
 			emplace(buf);
@@ -197,7 +197,6 @@ public:
 			_memory_pool::instance().deallocate(*address);
 			return result;
 		}
-	public:
 		inline auto begin(void) noexcept -> iterator {
 			return iterator(reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & _head)->_next));
 		}
@@ -422,8 +421,71 @@ public:
 		size_type _release_count = 0;
 	};
 
-	class task final {
-		std::function<int(void)> _function;
+
+	class scheduler final {
+	public:
+		class task final {
+		public:
+			inline explicit task(void) noexcept = delete;
+			inline explicit task(task const& rhs) noexcept = delete;
+			inline explicit task(task&& rhs) noexcept = delete;
+			inline auto operator=(task const& rhs) noexcept -> task & = delete;
+			inline auto operator=(task&& rhs) noexcept -> task & = delete;
+			inline ~task(void) noexcept = delete;
+		public:
+			unsigned long long _time;
+			std::function<int(void)> _function;
+		};
+	private:
+		class queue final : protected data_structure::lockfree::queue<task*> {
+		private:
+			using base = data_structure::lockfree::queue<task*>;
+		public:
+			inline void push(task* task_) noexcept {
+				base::emplace(task_);
+				_InterlockedIncrement(&_size);
+			}
+			inline auto pop(void) noexcept -> std::optional<task*> {
+				unsigned long long head = _head;
+				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
+				unsigned long long next = address->_next;
+
+				if (0x10000 > (0x00007FFFFFFFFFFFULL & next))
+					return std::nullopt;
+				unsigned long long tail = _tail;
+				if (tail == head)
+					_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
+
+				task* result = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value;
+				_head = next;
+				_memory_pool::instance().deallocate(*address);
+				_InterlockedDecrement(&_size);
+				return result;
+			}
+		public:
+			size_type _size = 0;
+		};
+	public:
+		inline explicit scheduler(void) noexcept = default;
+		inline explicit scheduler(scheduler const& rhs) noexcept = delete;
+		inline explicit scheduler(scheduler&& rhs) noexcept = delete;
+		inline auto operator=(scheduler const& rhs) noexcept -> scheduler & = delete;
+		inline auto operator=(scheduler&& rhs) noexcept -> scheduler & = delete;
+		inline ~scheduler(void) noexcept = default;
+	public:
+		template <typename function, typename... argument>
+		inline void register_task(function&& func, argument&&... arg) noexcept {
+			auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
+			task* task_ = &memory_pool.allocate();
+			task_->_time = 0;
+			task_->_function = std::bind(std::forward<function>(func), std::forward<argument>(arg)...);
+			_queue.push(task_);
+			_wait_on_address.wake_single((volatile long&)_queue._size);
+		}
+	public:
+		system_component::multi::wait_on_address _wait_on_address;
+		queue _queue;
+		data_structure::priority_queue<task*> _ready_queue;
 	};
 
 	class command final {
@@ -568,11 +630,13 @@ private:
 			_accept_thread.begin(&server::accept, CREATE_SUSPENDED, this);
 			for (size_type index = 0; index < _worker_thread_count; ++index)
 				_worker_thread.emplace_back(&server::worker, 0, this);
+			_scheduler_thread.begin(&server::scheduling, 0, this);
 
 			_session_array.initialize(_session_array_max);
 
 			_send_thread_run = true;
-			_send_thread.begin(&server::send, 0, this);
+			register_task(&server::send, this);
+			////_send_thread.begin(&server::send, 0, this);
 
 			system_component::network::socket_address_ipv4 socket_address;
 			socket_address.set_address(_listen_socket_ip.c_str());
@@ -719,7 +783,7 @@ private:
 			}
 		}
 	}
-	inline void send(void) noexcept {
+	inline int send(void) noexcept {
 		while (_send_thread_run) {
 			for (auto& iter : _session_array) {
 				if (iter._value.acquire()) {
@@ -732,41 +796,37 @@ private:
 					_session_array.release(&iter._value);
 				}
 			}
-			//Sleep(20);
+			std::cout << "샌드 호출" << std::endl;
+			Sleep(20);
 		}
+		return 0;
 	}
-	inline void scheduler(void) {
-		long compare = 0;
+	inline void scheduling(void) {
 		for (;;) {
-			_scheduler_wait_on_address.wait(compare, compare, INFINITE);
 			for (;;) {
-				auto result = _scheduler_queue.pop();
-
-				_scheduler_queue2.push();
-
-				_scheduler_queue2.top();
-				_scheduler_queue2.pop();
-
-				//GetTickCount64();
+				auto task_ = _scheduler._queue.pop();
+				if (!task_)
+					break;
+				_scheduler._ready_queue.emplace((*task_));
 			}
+
+			unsigned long wait = INFINITE;
+			unsigned long long time = GetTickCount64();
+			while (!_scheduler._ready_queue.empty()) {
+				auto task_ = _scheduler._ready_queue.top();
+				if (time >= task_->_time) {
+					_scheduler._ready_queue.pop();
+					_complation_port.post_queue_state(0, );
+				}
+				else {
+					wait = task_->_time - time;
+					break;
+				}
+			}
+			long _compare = 0;
+			_scheduler._wait_on_address.wait((volatile long&)_scheduler._queue._size, _compare, wait);
 		}
 	}
-	//inline void timeout(void) noexcept {
-	//	while (_timeout_thread_run) {
-	//		for (auto& iter : _session_array) {
-	//			if (iter._value.acquire()) {
-	//				// 타임아웃 시간을 측정해서 
-	//				// 타임아웃시 cancelioex를 호출한다
-	//			}
-	//			if (iter._value.release()) {
-	//				on_destroy_session(iter._value._key);
-	//				_InterlockedDecrement(&_monitor._session_count);
-	//				_session_array.release(&iter._value);
-	//			}
-	//		}
-	//		Sleep(_timeout_thread_interval);
-	//	}
-	//}
 public:
 	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept {
 		return true;
@@ -816,6 +876,14 @@ public:
 		message_->initialize();
 		return message_;
 	}
+	template <typename function, typename... argument>
+	inline void register_task(function&& func, argument&&... arg) noexcept {
+		_scheduler.register_task(std::forward<function>(func), std::forward<argument>(arg)...);
+		//auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
+		//auto& task_ = memory_pool.allocate();
+		//task_._time = 0;
+		//task_._function = std::bind(func, arg);
+	}
 private:
 	system_component::input_output::completion_port _complation_port;
 	system_component::network::socket _listen_socket;
@@ -837,7 +905,6 @@ public:
 	monitor _monitor;
 
 	system_component::multi::thread _scheduler_thread;
-	system_component::multi::wait_on_address _scheduler_wait_on_address;
-	data_structure::lockfree::queue<int> _scheduler_queue;
-	data_structure::priority_queue<int> _scheduler_queue2;
+
+	scheduler _scheduler;
 };
