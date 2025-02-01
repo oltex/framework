@@ -4,7 +4,7 @@
 
 namespace data_structure {
 	template<typename type, auto _predicate = predicate::less<type>>
-	class priority_queue final {
+	class priority_queue {
 	private:
 		using size_type = unsigned int;
 	public:

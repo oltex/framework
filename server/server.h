@@ -27,9 +27,9 @@
 template<typename type>
 concept string_size = std::_Is_any_of_v<type, unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long>;
 
-class server final : public design_pattern::singleton<server> {
+class server final/* : public design_pattern::singleton<server>*/ {
 private:
-	friend class design_pattern::singleton<server>;
+	//friend class design_pattern::singleton<server>;
 	using size_type = unsigned int;
 	using byte = unsigned char;
 	enum class post_queue_state {
@@ -41,25 +41,25 @@ public:
 		struct header final {
 			unsigned short _size;
 		};
-		class packet final : public data_structure::intrusive::shared_pointer_hook<0>, public data_structure::serialize_buffer {
+		class message final : public data_structure::intrusive::shared_pointer_hook<0>, public data_structure::serialize_buffer {
 		public:
-			inline explicit packet(void) noexcept = delete;
-			inline explicit packet(packet const& rhs) noexcept = delete;
-			inline explicit packet(packet&& rhs) noexcept = delete;
-			inline auto operator=(packet const& rhs) noexcept -> packet & = delete;
-			inline auto operator=(packet&& rhs) noexcept -> packet & = delete;
-			inline ~packet(void) noexcept = delete;
+			inline explicit message(void) noexcept = delete;
+			inline explicit message(message const& rhs) noexcept = delete;
+			inline explicit message(message&& rhs) noexcept = delete;
+			inline auto operator=(message const& rhs) noexcept -> message & = delete;
+			inline auto operator=(message&& rhs) noexcept -> message & = delete;
+			inline ~message(void) noexcept = delete;
 		public:
 			inline void initialize(void) noexcept {
 				_front = 0;
 				_rear = 0;
 			}
-			friend inline static void destructor(packet* rhs) {
-				auto& memory_pool = data_structure::_thread_local::memory_pool<packet>::instance();
+			friend inline static void destructor(message* rhs) {
+				auto& memory_pool = data_structure::_thread_local::memory_pool<message>::instance();
 				memory_pool.deallocate(*rhs);
 			}
 		};
-		using message = data_structure::intrusive::shared_pointer<packet, 0>;
+		using message_pointer = data_structure::intrusive::shared_pointer<message, 0>;
 		class view final {
 		private:
 			using size_type = unsigned int;
@@ -67,10 +67,10 @@ public:
 			inline explicit view(void) noexcept
 				: _front(0), _rear(0) {
 			}
-			inline explicit view(message message_) noexcept
+			inline explicit view(message_pointer message_) noexcept
 				: _message(message_), _front(0), _rear(0) {
 			}
-			inline explicit view(message message_, size_type front, size_type rear) noexcept
+			inline explicit view(message_pointer message_, size_type front, size_type rear) noexcept
 				: _message(message_), _front(front), _rear(rear) {
 			}
 			inline view(view const& rhs) noexcept
@@ -129,22 +129,22 @@ public:
 			inline auto size(void) const noexcept -> size_type {
 				return _rear - _front;
 			}
-			inline auto data(void) noexcept -> message& {
+			inline auto data(void) noexcept -> message_pointer& {
 				return _message;
 			}
-			inline void set(packet* packet_, size_type front, size_type rear) noexcept {
+			inline void set(message* message_, size_type front, size_type rear) noexcept {
 				_front = front;
 				_rear = rear;
-				_message.set(packet_);
+				_message.set(message_);
 			}
 			inline auto reset(void) noexcept {
 				_message.reset();
 			}
 		private:
 			size_type _front, _rear;
-			message _message;
+			message_pointer _message;
 		};
-		class send_queue final : protected data_structure::lockfree::queue<packet*> {
+		class send_queue final : protected data_structure::lockfree::queue<message*> {
 		private:
 			class iterator final {
 			public:
@@ -155,7 +155,7 @@ public:
 					: _node(rhs._node) {
 				}
 			public:
-				inline auto operator*(void) const noexcept -> packet*& {
+				inline auto operator*(void) const noexcept -> message*& {
 					return _node->_value;
 				}
 				inline auto operator++(void) noexcept -> iterator& {
@@ -176,12 +176,11 @@ public:
 			inline auto operator=(send_queue&& rhs) noexcept -> send_queue&;
 			inline ~send_queue(void) noexcept = default;
 		public:
-			inline void push(message message_) noexcept {
-				auto buf = message_.get();
-				emplace(buf);
+			inline void push(message_pointer message_) noexcept {
+				emplace(message_.get());
 				message_.reset();
 			}
-			inline auto pop(void) noexcept -> message {
+			inline auto pop(void) noexcept -> message_pointer {
 				unsigned long long head = _head;
 				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
 				unsigned long long next = address->_next;
@@ -192,7 +191,7 @@ public:
 				if (tail == head)
 					_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
 
-				message result;
+				message_pointer result;
 				result.set(reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value);
 				_head = next;
 				_memory_pool::instance().deallocate(*address);
@@ -218,10 +217,10 @@ public:
 #pragma warning(suppress: 26495)
 		inline explicit session(size_type const index) noexcept
 			: _key(index) {
-			auto& memory_pool = data_structure::_thread_local::memory_pool<packet>::instance();
-			packet* receive_packet = &memory_pool.allocate();
-			receive_packet->initialize();
-			_receive_message = message(receive_packet);
+			auto& memory_pool = data_structure::_thread_local::memory_pool<message>::instance();
+			message_pointer receive_message(&memory_pool.allocate());
+			receive_message->initialize();
+			_receive_message = receive_message;
 		};
 		inline explicit session(session const&) noexcept = delete;
 		inline explicit session(session&&) noexcept = delete;
@@ -310,22 +309,21 @@ public:
 		}
 	public:
 		inline void create_receive(void) noexcept {
-			packet* receive_packet = &data_structure::_thread_local::memory_pool<packet>::instance().allocate();
-
-			receive_packet->initialize();
-			memcpy(receive_packet->data(), _receive_message->data() + _receive_message->front(), _receive_message->size());
-			receive_packet->move_rear(_receive_message->size());
-			_receive_message = message(receive_packet);
+			message_pointer receive_message(&data_structure::_thread_local::memory_pool<message>::instance().allocate());
+			receive_message->initialize();
+			memcpy(receive_message->data(), _receive_message->data() + _receive_message->front(), _receive_message->size());
+			receive_message->move_rear(_receive_message->size());
+			_receive_message = receive_message;
 		}
 		inline void finish_send(void) noexcept {
 			for (size_type index = 0; index < _send_size; ++index)
-				message message_ = _send_queue.pop();
+				message_pointer message_ = _send_queue.pop();
 			_InterlockedExchange(&_send_flag, 0);
 		}
 	public:
 		unsigned long long _key;
 		system_component::network::socket _socket;
-		message _receive_message;
+		message_pointer _receive_message;
 		send_queue _send_queue;
 		system_component::input_output::overlapped _recv_overlapped;
 		system_component::input_output::overlapped _send_overlapped;
@@ -422,10 +420,10 @@ public:
 
 	class scheduler final {
 	public:
-		class task final {
+		class task final : public data_structure::intrusive::shared_pointer_hook<0> {
 		public:
 			template <typename function, typename... argument>
-			inline explicit task(function&& func, argument&&... arg) noexcept 
+			inline explicit task(function&& func, argument&&... arg) noexcept
 				: _time(0), _function(std::bind(std::forward<function>(func), std::forward<argument>(arg)...)) {
 			};
 			inline explicit task(task const& rhs) noexcept = delete;
@@ -434,9 +432,29 @@ public:
 			inline auto operator=(task&& rhs) noexcept -> task & = delete;
 			inline ~task(void) noexcept = default;
 		public:
+			inline void stop(void) noexcept {
+				_active = false;
+			}
+			inline void wait(void) noexcept {
+				long comapre = 0;
+				_wait_on_address.wait(_signal, comapre, INFINITE);
+			}
+			inline void signal(void) noexcept {
+				_signal = 1;
+				_wait_on_address.wake_all(_signal);
+			}
+			friend inline static void destructor(task* rhs) {
+				auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
+				memory_pool.deallocate(*rhs);
+			}
+		public:
+			bool _active = true;
+			volatile long _signal = 0;
 			unsigned long long _time;
 			std::function<int(void)> _function;
+			system_component::multi::wait_on_address _wait_on_address;
 		};
+		using task_pointer = data_structure::intrusive::shared_pointer<task, 0>;
 	private:
 		inline static auto less(task* const& source, task* const& destination) noexcept -> std::strong_ordering {
 			return source->_time <=> destination->_time;
@@ -452,6 +470,11 @@ public:
 			inline auto operator=(task_queue&& rhs) noexcept -> task_queue & = delete;
 			inline ~task_queue(void) noexcept = default;
 		public:
+			inline void push(task_pointer task_ptr) noexcept {
+				base::emplace(task_ptr.get());
+				task_ptr.reset();
+				_InterlockedIncrement(&_size);
+			}
 			inline void push(task* task_) noexcept {
 				base::emplace(task_);
 				_InterlockedIncrement(&_size);
@@ -486,17 +509,21 @@ public:
 		inline ~scheduler(void) noexcept = default;
 	public:
 		template <typename function, typename... argument>
-		inline void register_task(function&& func, argument&&... arg) noexcept {
+		inline auto regist_task(function&& func, argument&&... arg) noexcept -> task_pointer {
 			auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
-			task* task_ = &memory_pool.allocate(std::forward<function>(func), std::forward<argument>(arg)...);
-			_task_queue.push(task_);
+			task_pointer task_ptr(&memory_pool.allocate(std::forward<function>(func), std::forward<argument>(arg)...));
+			_InterlockedIncrement(&_size);
+			_task_queue.push(task_ptr);
 			_wait_on_address.wake_single((volatile long&)_task_queue._size);
+			return task_ptr;
 		}
 	public:
+		bool _active = true;
 		system_component::multi::thread _thread;
 		system_component::multi::wait_on_address _wait_on_address;
 		task_queue _task_queue;
 		ready_queue _ready_queue;
+		size_type _size = 0;
 	};
 	class monitor final {
 	public:
@@ -514,7 +541,7 @@ public:
 		size_type _receive_tps = 0;
 		size_type _send_tps = 0;
 	};
-private:
+public:
 	inline explicit server(void) noexcept {
 		system_component::network::window_socket_api::start_up();
 
@@ -552,18 +579,6 @@ private:
 			this->stop();
 			return 0;
 			});
-
-		//command_.add("monitor_start", [&](command::parameter* param) noexcept ->int {
-		//	_monitor._run = true;
-		//	_monitor._update_thread.begin(&monitor::update, 0, &_monitor);
-		//	return 0;
-		//	});
-		//command_.add("monitor_stop", [&](command::parameter* param) noexcept ->int {
-		//	_monitor._run = false;
-		//	_monitor._update_thread.wait_for_single(INFINITE);
-		//	_monitor._update_thread.close();
-		//	return 0;
-		//	});
 	};
 	inline explicit server(server const&) noexcept = delete;
 	inline explicit server(server&&) noexcept = delete;
@@ -584,8 +599,8 @@ public:
 
 		//_send_thread_run = true;
 		//_send_thread.begin(&server::send, 0, this);
-		_scheduler.register_task(&server::send, this);
-		_scheduler.register_task(&server::monit, this);
+		_scheduler.regist_task(&server::send, this);
+		_scheduler.regist_task(&server::monit, this);
 
 		system_component::network::socket_address_ipv4 socket_address;
 		socket_address.set_address(_listen_socket_ip.c_str());
@@ -601,6 +616,7 @@ public:
 		_listen_socket.close();
 		_accept_thread.wait_for_single(INFINITE);
 		_accept_thread.close();
+
 
 		//_send_thread_run = false;
 		//_send_thread.wait_for_single(INFINITE);
@@ -674,9 +690,22 @@ private:
 			} break;
 			case excute_task: {
 				scheduler::task& task = *reinterpret_cast<scheduler::task*>(overlapped);
-				task._time = task._function() + GetTickCount64();
-				_scheduler._task_queue.push(&task);
-				_scheduler._wait_on_address.wake_single(reinterpret_cast<volatile long&>(_scheduler._task_queue._size));
+				int time;
+				do
+					time = task._function();
+				while (time == 0);
+
+				if (false == task._active || -1 == time) {
+					scheduler::task_pointer task_ptr;
+					task_ptr.set(&task);
+					task_ptr->signal();
+					_InterlockedDecrement(&_scheduler._size);
+				}
+				else {
+					task._time = time + GetTickCount64();
+					_scheduler._task_queue.push(&task);
+					_scheduler._wait_on_address.wake_single(reinterpret_cast<volatile long&>(_scheduler._task_queue._size));
+				}
 			} break;
 			default: {
 				session& session_ = *reinterpret_cast<session*>(key);
@@ -721,14 +750,14 @@ private:
 	}
 	inline void schedule(void) {
 		unsigned long wait = INFINITE;
-		for (;;) {
-			long _compare = 0;
-			_scheduler._wait_on_address.wait(reinterpret_cast<volatile long&>(_scheduler._task_queue._size), _compare, wait);
+		long compare = 0;
+		while (_scheduler._active) {
+			_scheduler._wait_on_address.wait(reinterpret_cast<volatile long&>(_scheduler._task_queue._size), compare, wait);
 			for (;;) {
 				auto task_ = _scheduler._task_queue.pop();
 				if (!task_)
 					break;
-				_scheduler._ready_queue.emplace((*task_));
+				_scheduler._ready_queue.push(*task_);
 			}
 
 			wait = INFINITE;
@@ -745,6 +774,23 @@ private:
 				}
 			}
 		}
+
+		//레디큐 보기
+		while (!_scheduler._ready_queue.empty()) {
+			auto task_ = _scheduler._ready_queue.top();
+			task_->signal();
+			_scheduler._ready_queue.pop();
+			_InterlockedDecrement(&_scheduler._size);
+		}
+		while (0 != _scheduler._size) {
+			_scheduler._wait_on_address.wait(reinterpret_cast<volatile long&>(_scheduler._task_queue._size), compare, INFINITE);
+			for (;;) {
+				auto task_ = _scheduler._task_queue.pop();
+				if (!task_)
+					break;
+			}
+		}
+
 	}
 	inline int send(void) noexcept {
 		//while (_send_thread_run) {
@@ -774,14 +820,14 @@ private:
 		_monitor._accept_tps = 0;
 		_monitor._receive_tps = 0;
 		_monitor._send_tps = 0;
-		return 1000;
+		return -1;
 	}
 public:
 	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept {
 		return true;
 	}
 	inline virtual void on_create_session(unsigned long long key) noexcept {
-		session::message message_ = make_message();
+		session::message_pointer message_ = make_message();
 
 		session::header header_{ 8 };
 		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(session::header));
@@ -791,7 +837,7 @@ public:
 	inline virtual void on_receive_session(unsigned long long key, session::view& view_) {
 		unsigned long long value;
 		view_ >> value;
-		session::message message_ = make_message();
+		session::message_pointer message_ = make_message();
 
 		session::header header_{ 8 };
 		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(session::header));
@@ -802,7 +848,7 @@ public:
 	inline virtual void on_destroy_session(unsigned long long key) noexcept {
 
 	}
-	inline void do_send_session(unsigned long long key, session::message& message_) noexcept {
+	inline void do_send_session(unsigned long long key, session::message_pointer& message_) noexcept {
 		session& session_ = _session_array[key];
 		if (session_.acquire(key))
 			session_._send_queue.push(message_);
@@ -819,15 +865,15 @@ public:
 	inline void do_timeout_session(unsigned long long key, unsigned long long timeout) noexcept {
 	};
 public:
-	inline static auto make_message(void) noexcept -> session::message {
-		auto& memory_pool = data_structure::_thread_local::memory_pool<session::packet>::instance();
-		session::message message_(&memory_pool.allocate());
+	inline static auto make_message(void) noexcept -> session::message_pointer {
+		auto& memory_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
+		session::message_pointer message_(&memory_pool.allocate());
 		message_->initialize();
 		return message_;
 	}
 	template <typename function, typename... argument>
 	inline void register_task(function&& func, argument&&... arg) noexcept {
-		_scheduler.register_task(std::forward<function>(func), std::forward<argument>(arg)...);
+		_scheduler.regist_task(std::forward<function>(func), std::forward<argument>(arg)...);
 	}
 private:
 	system_component::input_output::completion_port _complation_port;
