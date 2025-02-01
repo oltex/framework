@@ -635,8 +635,8 @@ private:
 			_session_array.initialize(_session_array_max);
 
 			_send_thread_run = true;
-			register_task(&server::send, this);
-			////_send_thread.begin(&server::send, 0, this);
+			//register_task(&server::send, this);
+			_send_thread.begin(&server::send, 0, this);
 
 			system_component::network::socket_address_ipv4 socket_address;
 			socket_address.set_address(_listen_socket_ip.c_str());
@@ -742,6 +742,12 @@ private:
 				_InterlockedDecrement(&_monitor._session_count);
 				_session_array.release(&session_);
 			} break;
+			case excute_task: {
+				scheduler::task& task = *reinterpret_cast<scheduler::task*>(overlapped);
+				task._time = task._function() + GetTickCount64();
+				_scheduler._queue.push(&task);
+				_scheduler._wait_on_address.wake_single(reinterpret_cast<volatile long&>(_scheduler._queue._size));
+			} break;
 			default: {
 				session& session_ = *reinterpret_cast<session*>(key);
 				if (0 != transferred) {
@@ -796,13 +802,16 @@ private:
 					_session_array.release(&iter._value);
 				}
 			}
-			std::cout << "»÷µå È£Ãâ" << std::endl;
+			//std::cout << GetCurrentThreadId() << "»÷µå È£Ãâ" << std::endl;
 			Sleep(20);
 		}
-		return 0;
+		return 20;
 	}
 	inline void scheduling(void) {
+		unsigned long wait = INFINITE;
 		for (;;) {
+			long _compare = 0;
+			_scheduler._wait_on_address.wait(reinterpret_cast<volatile long&>(_scheduler._queue._size), _compare, wait);
 			for (;;) {
 				auto task_ = _scheduler._queue.pop();
 				if (!task_)
@@ -810,21 +819,19 @@ private:
 				_scheduler._ready_queue.emplace((*task_));
 			}
 
-			unsigned long wait = INFINITE;
+			wait = INFINITE;
 			unsigned long long time = GetTickCount64();
 			while (!_scheduler._ready_queue.empty()) {
 				auto task_ = _scheduler._ready_queue.top();
 				if (time >= task_->_time) {
 					_scheduler._ready_queue.pop();
-					_complation_port.post_queue_state(0, );
+					_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(task_));
 				}
 				else {
 					wait = task_->_time - time;
 					break;
 				}
 			}
-			long _compare = 0;
-			_scheduler._wait_on_address.wait((volatile long&)_scheduler._queue._size, _compare, wait);
 		}
 	}
 public:

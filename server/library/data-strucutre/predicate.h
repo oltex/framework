@@ -3,16 +3,11 @@
 
 namespace predicate {
 	template<typename type>
-	struct less final {
-		inline auto operator()(type const& source, type const& destination) const noexcept {
-			return source <=> destination;
-		}
-	};
-
+	inline static auto less(type const& source, type const& destination) noexcept {
+		return source <=> destination;
+	}
 	template<typename type>
-	struct greater final {
-		inline auto operator()(type const& source, type const& destination) const noexcept {
-			return destination <=> source;
-		}
-	};
+	inline static auto greater(type const& source, type const& destination) noexcept {
+		return destination <=> source;
+	}
 }
