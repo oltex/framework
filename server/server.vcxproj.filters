@@ -87,6 +87,9 @@
     <ClInclude Include="library\data-strucutre\predicate.h">
       <Filter>library\data-strucutre</Filter>
     </ClInclude>
+    <ClInclude Include="library\utility\command.h">
+      <Filter>library\utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="library">

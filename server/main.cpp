@@ -10,14 +10,13 @@ int main(void) noexcept {
 
 	server& _server = server::instance();
 	{
-		server::command::parameter param("include", "server.cfg");
-		_server._command.execute("include", &param);
+		command::parameter param("include", "server.cfg");
+		command::instance().execute("include", &param);
 	}
-	//Sleep(5000);
 	system("pause");
 	{
-		server::command::parameter param("server_stop");
-		_server._command.execute("server_stop", &param);
+		command::parameter param("server_stop");
+		command::instance().execute("server_stop", &param);
 	}
-	Sleep(INFINITE);
+	//Sleep(INFINITE);
 }
