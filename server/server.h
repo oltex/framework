@@ -17,7 +17,7 @@
 
 #include "library/utility/parser.h"
 #include "library/utility/command.h"
-#include "library/utility/performance_monitor.h"
+#include "library/utility/performance_data_helper.h"
 
 #include <optional>
 #include <iostream>
@@ -28,14 +28,115 @@ template<typename type>
 concept string_size = std::_Is_any_of_v<type, unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long>;
 
 class server final/* : public design_pattern::singleton<server>*/ {
-private:
 	//friend class design_pattern::singleton<server>;
+private:
 	using size_type = unsigned int;
 	using byte = unsigned char;
 	enum class post_queue_state {
 		close_worker, destory_session, excute_task
 	};
 public:
+	class scheduler final {
+	public:
+		class task final : public data_structure::intrusive::shared_pointer_hook<0> {
+		public:
+			template <typename function, typename... argument>
+			inline explicit task(function&& func, argument&&... arg) noexcept
+				: _time(0), _function(std::bind(std::forward<function>(func), std::forward<argument>(arg)...)) {
+			};
+			inline explicit task(task const& rhs) noexcept = delete;
+			inline explicit task(task&& rhs) noexcept = delete;
+			inline auto operator=(task const& rhs) noexcept -> task & = delete;
+			inline auto operator=(task&& rhs) noexcept -> task & = delete;
+			inline ~task(void) noexcept = default;
+		public:
+			friend inline static void destructor(task* rhs) {
+				auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
+				memory_pool.deallocate(*rhs);
+			}
+		public:
+			unsigned long long _time;
+			std::function<int(void)> _function;
+		};
+	private:
+		inline static auto less(task* const& source, task* const& destination) noexcept -> std::strong_ordering {
+			return source->_time <=> destination->_time;
+		}
+		class task_queue final : protected data_structure::lockfree::queue<task*> {
+		private:
+			using base = data_structure::lockfree::queue<task*>;
+		public:
+			inline explicit task_queue(void) noexcept = default;
+			inline explicit task_queue(task_queue const& rhs) noexcept = delete;
+			inline explicit task_queue(task_queue&& rhs) noexcept = delete;
+			inline auto operator=(task_queue const& rhs) noexcept -> task_queue & = delete;
+			inline auto operator=(task_queue&& rhs) noexcept -> task_queue & = delete;
+			inline ~task_queue(void) noexcept = default;
+		public:
+			inline void push(task* task_) noexcept {
+				base::emplace(task_);
+				_InterlockedIncrement(&_size);
+			}
+			inline auto pop(void) noexcept -> task* {
+				unsigned long long head = _head;
+				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
+				unsigned long long next = address->_next;
+
+				if (0x10000 > (0x00007FFFFFFFFFFFULL & next))
+					__debugbreak();
+				unsigned long long tail = _tail;
+				if (tail == head)
+					_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
+
+				task* result = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value;
+				_head = next;
+				_memory_pool::instance().deallocate(*address);
+				_InterlockedDecrement(&_size);
+				return result;
+			}
+			inline auto empty(void) const noexcept {
+				unsigned long long head = _head;
+				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
+				unsigned long long next = address->_next;
+				if (_nullptr == (0x00007FFFFFFFFFFFULL & next))
+					return true;
+				return false;
+			}
+		public:
+			size_type _size = 0;
+		};
+		using ready_queue = data_structure::priority_queue<task*, less>;
+	public:
+		inline explicit scheduler(void) noexcept = default;
+		inline explicit scheduler(scheduler const& rhs) noexcept = delete;
+		inline explicit scheduler(scheduler&& rhs) noexcept = delete;
+		inline auto operator=(scheduler const& rhs) noexcept -> scheduler & = delete;
+		inline auto operator=(scheduler&& rhs) noexcept -> scheduler & = delete;
+		inline ~scheduler(void) noexcept = default;
+	public:
+		template <typename function, typename... argument>
+		inline void regist_task(function&& func, argument&&... arg) noexcept {
+			if (0 == _active) {
+				_InterlockedIncrement(&_size);
+				if (0 == _active) {
+					auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
+					task* task_(&memory_pool.allocate(std::forward<function>(func), std::forward<argument>(arg)...));
+					_task_queue.push(task_);
+					_wait_on_address.wake_single((volatile long&)_task_queue._size);
+				}
+				else {
+					_InterlockedDecrement(&_size);
+				}
+			}
+		}
+	public:
+		long _active = 0;
+		system_component::multi::thread _thread;
+		system_component::multi::wait_on_address _wait_on_address;
+		task_queue _task_queue;
+		ready_queue _ready_queue;
+		size_type _size = 0;
+	};
 	class session final {
 	public:
 		struct header final {
@@ -417,124 +518,6 @@ public:
 		size_type _acquire_count = 0;
 		size_type _release_count = 0;
 	};
-
-	class scheduler final {
-	public:
-		class task final : public data_structure::intrusive::shared_pointer_hook<0> {
-		public:
-			template <typename function, typename... argument>
-			inline explicit task(function&& func, argument&&... arg) noexcept
-				: _time(0), _function(std::bind(std::forward<function>(func), std::forward<argument>(arg)...)) {
-			};
-			inline explicit task(task const& rhs) noexcept = delete;
-			inline explicit task(task&& rhs) noexcept = delete;
-			inline auto operator=(task const& rhs) noexcept -> task & = delete;
-			inline auto operator=(task&& rhs) noexcept -> task & = delete;
-			inline ~task(void) noexcept = default;
-		public:
-			friend inline static void destructor(task* rhs) {
-				auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
-				memory_pool.deallocate(*rhs);
-			}
-		public:
-			unsigned long long _time;
-			std::function<int(void)> _function;
-		};
-	private:
-		inline static auto less(task* const& source, task* const& destination) noexcept -> std::strong_ordering {
-			return source->_time <=> destination->_time;
-		}
-		class task_queue final : protected data_structure::lockfree::queue<task*> {
-		private:
-			using base = data_structure::lockfree::queue<task*>;
-		public:
-			inline explicit task_queue(void) noexcept = default;
-			inline explicit task_queue(task_queue const& rhs) noexcept = delete;
-			inline explicit task_queue(task_queue&& rhs) noexcept = delete;
-			inline auto operator=(task_queue const& rhs) noexcept -> task_queue & = delete;
-			inline auto operator=(task_queue&& rhs) noexcept -> task_queue & = delete;
-			inline ~task_queue(void) noexcept = default;
-		public:
-			inline void push(task* task_) noexcept {
-				base::emplace(task_);
-				_InterlockedIncrement(&_size);
-			}
-			inline auto pop(void) noexcept -> task* {
-				unsigned long long head = _head;
-				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
-				unsigned long long next = address->_next;
-
-				if (0x10000 > (0x00007FFFFFFFFFFFULL & next))
-					__debugbreak();
-				unsigned long long tail = _tail;
-				if (tail == head)
-					_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
-
-				task* result = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value;
-				_head = next;
-				_memory_pool::instance().deallocate(*address);
-				_InterlockedDecrement(&_size);
-				return result;
-			}
-			inline auto empty(void) const noexcept {
-				unsigned long long head = _head;
-				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
-				unsigned long long next = address->_next;
-				if (_nullptr == (0x00007FFFFFFFFFFFULL & next))
-					return true;
-				return false;
-			}
-		public:
-			size_type _size = 0;
-		};
-		using ready_queue = data_structure::priority_queue<task*, less>;
-	public:
-		inline explicit scheduler(void) noexcept = default;
-		inline explicit scheduler(scheduler const& rhs) noexcept = delete;
-		inline explicit scheduler(scheduler&& rhs) noexcept = delete;
-		inline auto operator=(scheduler const& rhs) noexcept -> scheduler & = delete;
-		inline auto operator=(scheduler&& rhs) noexcept -> scheduler & = delete;
-		inline ~scheduler(void) noexcept = default;
-	public:
-		template <typename function, typename... argument>
-		inline void regist_task(function&& func, argument&&... arg) noexcept {
-			if (0 == _active) {
-				_InterlockedIncrement(&_size);
-				if (0 == _active) {
-					auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
-					task* task_(&memory_pool.allocate(std::forward<function>(func), std::forward<argument>(arg)...));
-					_task_queue.push(task_);
-					_wait_on_address.wake_single((volatile long&)_task_queue._size);
-				}
-				else {
-					_InterlockedDecrement(&_size);
-				}
-			}
-		}
-	public:
-		long _active = 0;
-		system_component::multi::thread _thread;
-		system_component::multi::wait_on_address _wait_on_address;
-		task_queue _task_queue;
-		ready_queue _ready_queue;
-		size_type _size = 0;
-	};
-	class monitor final {
-	public:
-		inline explicit monitor(void) noexcept = default;
-		inline explicit monitor(monitor const& rhs) noexcept = delete;
-		inline explicit monitor(monitor&& rhs) noexcept = delete;
-		inline auto operator=(monitor const& rhs) noexcept -> monitor & = delete;
-		inline auto operator=(monitor&& rhs) noexcept -> monitor & = delete;
-		inline ~monitor(void) noexcept = default;
-	public:
-		bool _run = false;
-		unsigned long long _accept_total_count = 0;
-		size_type _session_count = 0;
-		size_type _accept_tps = 0;
-		size_type _receive_tps = 0;
-		size_type _send_tps = 0;
-	};
 public:
 	inline explicit server(void) noexcept {
 		system_component::network::window_socket_api::start_up();
@@ -590,6 +573,17 @@ public:
 
 		_session_array.initialize(_session_array_max);
 		_scheduler.regist_task(&server::send, this);
+
+		auto& query = utility::performance_data_helper::query::instance();
+		_processor_total_time = query.add_counter(L"\\Processor(_Total)\\% Processor Time");
+		_processor_user_time = query.add_counter(L"\\Processor(_Total)\\% User Time");
+		_processor_kernel_time = query.add_counter(L"\\Processor(_Total)\\% Privileged Time");
+		_process_total_time = query.add_counter(L"\\Process(server)\\% Processor Time");
+		_process_user_time = query.add_counter(L"\\Process(server)\\% User Time");
+		_process_kernel_time = query.add_counter(L"\\Process(server)\\% Privileged Time");
+		_memory_available_byte = query.add_counter(L"\\Memory\\Available Bytes");
+		_memory_pool_paged_byte = query.add_counter(L"\\Memory\\Pool Paged Bytes");
+		_memory_pool_nonpaged_byte = query.add_counter(L"\\Memory\\Pool Nonpaged Bytes");
 		_scheduler.regist_task(&server::monit, this);
 
 		// ÄÁÅÙÃ÷ »ý¼º
@@ -613,7 +607,7 @@ public:
 				iter._value.cancel();
 			if (iter._value.release()) {
 				on_destroy_session(iter._value._key);
-				_InterlockedDecrement(&_monitor._session_count);
+				_InterlockedDecrement(&_session_count);
 				_session_array.release(&iter._value);
 			}
 		}
@@ -643,21 +637,21 @@ private:
 			auto [socket, socket_address] = _listen_socket.accept();
 			if (INVALID_SOCKET == socket.data())
 				break;
-			_monitor._accept_total_count++;
-			_InterlockedIncrement(&_monitor._accept_tps);
+			_accept_total_count++;
+			_InterlockedIncrement(&_accept_tps);
 			if (false == on_accept_socket(socket_address))
 				socket.close();
 			else {
 				session& session_ = *_session_array.acquire();
 				session_.initialize(std::move(socket));
-				_InterlockedIncrement(&_monitor._session_count);
+				_InterlockedIncrement(&_session_count);
 
 				_complation_port.connect(session_._socket, reinterpret_cast<ULONG_PTR>(&session_));
 				on_create_session(session_._key);
 
 				if (!session_.receive() && session_.release()) {
 					on_destroy_session(session_._key);
-					_InterlockedDecrement(&_monitor._session_count);
+					_InterlockedDecrement(&_session_count);
 					_session_array.release(&session_);
 				}
 			}
@@ -673,7 +667,7 @@ private:
 			case destory_session: {
 				session& session_ = *reinterpret_cast<session*>(overlapped);
 				on_destroy_session(session_._key);
-				_InterlockedDecrement(&_monitor._session_count);
+				_InterlockedDecrement(&_session_count);
 				_session_array.release(&session_);
 			} break;
 			case excute_task: {
@@ -712,7 +706,7 @@ private:
 							session::view view_(session_._receive_message, session_._receive_message->front(), session_._receive_message->front() + header_._size);
 							session_._receive_message->pop(header_._size);
 							on_receive_session(session_._key, view_);
-							_InterlockedIncrement(&_monitor._receive_tps);
+							_InterlockedIncrement(&_receive_tps);
 						}
 
 						session_.create_receive();
@@ -721,14 +715,14 @@ private:
 					}
 					else {
 						session_.finish_send();
-						_interlockedadd((volatile long*)&_monitor._send_tps, session_._send_size);
+						_interlockedadd((volatile long*)&_send_tps, session_._send_size);
 						//if (session_.send())
 						//	continue;
 					}
 				}
 				if (session_.release()) {
 					on_destroy_session(session_._key);
-					_InterlockedDecrement(&_monitor._session_count);
+					_InterlockedDecrement(&_session_count);
 					_session_array.release(&session_);
 				}
 			} break;
@@ -766,7 +760,7 @@ private:
 			}
 			if (iter._value.release()) {
 				on_destroy_session(iter._value._key);
-				_InterlockedDecrement(&_monitor._session_count);
+				_InterlockedDecrement(&_session_count);
 				_session_array.release(&iter._value);
 			}
 		}
@@ -776,15 +770,45 @@ private:
 	}
 	inline int monit(void) noexcept {
 		system("cls");
+		auto& query = utility::performance_data_helper::query::instance();
+		query.collect_query_data();
+
+		SYSTEM_INFO info;
+		GetSystemInfo(&info);
+
+		printf("processer cpu usage\n"\
+			"total : %lf \n"\
+			"user : %lf \n"\
+			"kernel : %lf \n"\
+			"process cpu usage\n"\
+			"total : %lf \n"\
+			"user : %lf \n"\
+			"kernel : %lf \n"\
+			"memory usage\n"\
+			"available : %lf \n"\
+			"page : %lf \n"\
+			"nonpage : %lf \n",
+			query.get_formatted_counter_value(_processor_total_time, PDH_FMT_DOUBLE).doubleValue,
+			query.get_formatted_counter_value(_processor_user_time, PDH_FMT_DOUBLE).doubleValue,
+			query.get_formatted_counter_value(_processor_kernel_time, PDH_FMT_DOUBLE).doubleValue,
+			query.get_formatted_counter_value(_process_total_time, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors,
+			query.get_formatted_counter_value(_process_user_time, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors,
+			query.get_formatted_counter_value(_process_kernel_time, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors);
+		query.get_formatted_counter_value(_process_total_time, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors,
+			query.get_formatted_counter_value(_process_user_time, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors,
+			query.get_formatted_counter_value(_process_kernel_time, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors);
+
+
+
 		printf("accept total : %llu\n"\
 			"accept tps : %u\n"\
 			"session count : %u\n"\
 			"receive tps : %u\n"\
 			"send tps : %u\n",
-			_monitor._accept_total_count, _monitor._accept_tps, _monitor._session_count, _monitor._receive_tps, _monitor._send_tps);
-		_monitor._accept_tps = 0;
-		_monitor._receive_tps = 0;
-		_monitor._send_tps = 0;
+			_accept_total_count, _accept_tps, _session_count, _receive_tps, _send_tps);
+		_accept_tps = 0;
+		_receive_tps = 0;
+		_send_tps = 0;
 		if (-1 == _scheduler._active)
 			return -1;
 		return 1000;
@@ -858,5 +882,19 @@ public:
 	system_component::network::socket _listen_socket;
 	system_component::multi::thread _accept_thread;
 
-	monitor _monitor;
+	unsigned long long _accept_total_count = 0;
+	size_type _session_count = 0;
+	size_type _accept_tps = 0;
+	size_type _receive_tps = 0;
+	size_type _send_tps = 0;
+
+	utility::performance_data_helper::counter _processor_total_time;
+	utility::performance_data_helper::counter _processor_user_time;
+	utility::performance_data_helper::counter _processor_kernel_time;
+	utility::performance_data_helper::counter _process_total_time;
+	utility::performance_data_helper::counter _process_user_time;
+	utility::performance_data_helper::counter _process_kernel_time;
+	utility::performance_data_helper::counter _memory_available_byte;
+	utility::performance_data_helper::counter _memory_pool_paged_byte;
+	utility::performance_data_helper::counter _memory_pool_nonpaged_byte;
 };

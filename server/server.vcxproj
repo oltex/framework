@@ -180,7 +180,7 @@
     <ClInclude Include="library\utility\command.h" />
     <ClInclude Include="library\utility\crash_dump.h" />
     <ClInclude Include="library\utility\parser.h" />
-    <ClInclude Include="library\utility\performance_monitor.h" />
+    <ClInclude Include="library\utility\performance_data_helper.h" />
     <ClInclude Include="server.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

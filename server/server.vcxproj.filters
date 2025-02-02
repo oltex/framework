@@ -71,7 +71,7 @@
     <ClInclude Include="library\data-strucutre\lockfree\memory_pool.h">
       <Filter>library\data-strucutre\lockfree</Filter>
     </ClInclude>
-    <ClInclude Include="library\utility\performance_monitor.h">
+    <ClInclude Include="library\utility\performance_data_helper.h">
       <Filter>library\utility</Filter>
     </ClInclude>
     <ClInclude Include="library\data-strucutre\unique_pointer.h">
