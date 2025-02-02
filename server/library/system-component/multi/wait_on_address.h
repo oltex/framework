@@ -12,7 +12,7 @@ namespace system_component::multi {
 		inline auto operator=(wait_on_address&& rhs) noexcept -> wait_on_address & = delete;
 		inline ~wait_on_address(void) noexcept = default;
 	public:
-		inline bool wait(volatile long& address, volatile long _compare, unsigned long milli_second) noexcept {
+		inline bool wait(volatile long& address, volatile long& _compare, unsigned long milli_second) noexcept {
 			return WaitOnAddress(&address, (void*)&_compare, sizeof(long), milli_second);
 		}
 		inline void wake_single(volatile long& address) noexcept {

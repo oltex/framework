@@ -80,7 +80,6 @@
     <ClInclude Include="library\utility\crash_dump.h">
       <Filter>library\utility</Filter>
     </ClInclude>
-    <ClInclude Include="library\system-component\multi\wait_on_address.h" />
     <ClInclude Include="library\data-strucutre\priority_queue.h">
       <Filter>library\data-strucutre</Filter>
     </ClInclude>
@@ -89,6 +88,9 @@
     </ClInclude>
     <ClInclude Include="library\utility\command.h">
       <Filter>library\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\multi\wait_on_address.h">
+      <Filter>library\system-component\multi</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -432,29 +432,14 @@ public:
 			inline auto operator=(task&& rhs) noexcept -> task & = delete;
 			inline ~task(void) noexcept = default;
 		public:
-			inline void stop(void) noexcept {
-				_active = false;
-			}
-			inline void wait(void) noexcept {
-				long comapre = 0;
-				_wait_on_address.wait(_signal, comapre, INFINITE);
-			}
-			inline void signal(void) noexcept {
-				_signal = 1;
-				_wait_on_address.wake_all(_signal);
-			}
 			friend inline static void destructor(task* rhs) {
 				auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
 				memory_pool.deallocate(*rhs);
 			}
 		public:
-			bool _active = true;
-			volatile long _signal = 0;
 			unsigned long long _time;
 			std::function<int(void)> _function;
-			system_component::multi::wait_on_address _wait_on_address;
 		};
-		using task_pointer = data_structure::intrusive::shared_pointer<task, 0>;
 	private:
 		inline static auto less(task* const& source, task* const& destination) noexcept -> std::strong_ordering {
 			return source->_time <=> destination->_time;
@@ -470,22 +455,17 @@ public:
 			inline auto operator=(task_queue&& rhs) noexcept -> task_queue & = delete;
 			inline ~task_queue(void) noexcept = default;
 		public:
-			inline void push(task_pointer task_ptr) noexcept {
-				base::emplace(task_ptr.get());
-				task_ptr.reset();
-				_InterlockedIncrement(&_size);
-			}
 			inline void push(task* task_) noexcept {
 				base::emplace(task_);
 				_InterlockedIncrement(&_size);
 			}
-			inline auto pop(void) noexcept -> std::optional<task*> {
+			inline auto pop(void) noexcept -> task* {
 				unsigned long long head = _head;
 				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
 				unsigned long long next = address->_next;
 
 				if (0x10000 > (0x00007FFFFFFFFFFFULL & next))
-					return std::nullopt;
+					__debugbreak();
 				unsigned long long tail = _tail;
 				if (tail == head)
 					_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
@@ -495,6 +475,14 @@ public:
 				_memory_pool::instance().deallocate(*address);
 				_InterlockedDecrement(&_size);
 				return result;
+			}
+			inline auto empty(void) const noexcept {
+				unsigned long long head = _head;
+				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
+				unsigned long long next = address->_next;
+				if (_nullptr == (0x00007FFFFFFFFFFFULL & next))
+					return true;
+				return false;
 			}
 		public:
 			size_type _size = 0;
@@ -509,16 +497,22 @@ public:
 		inline ~scheduler(void) noexcept = default;
 	public:
 		template <typename function, typename... argument>
-		inline auto regist_task(function&& func, argument&&... arg) noexcept -> task_pointer {
-			auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
-			task_pointer task_ptr(&memory_pool.allocate(std::forward<function>(func), std::forward<argument>(arg)...));
-			_InterlockedIncrement(&_size);
-			_task_queue.push(task_ptr);
-			_wait_on_address.wake_single((volatile long&)_task_queue._size);
-			return task_ptr;
+		inline void regist_task(function&& func, argument&&... arg) noexcept {
+			if (0 == _active) {
+				_InterlockedIncrement(&_size);
+				if (0 == _active) {
+					auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
+					task* task_(&memory_pool.allocate(std::forward<function>(func), std::forward<argument>(arg)...));
+					_task_queue.push(task_);
+					_wait_on_address.wake_single((volatile long&)_task_queue._size);
+				}
+				else {
+					_InterlockedDecrement(&_size);
+				}
+			}
 		}
 	public:
-		bool _active = true;
+		long _active = 0;
 		system_component::multi::thread _thread;
 		system_component::multi::wait_on_address _wait_on_address;
 		task_queue _task_queue;
@@ -590,17 +584,15 @@ public:
 public:
 	inline void start(void) noexcept {
 		_complation_port.create(_concurrent_thread_count);
-		_accept_thread.begin(&server::accept, CREATE_SUSPENDED, this);
 		for (size_type index = 0; index < _worker_thread_count; ++index)
 			_worker_thread.emplace_back(&server::worker, 0, this);
 		_scheduler._thread.begin(&server::schedule, 0, this);
 
 		_session_array.initialize(_session_array_max);
-
-		//_send_thread_run = true;
-		//_send_thread.begin(&server::send, 0, this);
 		_scheduler.regist_task(&server::send, this);
 		_scheduler.regist_task(&server::monit, this);
+
+		// 컨텐츠 생성
 
 		system_component::network::socket_address_ipv4 socket_address;
 		socket_address.set_address(_listen_socket_ip.c_str());
@@ -610,20 +602,12 @@ public:
 		_listen_socket.set_send_buffer(0);
 		_listen_socket.bind(socket_address);
 		_listen_socket.listen(_listen_socket_backlog);
-		_accept_thread.resume();
+		_accept_thread.begin(&server::accept, 0, this);
 	}
 	inline void stop(void) noexcept {
 		_listen_socket.close();
 		_accept_thread.wait_for_single(INFINITE);
 		_accept_thread.close();
-
-
-		//_send_thread_run = false;
-		//_send_thread.wait_for_single(INFINITE);
-		//_send_thread.close();
-
-		// 스케줄러 정리 코드
-
 		for (auto& iter : _session_array) {
 			if (iter._value.acquire())
 				iter._value.cancel();
@@ -635,13 +619,17 @@ public:
 		}
 		while (_session_array._size != 0) {
 		}
-		_session_array.finalize();
 
-		// 스케줄러 종료 코드
+		// 컨텐츠 종료
+
+		_scheduler._active = -1;
+		_scheduler._wait_on_address.wake_single(reinterpret_cast<volatile long&>(_scheduler._task_queue._size));
+		_scheduler._thread.wait_for_single(INFINITE);
+		_scheduler._thread.close();
+		_session_array.finalize();
 
 		for (size_type index = 0; index < _worker_thread.size(); ++index)
 			_complation_port.post_queue_state(0, 0, nullptr);
-
 		HANDLE handle[128];
 		for (unsigned int index = 0; index < _worker_thread.size(); ++index)
 			handle[index] = _worker_thread[index].data();
@@ -695,11 +683,10 @@ private:
 					time = task._function();
 				while (time == 0);
 
-				if (false == task._active || -1 == time) {
-					scheduler::task_pointer task_ptr;
-					task_ptr.set(&task);
-					task_ptr->signal();
+				if (-1 == time) {
 					_InterlockedDecrement(&_scheduler._size);
+					auto& memory_pool = data_structure::_thread_local::memory_pool<scheduler::task>::instance();
+					memory_pool.deallocate(task);
 				}
 				else {
 					task._time = time + GetTickCount64();
@@ -749,18 +736,14 @@ private:
 		}
 	}
 	inline void schedule(void) {
-		unsigned long wait = INFINITE;
-		long compare = 0;
-		while (_scheduler._active) {
-			_scheduler._wait_on_address.wait(reinterpret_cast<volatile long&>(_scheduler._task_queue._size), compare, wait);
-			for (;;) {
-				auto task_ = _scheduler._task_queue.pop();
-				if (!task_)
-					break;
-				_scheduler._ready_queue.push(*task_);
+		unsigned long wait_time = INFINITE;
+		while (0 == _scheduler._active || 0 != _scheduler._size) {
+			bool result = _scheduler._wait_on_address.wait(reinterpret_cast<volatile long&>(_scheduler._task_queue._size), reinterpret_cast<volatile long&>(_scheduler._active), wait_time);
+			if (result) {
+				while (!_scheduler._task_queue.empty())
+					_scheduler._ready_queue.push(_scheduler._task_queue.pop());
 			}
-
-			wait = INFINITE;
+			wait_time = INFINITE;
 			unsigned long long time = GetTickCount64();
 			while (!_scheduler._ready_queue.empty()) {
 				auto task_ = _scheduler._ready_queue.top();
@@ -769,31 +752,13 @@ private:
 					_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(task_));
 				}
 				else {
-					wait = static_cast<unsigned long>(task_->_time - time);
+					wait_time = static_cast<unsigned long>(task_->_time - time);
 					break;
 				}
 			}
 		}
-
-		//레디큐 보기
-		while (!_scheduler._ready_queue.empty()) {
-			auto task_ = _scheduler._ready_queue.top();
-			task_->signal();
-			_scheduler._ready_queue.pop();
-			_InterlockedDecrement(&_scheduler._size);
-		}
-		while (0 != _scheduler._size) {
-			_scheduler._wait_on_address.wait(reinterpret_cast<volatile long&>(_scheduler._task_queue._size), compare, INFINITE);
-			for (;;) {
-				auto task_ = _scheduler._task_queue.pop();
-				if (!task_)
-					break;
-			}
-		}
-
 	}
 	inline int send(void) noexcept {
-		//while (_send_thread_run) {
 		for (auto& iter : _session_array) {
 			if (iter._value.acquire()) {
 				if (iter._value.send())
@@ -805,9 +770,9 @@ private:
 				_session_array.release(&iter._value);
 			}
 		}
-		//	Sleep(20);
-		//}
-		return 20;
+		if (-1 == _scheduler._active)
+			return -1;
+		return 0;
 	}
 	inline int monit(void) noexcept {
 		system("cls");
@@ -820,7 +785,9 @@ private:
 		_monitor._accept_tps = 0;
 		_monitor._receive_tps = 0;
 		_monitor._send_tps = 0;
-		return -1;
+		if (-1 == _scheduler._active)
+			return -1;
+		return 1000;
 	}
 public:
 	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept {
@@ -877,14 +844,9 @@ public:
 	}
 private:
 	system_component::input_output::completion_port _complation_port;
-	system_component::multi::thread _accept_thread;
 	data_structure::vector<system_component::multi::thread> _worker_thread;
 	scheduler _scheduler;
 	session_array _session_array;
-
-	system_component::network::socket _listen_socket;
-	//bool _send_thread_run = false;
-	//system_component::multi::thread _send_thread;
 public:
 	size_type _concurrent_thread_count = 0;
 	size_type _worker_thread_count = 0;
@@ -893,6 +855,8 @@ public:
 	size_type _listen_socket_port = 0;
 	size_type _listen_socket_backlog = 0;
 	unsigned char _header_fixed_key = 0;
+	system_component::network::socket _listen_socket;
+	system_component::multi::thread _accept_thread;
 
 	monitor _monitor;
 };
