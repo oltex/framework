@@ -418,7 +418,7 @@ public:
 		}
 		inline void finish_send(void) noexcept {
 			for (size_type index = 0; index < _send_size; ++index)
-				message_pointer message_ = _send_queue.pop();
+				_send_queue.pop();
 			_InterlockedExchange(&_send_flag, 0);
 		}
 	public:
@@ -581,9 +581,16 @@ public:
 		_process_total_time = query.add_counter(L"\\Process(server)\\% Processor Time");
 		_process_user_time = query.add_counter(L"\\Process(server)\\% User Time");
 		_process_kernel_time = query.add_counter(L"\\Process(server)\\% Privileged Time");
+
 		_memory_available_byte = query.add_counter(L"\\Memory\\Available Bytes");
-		_memory_pool_paged_byte = query.add_counter(L"\\Memory\\Pool Paged Bytes");
 		_memory_pool_nonpaged_byte = query.add_counter(L"\\Memory\\Pool Nonpaged Bytes");
+		_process_private_byte = query.add_counter(L"\\Process(server)\\Private Bytes");
+		_process_pool_nonpaged_byte = query.add_counter(L"\\Process(server)\\Pool Nonpaged Bytes");
+
+		_tcpv4_segments_received_sec = query.add_counter(L"\\TCPv4\\Segments Received/sec");
+		_tcpv4_segments_sent_sec = query.add_counter(L"\\TCPv4\\Segments Sent/sec");
+		_tcpv4_segments_retransmitted_sec = query.add_counter(L"\\TCPv4\\Segments Retransmitted/sec");
+
 		_scheduler.regist_task(&server::monit, this);
 
 		// ÄÁÅÙÃ÷ »ý¼º
@@ -777,26 +784,36 @@ private:
 		GetSystemInfo(&info);
 
 		printf("processer cpu usage\n"\
-			"total : %lf \n"\
-			"user : %lf \n"\
-			"kernel : %lf \n"\
+			"total : %f \n"\
+			"user : %f \n"\
+			"kernel : %f \n"\
 			"process cpu usage\n"\
-			"total : %lf \n"\
-			"user : %lf \n"\
-			"kernel : %lf \n"\
+			"total : %f \n"\
+			"user : %f \n"\
+			"kernel : %f \n"\
 			"memory usage\n"\
-			"available : %lf \n"\
-			"page : %lf \n"\
-			"nonpage : %lf \n",
+			"available : %f \n"\
+			"nonpage : %f \n"\
+			"process memory usage\n"\
+			"private : %f \n"\
+			"nonpage : %f \n"\
+			"network\n"\
+			"receive : %f\n"\
+			"send : %f\n"\
+			"retransmission : %f\n",
 			query.get_formatted_counter_value(_processor_total_time, PDH_FMT_DOUBLE).doubleValue,
 			query.get_formatted_counter_value(_processor_user_time, PDH_FMT_DOUBLE).doubleValue,
 			query.get_formatted_counter_value(_processor_kernel_time, PDH_FMT_DOUBLE).doubleValue,
 			query.get_formatted_counter_value(_process_total_time, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors,
 			query.get_formatted_counter_value(_process_user_time, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors,
-			query.get_formatted_counter_value(_process_kernel_time, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors);
-		query.get_formatted_counter_value(_process_total_time, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors,
-			query.get_formatted_counter_value(_process_user_time, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors,
-			query.get_formatted_counter_value(_process_kernel_time, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors);
+			query.get_formatted_counter_value(_process_kernel_time, PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors,
+			query.get_formatted_counter_value(_memory_available_byte, PDH_FMT_DOUBLE).doubleValue / 0x40000000,
+			query.get_formatted_counter_value(_memory_pool_nonpaged_byte, PDH_FMT_DOUBLE).doubleValue / 0x100000,
+			query.get_formatted_counter_value(_process_private_byte, PDH_FMT_DOUBLE).doubleValue / 0x100000,
+			query.get_formatted_counter_value(_process_pool_nonpaged_byte, PDH_FMT_DOUBLE).doubleValue / 0x100000,
+			query.get_formatted_counter_value(_tcpv4_segments_received_sec, PDH_FMT_DOUBLE).doubleValue,
+			query.get_formatted_counter_value(_tcpv4_segments_sent_sec, PDH_FMT_DOUBLE).doubleValue,
+			query.get_formatted_counter_value(_tcpv4_segments_retransmitted_sec, PDH_FMT_DOUBLE).doubleValue);
 
 
 
@@ -818,12 +835,12 @@ public:
 		return true;
 	}
 	inline virtual void on_create_session(unsigned long long key) noexcept {
-		session::message_pointer message_ = make_message();
+		//session::message_pointer message_ = make_message();
 
-		session::header header_{ 8 };
-		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(session::header));
-		*message_ << 0x7fffffffffffffff;
-		do_send_session(key, message_);
+		//session::header header_{ 8 };
+		//message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(session::header));
+		//*message_ << 0x7fffffffffffffff;
+		//do_send_session(key, message_);
 	}
 	inline virtual void on_receive_session(unsigned long long key, session::view& view_) {
 		unsigned long long value;
@@ -894,7 +911,14 @@ public:
 	utility::performance_data_helper::counter _process_total_time;
 	utility::performance_data_helper::counter _process_user_time;
 	utility::performance_data_helper::counter _process_kernel_time;
+
 	utility::performance_data_helper::counter _memory_available_byte;
-	utility::performance_data_helper::counter _memory_pool_paged_byte;
 	utility::performance_data_helper::counter _memory_pool_nonpaged_byte;
+	utility::performance_data_helper::counter _process_private_byte;
+	utility::performance_data_helper::counter _process_pool_nonpaged_byte;
+
+	utility::performance_data_helper::counter _tcpv4_segments_received_sec;
+	utility::performance_data_helper::counter _tcpv4_segments_sent_sec;
+	utility::performance_data_helper::counter _tcpv4_segments_retransmitted_sec;
+
 };
