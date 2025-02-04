@@ -114,6 +114,10 @@ public:
 		inline auto operator=(scheduler&&) noexcept -> scheduler & = delete;
 		inline ~scheduler(void) noexcept = default;
 	public:
+		inline void initialize(void) noexcept {
+			_active = 0;
+			_size = 0;
+		}
 		template <typename function, typename... argument>
 		inline void regist_task(function&& func, argument&&... arg) noexcept {
 			if (0 == _active) {
@@ -122,7 +126,7 @@ public:
 					auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
 					task* task_(&memory_pool.allocate(std::forward<function>(func), std::forward<argument>(arg)...));
 					_task_queue.push(task_);
-					_wait_on_address.wake_single((volatile long&)_task_queue._size);
+					_wait_on_address.wake_single(&_task_queue._size);
 				}
 				else {
 					_InterlockedDecrement(&_size);
@@ -130,12 +134,12 @@ public:
 			}
 		}
 	public:
-		long _active = 0;
+		size_type _active;
 		system_component::multi::thread _thread;
 		system_component::multi::wait_on_address _wait_on_address;
 		task_queue _task_queue;
 		ready_queue _ready_queue;
-		size_type _size = 0;
+		size_type _size;
 	};
 	class session final {
 	public:
@@ -150,7 +154,7 @@ public:
 		};
 		class message final : public data_structure::intrusive::shared_pointer_hook<0>, public data_structure::serialize_buffer<> {
 		public:
-			inline explicit message(void) noexcept = default;
+			inline explicit message(void) noexcept = delete;
 			inline explicit message(message const& rhs) noexcept = delete;
 			inline explicit message(message&& rhs) noexcept = delete;
 			inline auto operator=(message const& rhs) noexcept -> message & = delete;
@@ -327,6 +331,7 @@ public:
 			: _key(index) {
 			auto& memory_pool = data_structure::_thread_local::memory_pool<message>::instance();
 			message_pointer receive_message(&memory_pool.allocate());
+			receive_message->clear();
 			_receive_message = receive_message;
 		};
 		inline explicit session(session const&) noexcept = delete;
@@ -417,6 +422,7 @@ public:
 	public:
 		inline void create_receive(void) noexcept {
 			message_pointer receive_message(&data_structure::_thread_local::memory_pool<message>::instance().allocate());
+			receive_message->clear();
 			memcpy(receive_message->data(), _receive_message->data() + _receive_message->front(), _receive_message->size());
 			receive_message->move_rear(_receive_message->size());
 			_receive_message = receive_message;
@@ -539,6 +545,16 @@ public:
 			_session_array_max = param->get_int(1);
 			return 0;
 			});
+		command_.add("send_mode", [&](command::parameter* param) noexcept -> int {
+			auto send_mode = param->get_string(1);
+			if ("direct" == send_mode)
+				_send_mode = false;
+			else if ("frame" == send_mode) {
+				_send_mode = true;
+				_send_frame = param->get_int(2);
+			}
+			return 0;
+			});
 		command_.add("tcp_ip", [&](command::parameter* param) noexcept -> int {
 			_listen_socket_ip = param->get_string(1);
 			return 0;
@@ -575,8 +591,8 @@ public:
 		_scheduler._thread.begin(&server::schedule, 0, this);
 
 		_session_array.initialize(_session_array_max);
-		_scheduler.regist_task(&server::send, this);
-
+		if (true == _send_mode)
+			_scheduler.regist_task(&server::send, this);
 		auto& query = utility::performance_data_helper::query::instance();
 		_processor_total_time = query.add_counter(L"\\Processor(_Total)\\% Processor Time");
 		_processor_user_time = query.add_counter(L"\\Processor(_Total)\\% User Time");
@@ -624,7 +640,7 @@ public:
 		// ÄÁÅÙÃ÷ Á¾·á
 
 		_scheduler._active = -1;
-		_scheduler._wait_on_address.wake_single(reinterpret_cast<volatile long&>(_scheduler._task_queue._size));
+		_scheduler._wait_on_address.wake_single(&_scheduler._task_queue._size);
 		_scheduler._thread.wait_for_single(INFINITE);
 		_scheduler._thread.close();
 		_session_array.finalize();
@@ -692,7 +708,7 @@ private:
 				else {
 					task._time = time + GetTickCount64();
 					_scheduler._task_queue.push(&task);
-					_scheduler._wait_on_address.wake_single(reinterpret_cast<volatile long&>(_scheduler._task_queue._size));
+					_scheduler._wait_on_address.wake_single(&_scheduler._task_queue._size);
 				}
 			} break;
 			default: {
@@ -723,8 +739,8 @@ private:
 					else {
 						session_.finish_send();
 						_interlockedadd((volatile long*)&_send_tps, session_._send_size);
-						//if (session_.send())
-						//	continue;
+						if (false == _send_mode && session_.send())
+							continue;
 					}
 				}
 				if (session_.release()) {
@@ -739,7 +755,7 @@ private:
 	inline void schedule(void) {
 		unsigned long wait_time = INFINITE;
 		while (0 == _scheduler._active || 0 != _scheduler._size) {
-			bool result = _scheduler._wait_on_address.wait(reinterpret_cast<volatile long&>(_scheduler._task_queue._size), reinterpret_cast<volatile long&>(_scheduler._active), wait_time);
+			bool result = _scheduler._wait_on_address.wait(&_scheduler._task_queue._size, &_scheduler._active, sizeof(size_type), wait_time);
 			if (result) {
 				while (!_scheduler._task_queue.empty())
 					_scheduler._ready_queue.push(_scheduler._task_queue.pop());
@@ -783,24 +799,24 @@ private:
 		SYSTEM_INFO info;
 		GetSystemInfo(&info);
 
-		printf("processer cpu usage\n"\
-			"total : %f \n"\
-			"user : %f \n"\
-			"kernel : %f \n"\
-			"process cpu usage\n"\
-			"total : %f \n"\
-			"user : %f \n"\
-			"kernel : %f \n"\
-			"memory usage\n"\
-			"available : %f \n"\
-			"nonpage : %f \n"\
-			"process memory usage\n"\
-			"private : %f \n"\
-			"nonpage : %f \n"\
-			"network\n"\
-			"receive : %f\n"\
-			"send : %f\n"\
-			"retransmission : %f\n",
+		printf("--------------------------------------\n"\
+			"[ System Monitor ]\n"\
+			"CPU Usage\n"\
+			" System  - Total  :   %f %%\n"\
+			"           User   :   %f %%\n"\
+			"           Kernel :   %f %%\n"\
+			" Process - Total  :   %f %%\n"\
+			"           User   :   %f %%\n"\
+			"           Kernel :   %f %%\n"\
+			"Memory Usage\n"\
+			" System  - Available :   %f GB\n"\
+			"           Non-Paged :   %f MB\n"\
+			" Process - Private   :   %f MB\n"\
+			"           Non-Paged :   %f MB\n"\
+			"Network Usage\n"\
+			" Receive        :   %f\n"\
+			" Send           :   %f\n"\
+			" Retransmission :   %f\n",
 			query.get_formatted_counter_value(_processor_total_time, PDH_FMT_DOUBLE).doubleValue,
 			query.get_formatted_counter_value(_processor_user_time, PDH_FMT_DOUBLE).doubleValue,
 			query.get_formatted_counter_value(_processor_kernel_time, PDH_FMT_DOUBLE).doubleValue,
@@ -815,22 +831,32 @@ private:
 			query.get_formatted_counter_value(_tcpv4_segments_sent_sec, PDH_FMT_DOUBLE).doubleValue,
 			query.get_formatted_counter_value(_tcpv4_segments_retransmitted_sec, PDH_FMT_DOUBLE).doubleValue);
 
-
-
-		printf("accept total : %llu\n"\
-			"accept tps : %u\n"\
-			"session count : %u\n"\
-			"receive tps : %u\n"\
-			"send tps : %u\n",
-			_accept_total_count, _accept_tps, _session_count, _receive_tps, _send_tps);
+		auto& memory_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
+		printf("--------------------------------------\n"\
+			"[ Server Monitor ]\n"\
+			"Connect\n"\
+			" Accept Total  :   %llu\n"\
+			" Session Count :   %u\n"\
+			"Traffic\n"\
+			" Accept  :   %u TPS\n"\
+			" Receive :   %u TPS\n"\
+			" Send    :   %u TPS\n"\
+			"Buffer Usage\n"\
+			" Message  - Pool Count :   %u\n"\
+			"            Use Count  :   %u\n",
+			_accept_total_count, _accept_tps, _session_count, _receive_tps, _send_tps,
+			memory_pool._stack._capacity, memory_pool._use_count);
 		_accept_tps = 0;
 		_receive_tps = 0;
 		_send_tps = 0;
+
 		if (-1 == _scheduler._active)
 			return -1;
 		return 1000;
 	}
 public:
+	inline virtual void on_start(void) noexcept {};
+	inline virtual void on_stop(void) noexcept {};
 	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept {
 		return true;
 	}
@@ -857,10 +883,15 @@ public:
 	inline virtual void on_destroy_session(unsigned long long key) noexcept {
 
 	}
+	inline virtual void on_monit(void) noexcept {
+	}
 	inline void do_send_session(unsigned long long key, session::message_pointer& message_) noexcept {
 		session& session_ = _session_array[key];
-		if (session_.acquire(key))
+		if (session_.acquire(key)) {
 			session_._send_queue.push(message_);
+			if (false == _send_mode && session_.send())
+				return;
+		}
 		if (session_.release())
 			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
 	}
@@ -875,6 +906,7 @@ public:
 	inline static auto make_message(void) noexcept -> session::message_pointer {
 		auto& memory_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
 		session::message_pointer message_(&memory_pool.allocate());
+		message_->clear();
 		return message_;
 	}
 	template <typename function, typename... argument>
@@ -886,22 +918,18 @@ private:
 	data_structure::vector<system_component::multi::thread> _worker_thread;
 	scheduler _scheduler;
 	session_array _session_array;
-public:
-	size_type _concurrent_thread_count = 0;
-	size_type _worker_thread_count = 0;
-	size_type _session_array_max = 0;
-	std::string _listen_socket_ip;
-	size_type _listen_socket_port = 0;
-	size_type _listen_socket_backlog = 0;
-	unsigned char _header_fixed_key = 0;
 	system_component::network::socket _listen_socket;
 	system_component::multi::thread _accept_thread;
-
-	unsigned long long _accept_total_count = 0;
-	size_type _session_count = 0;
-	size_type _accept_tps = 0;
-	size_type _receive_tps = 0;
-	size_type _send_tps = 0;
+public:
+	size_type _concurrent_thread_count;
+	size_type _worker_thread_count;
+	size_type _session_array_max;
+	bool _send_mode;
+	size_type _send_frame;
+	std::string _listen_socket_ip;
+	size_type _listen_socket_port;
+	size_type _listen_socket_backlog;
+	unsigned char _header_fixed_key;
 
 	utility::performance_data_helper::counter _processor_total_time;
 	utility::performance_data_helper::counter _processor_user_time;
@@ -916,4 +944,10 @@ public:
 	utility::performance_data_helper::counter _tcpv4_segments_received_sec;
 	utility::performance_data_helper::counter _tcpv4_segments_sent_sec;
 	utility::performance_data_helper::counter _tcpv4_segments_retransmitted_sec;
+
+	unsigned long long _accept_total_count = 0;
+	size_type _session_count = 0;
+	size_type _accept_tps = 0;
+	size_type _receive_tps = 0;
+	size_type _send_tps = 0;
 };

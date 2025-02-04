@@ -20,7 +20,6 @@ namespace data_structure::_thread_local {
 			node* _next;
 			type _value;
 		};
-
 		class stack final {
 		private:
 			struct bucket final {
@@ -113,8 +112,9 @@ namespace data_structure::_thread_local {
 			}
 		private:
 			unsigned long long _head;
-			size_type _capacity = 0;
 			lockfree::memory_pool<bucket> _memory_pool;
+		public:
+			size_type _capacity = 0;
 		};
 	private:
 		inline explicit memory_pool(void) noexcept = default;
@@ -148,6 +148,7 @@ namespace data_structure::_thread_local {
 			else if constexpr (1 == sizeof...(arg))
 				current->_value = type(std::forward<argument>(arg)...);
 			--_size;
+			_InterlockedIncrement(&_use_count);
 			return current->_value;
 		}
 		inline void deallocate(type& value) noexcept {
@@ -156,6 +157,7 @@ namespace data_structure::_thread_local {
 			reinterpret_cast<node*>(&value)->_next = _head;
 			_head = reinterpret_cast<node*>(&value);
 			++_size;
+			_InterlockedDecrement(&_use_count);
 
 			if (bucket_size == _size)
 				_break = _head;
@@ -166,9 +168,11 @@ namespace data_structure::_thread_local {
 			}
 		}
 	private:
-		inline static stack _stack;
 		node* _head = nullptr;
 		node* _break = nullptr;
 		size_type _size = 0;
+	public:
+		inline static stack _stack;
+		inline static size_type _use_count = 0;
 	};
 }
