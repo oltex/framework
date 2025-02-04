@@ -8,6 +8,7 @@ namespace data_structure {
 	template<typename type>
 	concept string_size = std::_Is_any_of_v<type, unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long>;
 
+	template<size_t _capacity = 8192>
 	class serialize_buffer {
 	private:
 		using byte = unsigned char;
@@ -151,10 +152,10 @@ namespace data_structure {
 	protected:
 		size_type _front = 0;
 		size_type _rear = 0;
-		size_type _capacity = 8192;
+
 #ifdef debug
 		bool _fail = false;
 #endif
-		byte _array[8192];
+		byte _array[_capacity];
 	};
 }

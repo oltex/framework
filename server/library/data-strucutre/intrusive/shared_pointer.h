@@ -16,6 +16,13 @@ namespace data_structure::intrusive {
 			size_type _weak;
 		};
 	public:
+		//inline explicit shared_pointer_hook(void) noexcept = delete;
+		//inline explicit shared_pointer_hook(shared_pointer_hook const& rhs) noexcept = delete;
+		//inline explicit shared_pointer_hook(shared_pointer_hook&& rhs) noexcept = delete;
+		//inline auto operator=(shared_pointer_hook const& rhs) noexcept -> shared_pointer_hook & = delete;
+		//inline auto operator=(shared_pointer_hook&& rhs) noexcept -> shared_pointer_hook & = delete;
+		//inline ~shared_pointer_hook(void) noexcept = delete;
+	public:
 		inline auto add_reference(void) noexcept -> size_type {
 			return _InterlockedIncrement(&_reference._use);
 		}

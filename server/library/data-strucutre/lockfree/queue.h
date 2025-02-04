@@ -18,7 +18,7 @@ namespace data_structure::lockfree {
 			unsigned long long _next;
 			type _value;
 		};
-		using _memory_pool = data_structure::_thread_local::memory_pool<node, 1024>;
+		using _memory_pool = data_structure::_thread_local::memory_pool<node>;
 	public:
 		inline explicit queue(void) noexcept {
 			node* current = &_memory_pool::instance().allocate();
