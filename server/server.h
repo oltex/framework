@@ -259,9 +259,7 @@ public:
 				inline explicit iterator(node* node_) noexcept
 					: _node(node_) {
 				}
-				inline iterator(iterator const& rhs) noexcept
-					: _node(rhs._node) {
-				}
+				inline explicit iterator(iterator const& rhs) noexcept = delete;
 				inline explicit iterator(iterator&&) noexcept = delete;
 				inline auto operator=(iterator const&) noexcept -> iterator & = delete;
 				inline auto operator=(iterator&&) noexcept -> iterator & = delete;
