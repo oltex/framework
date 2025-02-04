@@ -107,6 +107,7 @@ public:
 		};
 		using ready_queue = data_structure::priority_queue<task*, less>;
 	public:
+#pragma warning(suppress: 26495)
 		inline explicit scheduler(void) noexcept = default;
 		inline explicit scheduler(scheduler const&) noexcept = delete;
 		inline explicit scheduler(scheduler&&) noexcept = delete;

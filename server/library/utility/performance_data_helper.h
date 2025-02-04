@@ -30,8 +30,10 @@ namespace utility::performance_data_helper {
 		inline auto add_counter(std::wstring_view const object, std::wstring_view const item, std::wstring_view const instance) noexcept -> counter {
 			size_t size = sizeof(wchar_t) * (object.size() + item.size() + instance.size() + 7);
 			wchar_t* path = reinterpret_cast<wchar_t*>(malloc(size));
+#pragma warning(suppress: 6387)
 			swprintf_s(path, size / sizeof(wchar_t), L"\\%s(%s)\\%% %s", object.data(), instance.data(), item.data());
 			counter counter_;
+#pragma warning(suppress: 6387)
 			PdhAddCounterW(_qurey, path, NULL, &counter_);
 			free(path);
 			return counter_;
@@ -39,8 +41,10 @@ namespace utility::performance_data_helper {
 		inline auto add_counter(std::wstring_view const object, std::wstring_view const item) noexcept -> counter {
 			size_t size = object.size() + item.size() + 5;
 			wchar_t* path = reinterpret_cast<wchar_t*>(malloc(sizeof(wchar_t) * size));
+#pragma warning(suppress: 6387)
 			swprintf_s(path, size / sizeof(wchar_t), L"\\%s\\%% %s", object.data(), item.data());
 			counter counter_;
+#pragma warning(suppress: 6387)
 			PdhAddCounterW(_qurey, path, NULL, &counter_);
 			free(path);
 			return counter_;
@@ -82,6 +86,7 @@ namespace utility::performance_data_helper {
 			wchar_t const* object = object_buffer;
 
 			std::list<std::wstring> result;
+#pragma warning(suppress: 6011)
 			for (wchar_t const* object = object_buffer; *object != false; object += wcslen(object) + 1)
 				result.emplace_back(object);
 			free(object_buffer);
@@ -98,8 +103,10 @@ namespace utility::performance_data_helper {
 			PdhEnumObjectItemsW(nullptr, nullptr, object.data(), item_buffer, &item_size, instance_buffer, &instance_size, PERF_DETAIL_WIZARD, 0);
 
 			std::pair<std::list<std::wstring>, std::list<std::wstring>> result;
+#pragma warning(suppress: 6011)
 			for (wchar_t const* item = item_buffer; *item != false; item += wcslen(item) + 1)
 				result.first.emplace_back(item);
+#pragma warning(suppress: 6011)
 			for (wchar_t const* instance = instance_buffer; *instance != false; instance += wcslen(instance) + 1)
 				result.second.emplace_back(instance);
 
