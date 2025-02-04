@@ -588,6 +588,7 @@ public:
 		_complation_port.create(_concurrent_thread_count);
 		for (size_type index = 0; index < _worker_thread_count; ++index)
 			_worker_thread.emplace_back(&server::worker, 0, this);
+		_scheduler.initialize();
 		_scheduler._thread.begin(&server::schedule, 0, this);
 
 		_session_array.initialize(_session_array_max);
@@ -630,7 +631,6 @@ public:
 				iter._value.cancel();
 			if (iter._value.release()) {
 				on_destroy_session(iter._value._key);
-				_InterlockedDecrement(&_session_count);
 				_session_array.release(&iter._value);
 			}
 		}
@@ -667,14 +667,12 @@ private:
 			else {
 				session& session_ = *_session_array.acquire();
 				session_.initialize(std::move(socket));
-				_InterlockedIncrement(&_session_count);
 
 				_complation_port.connect(session_._socket, reinterpret_cast<ULONG_PTR>(&session_));
 				on_create_session(session_._key);
 
 				if (!session_.receive() && session_.release()) {
 					on_destroy_session(session_._key);
-					_InterlockedDecrement(&_session_count);
 					_session_array.release(&session_);
 				}
 			}
@@ -690,7 +688,6 @@ private:
 			case destory_session: {
 				session& session_ = *reinterpret_cast<session*>(overlapped);
 				on_destroy_session(session_._key);
-				_InterlockedDecrement(&_session_count);
 				_session_array.release(&session_);
 			} break;
 			case excute_task: {
@@ -745,7 +742,6 @@ private:
 				}
 				if (session_.release()) {
 					on_destroy_session(session_._key);
-					_InterlockedDecrement(&_session_count);
 					_session_array.release(&session_);
 				}
 			} break;
@@ -783,13 +779,12 @@ private:
 			}
 			if (iter._value.release()) {
 				on_destroy_session(iter._value._key);
-				_InterlockedDecrement(&_session_count);
 				_session_array.release(&iter._value);
 			}
 		}
 		if (-1 == _scheduler._active)
 			return -1;
-		return 0;
+		return 20;
 	}
 	inline int monit(void) noexcept {
 		system("cls");
@@ -844,7 +839,7 @@ private:
 			"Buffer Usage\n"\
 			" Message  - Pool Count :   %u\n"\
 			"            Use Count  :   %u\n",
-			_accept_total_count, _accept_tps, _session_count, _receive_tps, _send_tps,
+			_accept_total_count, _session_array._size, _accept_tps, _receive_tps, _send_tps,
 			memory_pool._stack._capacity, memory_pool._use_count);
 		_accept_tps = 0;
 		_receive_tps = 0;
@@ -946,7 +941,6 @@ public:
 	utility::performance_data_helper::counter _tcpv4_segments_retransmitted_sec;
 
 	unsigned long long _accept_total_count = 0;
-	size_type _session_count = 0;
 	size_type _accept_tps = 0;
 	size_type _receive_tps = 0;
 	size_type _send_tps = 0;
