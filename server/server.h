@@ -271,10 +271,10 @@ public:
 			};
 		public:
 			inline explicit send_queue(void) noexcept = default;
-			inline explicit send_queue(send_queue const& rhs) noexcept = default;
-			inline explicit send_queue(send_queue&& rhs) noexcept = default;
-			inline auto operator=(send_queue const& rhs) noexcept -> send_queue&;
-			inline auto operator=(send_queue&& rhs) noexcept -> send_queue&;
+			inline explicit send_queue(send_queue const&) noexcept = delete;
+			inline explicit send_queue(send_queue&&) noexcept = delete;
+			inline auto operator=(send_queue const&) noexcept -> send_queue & = delete;
+			inline auto operator=(send_queue&&) noexcept -> send_queue & = delete;
 			inline ~send_queue(void) noexcept = default;
 		public:
 			inline void push(message_pointer message_) noexcept {
@@ -512,7 +512,7 @@ public:
 		}
 	public:
 		unsigned long long _head;
-		node* _array = nullptr;
+		node* _array;
 		size_type _size;
 		size_type _capacity;
 		size_type _acquire_count = 0;
