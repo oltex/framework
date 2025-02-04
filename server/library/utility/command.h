@@ -1,10 +1,8 @@
 #pragma once
 #include "../design-pattern/singleton.h"
+#include "../utility/parser.h"
 #include <string>
 #include <functional>
-
-#include "../data-strucutre/vector.h"
-#include "../utility/parser.h"
 
 class command final : public design_pattern::singleton<command> {
 private:

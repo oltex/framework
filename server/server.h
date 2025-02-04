@@ -5,17 +5,14 @@
 #include "library/system-component/network/socket.h"
 #include "library/system-component/multi/wait_on_address.h"
 
-#include "library/data-strucutre/vector.h"
 #include "library/data-strucutre/serialize_buffer.h"
 #include "library/data-strucutre/thread-local/memory_pool.h"
 #include "library/data-strucutre/intrusive/shared_pointer.h"
 #include "library/data-strucutre/lockfree/queue.h"
-#include "library/data-strucutre/unordered_map.h"
 #include "library/data-strucutre/priority_queue.h"
 
 #include "library/design-pattern/singleton.h"
 
-#include "library/utility/parser.h"
 #include "library/utility/command.h"
 #include "library/utility/performance_data_helper.h"
 
@@ -531,7 +528,6 @@ public:
 		system_component::network::window_socket_api::start_up();
 
 		auto& command_ = command::instance();
-
 		command_.add("iocp_concurrent", [&](command::parameter* param) noexcept -> int {
 			_concurrent_thread_count = param->get_int(1);
 			return 0;
@@ -844,6 +840,8 @@ private:
 		_receive_tps = 0;
 		_send_tps = 0;
 
+		//on_monit();
+
 		if (-1 == _scheduler._active)
 			return -1;
 		return 1000;
@@ -901,6 +899,10 @@ public:
 		auto& memory_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
 		session::message_pointer message_(&memory_pool.allocate());
 		message_->clear();
+
+		session::header header_;
+		header_._size = 8;
+		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(session::header));
 		return message_;
 	}
 	template <typename function, typename... argument>
