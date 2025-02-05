@@ -251,6 +251,7 @@ public:
 		};
 		class send_queue final : protected data_structure::lockfree::queue<message*> {
 		private:
+			using base = data_structure::lockfree::queue<message*>;
 			class iterator final {
 			public:
 				inline explicit iterator(void) noexcept = default;
@@ -284,9 +285,9 @@ public:
 			inline auto operator=(send_queue&&) noexcept -> send_queue & = delete;
 			inline ~send_queue(void) noexcept = default;
 		public:
-			inline void push(message_pointer message_) noexcept {
-				emplace(message_.get());
-				message_.reset();
+			inline void push(message_pointer message_ptr) noexcept {
+				base::emplace(message_ptr.get());
+				message_ptr.reset();
 			}
 			inline auto pop(void) noexcept -> message_pointer {
 				unsigned long long head = _head;
@@ -854,9 +855,6 @@ public:
 	}
 	inline virtual void on_create_session(unsigned long long key) noexcept {
 		//session::message_pointer message_ = make_message();
-
-		//session::header header_{ 8 };
-		//message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(session::header));
 		//*message_ << 0x7fffffffffffffff;
 		//do_send_session(key, message_);
 	}
@@ -864,23 +862,17 @@ public:
 		unsigned long long value;
 		view_ >> value;
 		session::message_pointer message_ = make_message();
-
-		session::header header_;
-		header_._size = 8;
-		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(session::header));
 		*message_ << value;
-
 		do_send_session(key, message_);
 	}
 	inline virtual void on_destroy_session(unsigned long long key) noexcept {
-
 	}
 	inline virtual void on_monit(void) noexcept {
 	}
-	inline void do_send_session(unsigned long long key, session::message_pointer& message_) noexcept {
+	inline void do_send_session(unsigned long long key, session::message_pointer& message_ptr) noexcept {
 		session& session_ = _session_array[key];
 		if (session_.acquire(key)) {
-			session_._send_queue.push(message_);
+			session_._send_queue.push(message_ptr);
 			if (false == _send_mode && session_.send())
 				return;
 		}
