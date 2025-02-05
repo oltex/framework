@@ -50,18 +50,6 @@
     <ClInclude Include="library\design-pattern\singleton.h">
       <Filter>library\design-pattern</Filter>
     </ClInclude>
-    <ClInclude Include="library\data-strucutre\unordered_map.h">
-      <Filter>library\data-strucutre</Filter>
-    </ClInclude>
-    <ClInclude Include="library\data-strucutre\hash.h">
-      <Filter>library\data-strucutre</Filter>
-    </ClInclude>
-    <ClInclude Include="library\data-strucutre\list.h">
-      <Filter>library\data-strucutre</Filter>
-    </ClInclude>
-    <ClInclude Include="library\data-strucutre\memory_pool.h">
-      <Filter>library\data-strucutre</Filter>
-    </ClInclude>
     <ClInclude Include="library\system-component\file.h">
       <Filter>library\system-component</Filter>
     </ClInclude>

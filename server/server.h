@@ -832,7 +832,7 @@ private:
 			" Accept  :   %u TPS\n"\
 			" Receive :   %u TPS\n"\
 			" Send    :   %u TPS\n"\
-			"Buffer Usage\n"\
+			"Resource Usage\n"\
 			" Message  - Pool Count :   %u\n"\
 			"            Use Count  :   %u\n",
 			_accept_total_count, _session_array._size, _accept_tps, _receive_tps, _send_tps,
