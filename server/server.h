@@ -153,10 +153,10 @@ public:
 		class message final : public data_structure::intrusive::shared_pointer_hook<0>, public data_structure::serialize_buffer<> {
 		public:
 			inline explicit message(void) noexcept = delete;
-			inline explicit message(message const& rhs) noexcept = delete;
-			inline explicit message(message&& rhs) noexcept = delete;
-			inline auto operator=(message const& rhs) noexcept -> message & = delete;
-			inline auto operator=(message&& rhs) noexcept -> message & = delete;
+			inline explicit message(message const&) noexcept = delete;
+			inline explicit message(message&&) noexcept = delete;
+			inline auto operator=(message const&) noexcept -> message & = delete;
+			inline auto operator=(message&&) noexcept -> message & = delete;
 			inline ~message(void) noexcept = delete;
 		public:
 			friend inline static void destructor(message* rhs) {
@@ -254,7 +254,7 @@ public:
 				inline explicit iterator(node* node_) noexcept
 					: _node(node_) {
 				}
-				inline explicit iterator(iterator const& rhs) noexcept = delete;
+				inline explicit iterator(iterator const&) noexcept = delete;
 				inline explicit iterator(iterator&&) noexcept = delete;
 				inline auto operator=(iterator const&) noexcept -> iterator & = delete;
 				inline auto operator=(iterator&&) noexcept -> iterator & = delete;
