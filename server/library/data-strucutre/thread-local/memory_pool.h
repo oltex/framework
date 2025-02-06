@@ -90,7 +90,6 @@ namespace data_structure::_thread_local {
 					bucket* address = reinterpret_cast<bucket*>(0x00007FFFFFFFFFFFULL & head);
 					if (nullptr == address) {
 						pair<node*, size_type> result{ reinterpret_cast<node*>(_aligned_malloc(sizeof(node) * bucket_size, _align)), bucket_size };
-
 						_InterlockedIncrement(&_capacity);
 
 						node* current = result._first;

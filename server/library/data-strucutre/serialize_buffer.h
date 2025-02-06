@@ -8,7 +8,7 @@ namespace data_structure {
 	template<typename type>
 	concept string_size = std::_Is_any_of_v<type, unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long>;
 
-	template<size_t _capacity = 8192>
+	template<size_t _capacity = 2048>
 	class serialize_buffer {
 	private:
 		using byte = unsigned char;
@@ -43,16 +43,6 @@ namespace data_structure {
 			memcpy(_array + _rear, buffer, length);
 			_rear += length;
 		}
-		template<string_size type>
-		inline void push(std::string_view const value) noexcept {
-			operator<<(static_cast<type>(value.size()));
-			push((unsigned char*)value.data(), static_cast<size_type>(sizeof(std::string::value_type) * value.size()));
-		}
-		template<string_size type>
-		inline void push(std::wstring_view const value) noexcept {
-			operator<<(static_cast<type>(value.size()));
-			push((unsigned char*)value.data(), static_cast<size_type>(sizeof(std::wstring::value_type) * value.size()));
-		}
 		template<typename type>
 		inline auto operator>>(type& value) noexcept -> serialize_buffer& requires std::is_arithmetic_v<type> {
 #ifdef debug
@@ -74,40 +64,8 @@ namespace data_structure {
 #endif
 			memcpy(buffer, _array + _front, length);
 		}
-		template<string_size type>
-		inline void peek(std::string& value) noexcept {
-			type length;
-			peek(reinterpret_cast<byte*>(&length), sizeof(type));
-#ifdef debug
-			if (_front + sizeof(type) + length > _rear) {
-				_fail = true;
-				return;
-			}
-#endif
-			value.assign(reinterpret_cast<char*>(_array + _front + sizeof(type)), length);
-		}
-		template<string_size type>
-		inline void peek(std::wstring& value) noexcept {
-			type length;
-			peek(reinterpret_cast<byte*>(&length), sizeof(type));
-#ifdef debug
-			if (_front + sizeof(type) + length > _rear) {
-				_fail = true;
-				return;
-			}
-#endif
-			value.assign(reinterpret_cast<wchar_t*>(_array + _front + sizeof(type)), length);
-		}
 		inline void pop(size_type const length) noexcept {
 			_front += length;
-		}
-		template<string_size type>
-		inline void pop(std::string const& value) noexcept {
-			_front += sizeof(type) + sizeof(std::string::value_type) * value.size();
-		}
-		template<string_size type>
-		inline void pop(std::wstring const& value) noexcept {
-			_front += sizeof(type) + sizeof(std::wstring::value_type) * value.size();
 		}
 	public:
 #ifdef debug
@@ -133,10 +91,7 @@ namespace data_structure {
 		inline auto rear(void) const noexcept -> size_type {
 			return _rear;
 		}
-		inline bool empty(void) const noexcept {
-			return _front == _rear;
-		}
-		inline auto capacity(void) const noexcept -> size_type {
+		inline static auto capacity(void) noexcept -> size_type {
 			return _capacity;
 		}
 		inline void move_front(size_type const length) noexcept {
@@ -145,7 +100,6 @@ namespace data_structure {
 		inline void move_rear(size_type const length) noexcept {
 			_rear += length;
 		}
-	public:
 		inline auto data(void) noexcept -> byte* {
 			return _array;
 		}

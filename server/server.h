@@ -170,16 +170,16 @@ public:
 			using size_type = unsigned int;
 		public:
 			inline explicit view(void) noexcept
-				: _front(0), _rear(0) {
+				: _front(0), _rear(0), _fail(false) {
 			}
 			inline explicit view(message_pointer message_) noexcept
-				: _message(message_), _front(0), _rear(0) {
+				: _message(message_), _front(0), _rear(0), _fail(false) {
 			}
 			inline explicit view(message_pointer message_, size_type front, size_type rear) noexcept
-				: _message(message_), _front(front), _rear(rear) {
+				: _message(message_), _front(front), _rear(rear), _fail(false) {
 			}
 			inline view(view const& rhs) noexcept
-				: _message(rhs._message), _front(rhs._front), _rear(rhs._rear) {
+				: _message(rhs._message), _front(rhs._front), _rear(rhs._rear), _fail(rhs._fail) {
 			}
 			inline auto operator=(view const& rhs) noexcept -> view&;
 			inline auto operator=(view&& rhs) noexcept -> view&;
@@ -188,35 +188,23 @@ public:
 			template<typename type>
 				requires std::is_arithmetic_v<type>
 			inline auto operator>>(type& value) noexcept -> view& {
+				if (sizeof(type) + _front > _rear) {
+					_fail = true;
+					return *this;
+				}
 				value = reinterpret_cast<type&>(_message->data()[_front]);
 				_front += sizeof(type);
 				return *this;
 			}
 			inline void peek(byte* const buffer, size_type const length) noexcept {
+				if (length + _front > _rear) {
+					_fail = true;
+					return;
+				}
 				memcpy(buffer, _message->data() + _front, length);
-			}
-			template<string_size type>
-			inline void peek(std::string& value) noexcept {
-				type length;
-				peek(reinterpret_cast<byte*>(&length), sizeof(type));
-				value.assign(reinterpret_cast<char*>(_message->data() + _front + sizeof(type)), length);
-			}
-			template<string_size type>
-			inline void peek(std::wstring& value) noexcept {
-				type length;
-				peek(reinterpret_cast<byte*>(&length), sizeof(type));
-				value.assign(reinterpret_cast<wchar_t*>(_message->data() + _front + sizeof(type)), length);
 			}
 			inline void pop(size_type const length) noexcept {
 				_front += length;
-			}
-			template<string_size type>
-			inline void pop(std::string& value) noexcept {
-				_front += sizeof(type) + sizeof(std::string::value_type) * value.size();
-			}
-			template<string_size type>
-			inline void pop(std::wstring& value) noexcept {
-				_front += sizeof(type) + sizeof(std::wstring::value_type) * value.size();
 			}
 		public:
 			inline auto front(void) const noexcept -> size_type {
@@ -240,13 +228,21 @@ public:
 			inline void set(message* message_, size_type front, size_type rear) noexcept {
 				_front = front;
 				_rear = rear;
+				_fail = false;
 				_message.set(message_);
 			}
 			inline auto reset(void) noexcept {
 				_message.reset();
 			}
+			inline operator bool(void) const noexcept {
+				return !_fail;
+			}
+			inline auto fail(void) const noexcept {
+				return _fail;
+			}
 		private:
 			size_type _front, _rear;
+			bool _fail = false;
 			message_pointer _message;
 		};
 		class send_queue final : protected data_structure::lockfree::queue<message*> {
@@ -370,7 +366,7 @@ public:
 		}
 		inline bool receive(void) noexcept {
 			if (0 == _cancel_flag) {
-				WSABUF wsa_buffer{ 8192 - _receive_message->rear(),  reinterpret_cast<char*>(_receive_message->data() + _receive_message->rear()) };
+				WSABUF wsa_buffer{ message::capacity() - _receive_message->rear(),  reinterpret_cast<char*>(_receive_message->data() + _receive_message->rear()) };
 				unsigned long flag = 0;
 				_recv_overlapped.clear();
 				int result = _socket.wsa_receive(&wsa_buffer, 1, &flag, _recv_overlapped);
@@ -417,12 +413,20 @@ public:
 			_socket.cancel_io_ex();
 		}
 	public:
-		inline void create_receive(void) noexcept {
-			message_pointer receive_message(&data_structure::_thread_local::memory_pool<message>::instance().allocate());
-			receive_message->clear();
-			memcpy(receive_message->data(), _receive_message->data() + _receive_message->front(), _receive_message->size());
-			receive_message->move_rear(_receive_message->size());
-			_receive_message = receive_message;
+		inline bool ready_receive(void) noexcept {
+			if (_receive_message->size() != _receive_message->capacity()) {
+				auto& memory_pool = data_structure::_thread_local::memory_pool<message>::instance();
+				message_pointer receive_message(&memory_pool.allocate());
+				receive_message->clear();
+				if (0 < _receive_message->size()) {
+					memcpy(receive_message->data(), _receive_message->data() + _receive_message->front(), _receive_message->size());
+					receive_message->move_rear(_receive_message->size());
+				}
+				_receive_message = receive_message;
+				return true;
+			}
+			cancel();
+			return false;
 		}
 		inline void finish_send(void) noexcept {
 			for (size_type index = 0; index < _send_size; ++index)
@@ -613,7 +617,7 @@ public:
 		socket_address.set_port(_listen_socket_port);
 		_listen_socket.create(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		_listen_socket.set_linger(1, 0);
-		_listen_socket.set_send_buffer(0);
+		//_listen_socket.set_send_buffer(0);
 		_listen_socket.bind(socket_address);
 		_listen_socket.listen(_listen_socket_backlog);
 		_accept_thread.begin(&server::accept, 0, this);
@@ -721,12 +725,13 @@ private:
 
 							session::view view_(session_._receive_message, session_._receive_message->front(), session_._receive_message->front() + header_._size);
 							session_._receive_message->pop(header_._size);
-							on_receive_session(session_._key, view_);
+							if (false == on_receive_session(session_._key, view_)) {
+								session_.cancel();
+								break;
+							}
 							_InterlockedIncrement(&_receive_tps);
 						}
-
-						session_.create_receive();
-						if (session_.receive())
+						if (session_.ready_receive() && session_.receive())
 							continue;
 					}
 					else {
@@ -858,12 +863,13 @@ public:
 		//*message_ << 0x7fffffffffffffff;
 		//do_send_session(key, message_);
 	}
-	inline virtual void on_receive_session(unsigned long long key, session::view& view_) {
+	inline virtual bool on_receive_session(unsigned long long key, session::view& view_) noexcept {
 		unsigned long long value;
 		view_ >> value;
 		session::message_pointer message_ = make_message();
 		*message_ << value;
 		do_send_session(key, message_);
+		return true;
 	}
 	inline virtual void on_destroy_session(unsigned long long key) noexcept {
 	}
