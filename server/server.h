@@ -610,7 +610,7 @@ public:
 		_tcpv4_segments_retransmitted_sec = query.add_counter(L"\\TCPv4\\Segments Retransmitted/sec");
 		_scheduler.regist_task(&server::monit, this);
 
-		// 牧刨明 积己
+		on_start();
 
 		system_component::network::socket_address_ipv4 socket_address;
 		socket_address.set_address(_listen_socket_ip.c_str());
@@ -637,7 +637,7 @@ public:
 		while (_session_array._size != 0) {
 		}
 
-		// 牧刨明 辆丰
+		on_stop();
 
 		_scheduler._active = -1;
 		_scheduler._wait_on_address.wake_single(&_scheduler._task_queue._size);
@@ -846,7 +846,7 @@ private:
 		_receive_tps = 0;
 		_send_tps = 0;
 
-		//on_monit();
+		on_monit();
 
 		if (-1 == _scheduler._active)
 			return -1;
