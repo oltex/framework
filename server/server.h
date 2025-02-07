@@ -547,12 +547,14 @@ public:
 			});
 		command_.add("send_mode", [&](command::parameter* param) noexcept -> int {
 			auto send_mode = param->get_string(1);
-			if ("direct" == send_mode)
+			if ("fast" == send_mode)
 				_send_mode = false;
-			else if ("frame" == send_mode) {
+			else if ("direct" == send_mode)
 				_send_mode = true;
-				_send_frame = param->get_int(2);
-			}
+			return 0;
+			});
+		command_.add("send_frame", [&](command::parameter* param) noexcept -> int {
+			_send_frame = param->get_int(1);
 			return 0;
 			});
 		command_.add("tcp_ip", [&](command::parameter* param) noexcept -> int {
@@ -592,7 +594,7 @@ public:
 		_scheduler._thread.begin(&server::schedule, 0, this);
 
 		_session_array.initialize(_session_array_max);
-		if (true == _send_mode)
+		if (0 != _send_frame)
 			_scheduler.regist_task(&server::send, this);
 		auto& query = utility::performance_data_helper::query::instance();
 		_processor_total_time = query.add_counter(L"\\Processor(_Total)\\% Processor Time");
@@ -737,7 +739,7 @@ private:
 					else {
 						session_.finish_send();
 						_interlockedadd((volatile long*)&_send_tps, session_._send_size);
-						if (false == _send_mode && session_.send())
+						if (0 == _send_frame && session_.send())
 							continue;
 					}
 				}
@@ -785,7 +787,7 @@ private:
 		}
 		if (-1 == _scheduler._active)
 			return -1;
-		return 0;
+		return _send_frame;
 	}
 	inline int monit(void) noexcept {
 		system("cls");
@@ -879,7 +881,7 @@ public:
 		session& session_ = _session_array[key];
 		if (session_.acquire(key)) {
 			session_._send_queue.push(message_ptr);
-			if (false == _send_mode && session_.send())
+			if (0 == _send_frame && session_.send())
 				return;
 		}
 		if (session_.release())
