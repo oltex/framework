@@ -25,9 +25,11 @@ namespace system_component {
 		inline bool write(void const* const buffer, unsigned long const length) const noexcept {
 			return WriteFile(_handle, buffer, length, nullptr, nullptr);
 		}
-	public:
 		inline auto set_pointer(long const distance_to_move, unsigned long move_method) const noexcept -> unsigned long {
 			return SetFilePointer(_handle, distance_to_move, nullptr, move_method);
+		}
+		inline auto set_pointer_ex(LARGE_INTEGER const distance_to_move, unsigned long move_method) const noexcept -> bool {
+			return SetFilePointerEx(_handle, distance_to_move, nullptr, move_method);
 		}
 		inline void set_end(void) const noexcept {
 			SetEndOfFile(_handle);
@@ -39,6 +41,13 @@ namespace system_component {
 			LARGE_INTEGER size;
 			GetFileSizeEx(_handle, &size);
 			return size;
+		}
+	public:
+		inline static auto get_attribute(std::wstring_view const path) noexcept -> unsigned long {
+			return GetFileAttributesW(path.data());
+		}
+		inline static bool create_directory(std::wstring_view const path) noexcept {
+			return CreateDirectoryW(path.data(), nullptr);
 		}
 	};
 }

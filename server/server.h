@@ -15,6 +15,7 @@
 
 #include "library/utility/command.h"
 #include "library/utility/performance_data_helper.h"
+#include "library/utility/logger.h"
 
 #include <optional>
 #include <iostream>
@@ -206,7 +207,6 @@ public:
 			inline void pop(size_type const length) noexcept {
 				_front += length;
 			}
-		public:
 			inline auto front(void) const noexcept -> size_type {
 				return _front;
 			}
@@ -412,7 +412,6 @@ public:
 			_InterlockedExchange(&_cancel_flag, 1);
 			_socket.cancel_io_ex();
 		}
-	public:
 		inline bool ready_receive(void) noexcept {
 			if (_receive_message->size() != _receive_message->capacity()) {
 				auto& memory_pool = data_structure::_thread_local::memory_pool<message>::instance();
@@ -619,7 +618,8 @@ public:
 		socket_address.set_port(_listen_socket_port);
 		_listen_socket.create(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		_listen_socket.set_linger(1, 0);
-		//_listen_socket.set_send_buffer(0);
+		if (true == _send_mode)
+			_listen_socket.set_send_buffer(0);
 		_listen_socket.bind(socket_address);
 		_listen_socket.listen(_listen_socket_backlog);
 		_accept_thread.begin(&server::accept, 0, this);

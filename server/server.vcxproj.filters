@@ -80,6 +80,18 @@
     <ClInclude Include="library\system-component\multi\wait_on_address.h">
       <Filter>library\system-component\multi</Filter>
     </ClInclude>
+    <ClInclude Include="library\utility\logger.h">
+      <Filter>library\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\multi\lock\critical_section.h">
+      <Filter>library\system-component\multi\lock</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\time\date.h">
+      <Filter>library\system-component\time</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\time\unix.h">
+      <Filter>library\system-component\time</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="library">
@@ -120,6 +132,12 @@
     </Filter>
     <Filter Include="library\utility">
       <UniqueIdentifier>{5af8e7e7-d5ae-4ed0-8ca7-52e16751cae6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\system-component\multi\lock">
+      <UniqueIdentifier>{305beaca-5201-46f7-9195-2ef979d7cdc0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\system-component\time">
+      <UniqueIdentifier>{cf8c7b21-5ce0-4459-8e26-7ac95ff5384a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
