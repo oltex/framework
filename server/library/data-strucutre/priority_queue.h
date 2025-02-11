@@ -1,9 +1,9 @@
 #pragma once
 #include "vector.h"
-#include "predicate.h"
+#include "../algorithm/predicate.h"
 
 namespace data_structure {
-	template<typename type, auto _predicate = predicate::less<type>>
+	template<typename type, auto _predicate = algorithm::predicate::less<type>>
 	class priority_queue {
 	private:
 		using size_type = unsigned int;

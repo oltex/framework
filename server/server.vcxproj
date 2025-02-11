@@ -152,6 +152,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="library\algorithm\predicate.h" />
     <ClInclude Include="library\data-strucutre\intrusive\shared_pointer.h" />
     <ClInclude Include="library\data-strucutre\lockfree\memory_pool.h" />
     <ClInclude Include="library\data-strucutre\lockfree\queue.h" />
@@ -161,7 +162,6 @@
     <ClInclude Include="library\data-strucutre\thread-local\memory_pool.h" />
     <ClInclude Include="library\data-strucutre\unique_pointer.h" />
     <ClInclude Include="library\data-strucutre\vector.h" />
-    <ClInclude Include="library\data-strucutre\predicate.h" />
     <ClInclude Include="library\design-pattern\singleton.h" />
     <ClInclude Include="library\design-pattern\thread-local\singleton.h" />
     <ClInclude Include="library\system-component\file.h" />

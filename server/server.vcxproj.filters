@@ -65,9 +65,6 @@
     <ClInclude Include="library\data-strucutre\priority_queue.h">
       <Filter>library\data-strucutre</Filter>
     </ClInclude>
-    <ClInclude Include="library\data-strucutre\predicate.h">
-      <Filter>library\data-strucutre</Filter>
-    </ClInclude>
     <ClInclude Include="library\utility\command.h">
       <Filter>library\utility</Filter>
     </ClInclude>
@@ -94,6 +91,9 @@
     </ClInclude>
     <ClInclude Include="library\system-component\time\multimedia.h">
       <Filter>library\system-component\time</Filter>
+    </ClInclude>
+    <ClInclude Include="library\algorithm\predicate.h">
+      <Filter>library\algorithm</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -138,6 +138,9 @@
     </Filter>
     <Filter Include="library\system-component\time">
       <UniqueIdentifier>{cf8c7b21-5ce0-4459-8e26-7ac95ff5384a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\algorithm">
+      <UniqueIdentifier>{e130d040-e493-4eed-bf74-09f8b530e426}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
