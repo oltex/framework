@@ -1,7 +1,7 @@
 #pragma once
 #include "library/system-component/network/window_socket_api.h"
 #include "library/system-component/input_output/completion_port.h"
-#include "library/system-component/multi/thread.h"
+#include "library/system-component/thread.h"
 #include "library/system-component/network/socket.h"
 #include "library/system-component/multi/wait_on_address.h"
 
@@ -134,7 +134,7 @@ public:
 		}
 	public:
 		size_type _active;
-		system_component::multi::thread _thread;
+		system_component::thread _thread;
 		system_component::multi::wait_on_address _wait_on_address;
 		task_queue _task_queue;
 		ready_queue _ready_queue;
@@ -389,6 +389,10 @@ public:
 						WSABUF wsa_buffer[512];
 						_send_size = 0;
 						for (auto& iter : _send_queue) {
+							if (512 <= _send_size) {
+								cancel();
+								return false;
+							}
 							wsa_buffer[_send_size].buf = reinterpret_cast<char*>(iter->data());
 							wsa_buffer[_send_size].len = iter->rear();
 							_send_size++;
@@ -425,6 +429,7 @@ public:
 				return true;
 			}
 			cancel();
+			log_message("server", utility::logger::level::info, L"session(%llu) close / reason : receive buffer full")
 			return false;
 		}
 		inline void finish_send(void) noexcept {
@@ -530,7 +535,7 @@ public:
 #pragma warning(suppress: 26495)
 	inline explicit server(void) noexcept {
 		system_component::network::window_socket_api::start_up();
-		_logger.create(L"server.log");
+		utility::logger::instance().create("server", L"server.log");
 
 		auto& command_ = command::instance();
 		command_.add("iocp_concurrent", [&](command::parameter* param) noexcept -> int {
@@ -566,23 +571,23 @@ public:
 				else if ("console" == param->get_string(index))
 					output |= utility::logger::output::console;
 			}
-			utility::logger::set_output(output);
+			utility::logger::instance().set_output(output);
 			return 0;
 			});
 
 		command_.add("log_level", [&](command::parameter* param) noexcept -> int {
 			if ("trace" == param->get_string(1)) 
-				utility::logger::set_level(utility::logger::level::trace);
+				utility::logger::instance().set_level(utility::logger::level::trace);
 			else if ("debug" == param->get_string(1)) 
-				utility::logger::set_level(utility::logger::level::debug);
+				utility::logger::instance().set_level(utility::logger::level::debug);
 			else if ("info" == param->get_string(1))
-				utility::logger::set_level(utility::logger::level::info);
+				utility::logger::instance().set_level(utility::logger::level::info);
 			else if ("warning" == param->get_string(1))
-				utility::logger::set_level(utility::logger::level::warning);
+				utility::logger::instance().set_level(utility::logger::level::warning);
 			else if ("error" == param->get_string(1))
-				utility::logger::set_level(utility::logger::level::error);
+				utility::logger::instance().set_level(utility::logger::level::error);
 			else if ("fatal" == param->get_string(1))
-				utility::logger::set_level(utility::logger::level::fatal);
+				utility::logger::instance().set_level(utility::logger::level::fatal);
 			return 0;
 			});
 
@@ -938,11 +943,11 @@ public:
 	}
 private:
 	system_component::input_output::completion_port _complation_port;
-	data_structure::vector<system_component::multi::thread> _worker_thread;
+	data_structure::vector<system_component::thread> _worker_thread;
 	scheduler _scheduler;
 	session_array _session_array;
 	system_component::network::socket _listen_socket;
-	system_component::multi::thread _accept_thread;
+	system_component::thread _accept_thread;
 public:
 	size_type _concurrent_thread_count;
 	size_type _worker_thread_count;
@@ -972,6 +977,4 @@ public:
 	size_type _accept_tps = 0;
 	size_type _receive_tps = 0;
 	size_type _send_tps = 0;
-
-	utility::logger _logger;
 };

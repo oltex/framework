@@ -1,12 +1,12 @@
 #pragma once
-#include "../kernel/object.h"
+#include "kernel/object.h"
 #include <process.h>
 #include <Windows.h>
 #include <tuple>
 #include <type_traits>
 #include <memory>
 
-namespace system_component::multi {
+namespace system_component {
 	class thread final : public kernel::object {
 	private:
 		template <typename tuple, size_t... index>

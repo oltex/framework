@@ -169,11 +169,11 @@
     <ClInclude Include="library\system-component\input_output\overlapped.h" />
     <ClInclude Include="library\system-component\kernel\object.h" />
     <ClInclude Include="library\system-component\multi\lock\critical_section.h" />
-    <ClInclude Include="library\system-component\multi\thread.h" />
     <ClInclude Include="library\system-component\multi\wait_on_address.h" />
     <ClInclude Include="library\system-component\network\socket.h" />
     <ClInclude Include="library\system-component\network\socket_address.h" />
     <ClInclude Include="library\system-component\network\window_socket_api.h" />
+    <ClInclude Include="library\system-component\thread.h" />
     <ClInclude Include="library\system-component\time\date.h" />
     <ClInclude Include="library\system-component\time\unix.h" />
     <ClInclude Include="library\utility\command.h" />
