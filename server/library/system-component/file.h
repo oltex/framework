@@ -20,7 +20,7 @@ namespace system_component {
 			return *this;
 		};
 		inline virtual ~file(void) noexcept override = default;
-	public:
+
 		inline void create(std::wstring_view path, unsigned long desired_access, unsigned long share_mode, unsigned long  creation_disposition, unsigned long flags_and_attributes) noexcept {
 			_handle = CreateFileW(path.data(), desired_access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr);
 		}
@@ -47,7 +47,7 @@ namespace system_component {
 			GetFileSizeEx(_handle, &size);
 			return size;
 		}
-	public:
+
 		inline static auto get_attribute(std::wstring_view const path) noexcept -> unsigned long {
 			return GetFileAttributesW(path.data());
 		}

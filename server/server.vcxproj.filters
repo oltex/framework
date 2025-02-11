@@ -92,6 +92,9 @@
     <ClInclude Include="library\system-component\handle.h">
       <Filter>library\system-component</Filter>
     </ClInclude>
+    <ClInclude Include="library\system-component\time\multimedia.h">
+      <Filter>library\system-component\time</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="library">

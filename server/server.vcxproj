@@ -175,6 +175,7 @@
     <ClInclude Include="library\system-component\network\window_socket_api.h" />
     <ClInclude Include="library\system-component\thread.h" />
     <ClInclude Include="library\system-component\time\date.h" />
+    <ClInclude Include="library\system-component\time\multimedia.h" />
     <ClInclude Include="library\system-component\time\unix.h" />
     <ClInclude Include="library\utility\command.h" />
     <ClInclude Include="library\utility\crash_dump.h" />

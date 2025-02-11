@@ -16,6 +16,7 @@
 #include "library/utility/command.h"
 #include "library/utility/performance_data_helper.h"
 #include "library/utility/logger.h"
+#include "library/utility/crash_dump.h"
 
 #include <optional>
 #include <iostream>
@@ -159,7 +160,7 @@ public:
 			inline auto operator=(message const&) noexcept -> message & = delete;
 			inline auto operator=(message&&) noexcept -> message & = delete;
 			inline ~message(void) noexcept = delete;
-		public:
+
 			friend inline static void destructor(message* rhs) {
 				auto& memory_pool = data_structure::_thread_local::memory_pool<message>::instance();
 				memory_pool.deallocate(*rhs);
@@ -185,7 +186,7 @@ public:
 			inline auto operator=(view const& rhs) noexcept -> view&;
 			inline auto operator=(view&& rhs) noexcept -> view&;
 			inline ~view(void) noexcept = default;
-		public:
+
 			template<typename type>
 				requires std::is_arithmetic_v<type>
 			inline auto operator>>(type& value) noexcept -> view& {
@@ -259,7 +260,7 @@ public:
 				inline auto operator=(iterator const&) noexcept -> iterator & = delete;
 				inline auto operator=(iterator&&) noexcept -> iterator & = delete;
 				inline ~iterator(void) noexcept = default;
-			public:
+
 				inline auto operator*(void) const noexcept -> message*& {
 					return _node->_value;
 				}
@@ -280,7 +281,7 @@ public:
 			inline auto operator=(send_queue const&) noexcept -> send_queue & = delete;
 			inline auto operator=(send_queue&&) noexcept -> send_queue & = delete;
 			inline ~send_queue(void) noexcept = default;
-		public:
+
 			inline void push(message_pointer message_ptr) noexcept {
 				base::emplace(message_ptr.get());
 				message_ptr.reset();
@@ -318,7 +319,7 @@ public:
 			}
 		};
 		inline static unsigned long long _static_id = 0x10000;
-	public:
+
 #pragma warning(suppress: 26495)
 		inline explicit session(size_type const index) noexcept
 			: _key(index) {
@@ -332,7 +333,7 @@ public:
 		inline auto operator=(session const&) noexcept -> session & = delete;
 		inline auto operator=(session&&) noexcept -> session & = delete;
 		inline ~session(void) noexcept = default;
-	public:
+
 		inline void initialize(system_component::network::socket&& socket) noexcept {
 			_key = 0xffff & _key | _static_id;
 			_static_id += 0x10000;
@@ -470,7 +471,7 @@ public:
 		inline auto operator=(session_array const&) noexcept -> session_array & = delete;
 		inline auto operator=(session_array&&) noexcept -> session_array & = delete;
 		inline ~session_array(void) noexcept = default;
-	public:
+
 		inline void initialize(size_type const capacity) noexcept {
 			_size = 0;
 			_capacity = capacity;
@@ -531,37 +532,14 @@ public:
 		size_type _size;
 		size_type _capacity;
 	};
-public:
+
 #pragma warning(suppress: 26495)
 	inline explicit server(void) noexcept {
+		utility::crash_dump();
 		system_component::network::window_socket_api::start_up();
 		utility::logger::instance().create("server", L"server.log");
 
 		auto& command_ = command::instance();
-		command_.add("iocp_concurrent", [&](command::parameter* param) noexcept -> int {
-			_concurrent_thread_count = param->get_int(1);
-			return 0;
-			});
-		command_.add("iocp_worker", [&](command::parameter* param) noexcept -> int {
-			_worker_thread_count = param->get_int(1);
-			return 0;
-			});
-		command_.add("session_max", [&](command::parameter* param) noexcept -> int {
-			_session_array_max = param->get_int(1);
-			return 0;
-			});
-		command_.add("send_mode", [&](command::parameter* param) noexcept -> int {
-			auto send_mode = param->get_string(1);
-			if ("fast" == send_mode)
-				_send_mode = false;
-			else if ("direct" == send_mode)
-				_send_mode = true;
-			return 0;
-			});
-		command_.add("send_frame", [&](command::parameter* param) noexcept -> int {
-			_send_frame = param->get_int(1);
-			return 0;
-			});
 		command_.add("log_output", [&](command::parameter* param) noexcept -> int {
 			unsigned char output = 0;
 			for (size_type index = 1; index < param->size(); ++index) {
@@ -586,6 +564,31 @@ public:
 				utility::logger::instance().set_level(utility::logger::level::error);
 			else if ("fatal" == param->get_string(1))
 				utility::logger::instance().set_level(utility::logger::level::fatal);
+			return 0;
+			});
+
+		command_.add("iocp_concurrent", [&](command::parameter* param) noexcept -> int {
+			_concurrent_thread_count = param->get_int(1);
+			return 0;
+			});
+		command_.add("iocp_worker", [&](command::parameter* param) noexcept -> int {
+			_worker_thread_count = param->get_int(1);
+			return 0;
+			});
+		command_.add("session_max", [&](command::parameter* param) noexcept -> int {
+			_session_array_max = param->get_int(1);
+			return 0;
+			});
+		command_.add("send_mode", [&](command::parameter* param) noexcept -> int {
+			auto send_mode = param->get_string(1);
+			if ("fast" == send_mode)
+				_send_mode = false;
+			else if ("direct" == send_mode)
+				_send_mode = true;
+			return 0;
+			});
+		command_.add("send_frame", [&](command::parameter* param) noexcept -> int {
+			_send_frame = param->get_int(1);
 			return 0;
 			});
 		command_.add("tcp_ip", [&](command::parameter* param) noexcept -> int {
@@ -616,7 +619,7 @@ public:
 	inline ~server(void) noexcept {
 		system_component::network::window_socket_api::clean_up();
 	};
-public:
+
 	inline void start(void) noexcept {
 		_complation_port.create(_concurrent_thread_count);
 		for (size_type index = 0; index < _worker_thread_count; ++index)
@@ -923,7 +926,6 @@ public:
 		if (session_.release())
 			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
 	}
-public:
 	inline static auto make_message(void) noexcept -> session::message_pointer {
 		auto& memory_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
 		session::message_pointer message_(&memory_pool.allocate());
