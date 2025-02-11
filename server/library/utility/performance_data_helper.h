@@ -18,9 +18,16 @@ namespace utility::performance_data_helper {
 		public:
 			inline explicit counter(void) noexcept = default;
 			inline counter(counter const&) noexcept = default;
-			inline explicit counter(counter&&) noexcept = default;
+			inline explicit counter(counter&& rhs) noexcept
+				: _counter(rhs._counter) {
+				rhs._counter = INVALID_HANDLE_VALUE;
+			};
 			inline auto operator=(counter const&) noexcept -> counter & = default;
-			inline auto operator=(counter&&) noexcept -> counter & = default;
+			inline auto operator=(counter&& rhs) noexcept -> counter& {
+				_counter = rhs._counter;
+				rhs._counter = INVALID_HANDLE_VALUE;
+				return *this;
+			};
 			inline ~counter(void) noexcept {
 				PdhRemoveCounter(_counter);
 			};

@@ -71,7 +71,7 @@ public:
 			inline auto operator=(task_queue const&) noexcept -> task_queue & = delete;
 			inline auto operator=(task_queue&&) noexcept -> task_queue & = delete;
 			inline ~task_queue(void) noexcept = default;
-		public:
+
 			inline void push(task* task_) noexcept {
 				base::emplace(task_);
 				_InterlockedIncrement(&_size);
@@ -113,7 +113,7 @@ public:
 		inline auto operator=(scheduler const&) noexcept -> scheduler & = delete;
 		inline auto operator=(scheduler&&) noexcept -> scheduler & = delete;
 		inline ~scheduler(void) noexcept = default;
-	public:
+
 		inline void initialize(void) noexcept {
 			_active = 0;
 			_size = 0;
@@ -319,7 +319,7 @@ public:
 			}
 		};
 		inline static unsigned long long _static_id = 0x10000;
-
+	public:
 #pragma warning(suppress: 26495)
 		inline explicit session(size_type const index) noexcept
 			: _key(index) {
@@ -431,7 +431,7 @@ public:
 			}
 			cancel();
 			log_message("server", utility::logger::level::info, L"session(%llu) close / reason : receive buffer full")
-			return false;
+				return false;
 		}
 		inline void finish_send(void) noexcept {
 			for (size_type index = 0; index < _send_size; ++index)
@@ -552,9 +552,9 @@ public:
 			return 0;
 			});
 		command_.add("log_level", [&](command::parameter* param) noexcept -> int {
-			if ("trace" == param->get_string(1)) 
+			if ("trace" == param->get_string(1))
 				utility::logger::instance().set_level(utility::logger::level::trace);
-			else if ("debug" == param->get_string(1)) 
+			else if ("debug" == param->get_string(1))
 				utility::logger::instance().set_level(utility::logger::level::debug);
 			else if ("info" == param->get_string(1))
 				utility::logger::instance().set_level(utility::logger::level::info);
@@ -826,6 +826,8 @@ private:
 	}
 	inline int monit(void) noexcept {
 		system("cls");
+		auto& query = utility::performance_data_helper::query::instance();
+		query.collect_query_data();
 
 		SYSTEM_INFO info;
 		GetSystemInfo(&info);
@@ -849,7 +851,7 @@ private:
 			" Retransmission :   %f\n",
 			_processor_total_time.get_formatted_value(PDH_FMT_DOUBLE).doubleValue,
 			_processor_user_time.get_formatted_value(PDH_FMT_DOUBLE).doubleValue,
-			_processor_kernel_time.get_formatted_value( PDH_FMT_DOUBLE).doubleValue,
+			_processor_kernel_time.get_formatted_value(PDH_FMT_DOUBLE).doubleValue,
 			_process_total_time.get_formatted_value(PDH_FMT_DOUBLE/* | PDH_FMT_NOCAP100*/).doubleValue/* / info.dwNumberOfProcessors*/,
 			_process_user_time.get_formatted_value(PDH_FMT_DOUBLE/* | PDH_FMT_NOCAP100*/).doubleValue/* / info.dwNumberOfProcessors*/,
 			_process_kernel_time.get_formatted_value(PDH_FMT_DOUBLE/* | PDH_FMT_NOCAP100*/).doubleValue/* / info.dwNumberOfProcessors*/,
