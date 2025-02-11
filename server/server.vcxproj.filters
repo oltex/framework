@@ -8,9 +8,6 @@
     <ClInclude Include="library\system-component\network\window_socket_api.h">
       <Filter>library\system-component\network</Filter>
     </ClInclude>
-    <ClInclude Include="library\system-component\kernel\object.h">
-      <Filter>library\system-component\kernel</Filter>
-    </ClInclude>
     <ClInclude Include="library\system-component\input_output\completion_port.h">
       <Filter>library\system-component\input_output</Filter>
     </ClInclude>
@@ -92,6 +89,9 @@
     <ClInclude Include="library\system-component\thread.h">
       <Filter>library\system-component</Filter>
     </ClInclude>
+    <ClInclude Include="library\system-component\handle.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="library">
@@ -105,9 +105,6 @@
     </Filter>
     <Filter Include="library\system-component\multi">
       <UniqueIdentifier>{9d212570-778d-419a-8c92-e4f754f80371}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="library\system-component\kernel">
-      <UniqueIdentifier>{295bfe1c-3bc3-4eee-8c05-9ba5385337fa}</UniqueIdentifier>
     </Filter>
     <Filter Include="library\system-component\input_output">
       <UniqueIdentifier>{602c4aea-b12f-489c-a7ce-475b7f8a17cf}</UniqueIdentifier>

@@ -562,7 +562,6 @@ public:
 			_send_frame = param->get_int(1);
 			return 0;
 			});
-
 		command_.add("log_output", [&](command::parameter* param) noexcept -> int {
 			unsigned char output = 0;
 			for (size_type index = 1; index < param->size(); ++index) {
@@ -574,7 +573,6 @@ public:
 			utility::logger::instance().set_output(output);
 			return 0;
 			});
-
 		command_.add("log_level", [&](command::parameter* param) noexcept -> int {
 			if ("trace" == param->get_string(1)) 
 				utility::logger::instance().set_level(utility::logger::level::trace);
@@ -590,7 +588,6 @@ public:
 				utility::logger::instance().set_level(utility::logger::level::fatal);
 			return 0;
 			});
-
 		command_.add("tcp_ip", [&](command::parameter* param) noexcept -> int {
 			_listen_socket_ip = param->get_string(1);
 			return 0;
@@ -687,7 +684,7 @@ public:
 		HANDLE handle[128];
 		for (unsigned int index = 0; index < _worker_thread.size(); ++index)
 			handle[index] = _worker_thread[index].data();
-		system_component::kernel::object::wait_for_multiple(_worker_thread.size(), handle, true, INFINITE);
+		system_component::handle::wait_for_multiple(_worker_thread.size(), handle, true, INFINITE);
 		_worker_thread.clear();
 		_complation_port.close();
 	}

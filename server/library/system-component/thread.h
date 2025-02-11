@@ -1,5 +1,5 @@
 #pragma once
-#include "kernel/object.h"
+#include "handle.h"
 #include <process.h>
 #include <Windows.h>
 #include <tuple>
@@ -7,7 +7,7 @@
 #include <memory>
 
 namespace system_component {
-	class thread final : public kernel::object {
+	class thread final : public handle {
 	private:
 		template <typename tuple, size_t... index>
 		inline static unsigned int __stdcall invoke(void* arg) noexcept {
@@ -36,11 +36,11 @@ namespace system_component {
 		}
 		inline explicit thread(thread const& rhs) noexcept = delete;
 		inline explicit thread(thread&& rhs) noexcept
-			: object(std::move(rhs)) {
+			: handle(std::move(rhs)) {
 		};
 		inline auto operator=(thread const& rhs) noexcept -> thread & = delete;
 		inline auto operator=(thread&& rhs) noexcept -> thread& {
-			object::operator=(std::move(rhs));
+			handle::operator=(std::move(rhs));
 			return *this;
 		};
 		inline virtual ~thread(void) noexcept override = default;

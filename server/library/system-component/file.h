@@ -1,19 +1,24 @@
 #pragma once
-#include "kernel/object.h"
+#include "handle.h"
 #include <string_view>
 #include <Windows.h>
 
 namespace system_component {
-	class file final : public kernel::object {
+	class file final : public handle {
 	public:
 		inline explicit file(void) noexcept = default;
 		inline explicit file(std::wstring_view path, unsigned long desired_access, unsigned long share_mode, unsigned long creation_disposition, unsigned long flags_and_attributes) noexcept
-			: object(CreateFileW(path.data(), desired_access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr)) {
+			: handle(CreateFileW(path.data(), desired_access, share_mode, nullptr, creation_disposition, flags_and_attributes, nullptr)) {
 		};
-		inline explicit file(file const& rhs) noexcept = delete;
-		inline explicit file(file&& rhs) noexcept = delete;
-		inline auto operator=(file const& rhs) noexcept -> file & = delete;
-		inline auto operator=(file&& rhs) noexcept -> file & = delete;
+		inline explicit file(file const&) noexcept = delete;
+		inline explicit file(file&& rhs) noexcept
+			: handle(std::move(rhs)) {
+		};
+		inline auto operator=(file const&) noexcept -> file & = delete;
+		inline auto operator=(file&& rhs) noexcept -> file& {
+			handle::operator=(std::move(rhs));
+			return *this;
+		};
 		inline virtual ~file(void) noexcept override = default;
 	public:
 		inline void create(std::wstring_view path, unsigned long desired_access, unsigned long share_mode, unsigned long  creation_disposition, unsigned long flags_and_attributes) noexcept {

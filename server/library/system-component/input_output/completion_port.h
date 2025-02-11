@@ -2,22 +2,22 @@
 #pragma comment(lib,"ws2_32.lib")
 #include <WinSock2.h>
 #include "../network/socket.h"
-#include "../kernel/object.h"
+#include "../handle.h"
 
 namespace system_component::input_output {
-	class completion_port final : public kernel::object {
+	class completion_port final : public handle {
 	public:
 		inline explicit completion_port(void) noexcept = default;
 		inline explicit completion_port(unsigned long const concurrent_thread) noexcept
-			: object(CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, concurrent_thread)) {
+			: handle(CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, concurrent_thread)) {
 		};
-		inline explicit completion_port(completion_port const& rhs) noexcept = delete;
+		inline explicit completion_port(completion_port const&) noexcept = delete;
 		inline explicit completion_port(completion_port&& rhs) noexcept
-			: object(std::move(rhs)) {
+			: handle(std::move(rhs)) {
 		};
-		inline auto operator=(completion_port const& rhs) noexcept -> completion_port & = delete;
+		inline auto operator=(completion_port const&) noexcept -> completion_port & = delete;
 		inline auto operator=(completion_port&& rhs) noexcept -> completion_port& {
-			object::operator=(std::move(rhs));
+			handle::operator=(std::move(rhs));
 			return *this;
 		}
 		inline virtual ~completion_port(void) noexcept override = default;
@@ -39,9 +39,6 @@ namespace system_component::input_output {
 			result._result = GetQueuedCompletionStatus(_handle, &result._transferred, &result._key, &result._overlapped, milli_second);
 			return result;
 		}
-		//inline auto get_queue_state_ex(void) noexcept {
-		//	GetQueuedCompletionStatusEx()
-		//}
 		inline void post_queue_state(unsigned long transferred, uintptr_t key, OVERLAPPED* overlapped) noexcept {
 			PostQueuedCompletionStatus(_handle, transferred, key, overlapped);
 		}

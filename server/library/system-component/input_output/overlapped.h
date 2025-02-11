@@ -5,15 +5,10 @@ namespace system_component::input_output {
 	class overlapped final {
 	public:
 		inline explicit overlapped(void) noexcept = default;
-		inline explicit overlapped(overlapped const& rhs) noexcept = delete;
-		inline explicit overlapped(overlapped&& rhs) noexcept
-			: _overlapped(rhs._overlapped) {
-		};
-		inline auto operator=(overlapped const& rhs) noexcept -> overlapped & = delete;
-		inline auto operator=(overlapped&& rhs) noexcept -> overlapped& {
-			_overlapped = rhs._overlapped;
-			return *this;
-		};
+		inline explicit overlapped(overlapped const&) noexcept = delete;
+		inline explicit overlapped(overlapped&&) noexcept = delete;
+		inline auto operator=(overlapped const&) noexcept -> overlapped & = delete;
+		inline auto operator=(overlapped&&) noexcept -> overlapped & = delete;
 		inline ~overlapped(void) noexcept = default;
 	public:
 		inline auto get_result(HANDLE handle, unsigned long* byte, bool const wait) noexcept -> bool {
