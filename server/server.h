@@ -530,6 +530,7 @@ public:
 #pragma warning(suppress: 26495)
 	inline explicit server(void) noexcept {
 		system_component::network::window_socket_api::start_up();
+		_logger.create(L"server.log");
 
 		auto& command_ = command::instance();
 		command_.add("iocp_concurrent", [&](command::parameter* param) noexcept -> int {
@@ -556,6 +557,35 @@ public:
 			_send_frame = param->get_int(1);
 			return 0;
 			});
+
+		command_.add("log_output", [&](command::parameter* param) noexcept -> int {
+			unsigned char output = 0;
+			for (size_type index = 1; index < param->size(); ++index) {
+				if ("file" == param->get_string(index))
+					output |= utility::logger::output::file;
+				else if ("console" == param->get_string(index))
+					output |= utility::logger::output::console;
+			}
+			utility::logger::set_output(output);
+			return 0;
+			});
+
+		command_.add("log_level", [&](command::parameter* param) noexcept -> int {
+			if ("trace" == param->get_string(1)) 
+				utility::logger::set_level(utility::logger::level::trace);
+			else if ("debug" == param->get_string(1)) 
+				utility::logger::set_level(utility::logger::level::debug);
+			else if ("info" == param->get_string(1))
+				utility::logger::set_level(utility::logger::level::info);
+			else if ("warning" == param->get_string(1))
+				utility::logger::set_level(utility::logger::level::warning);
+			else if ("error" == param->get_string(1))
+				utility::logger::set_level(utility::logger::level::error);
+			else if ("fatal" == param->get_string(1))
+				utility::logger::set_level(utility::logger::level::fatal);
+			return 0;
+			});
+
 		command_.add("tcp_ip", [&](command::parameter* param) noexcept -> int {
 			_listen_socket_ip = param->get_string(1);
 			return 0;
@@ -662,8 +692,8 @@ private:
 			auto [socket, socket_address] = _listen_socket.accept();
 			if (INVALID_SOCKET == socket.data())
 				break;
-			_accept_total_count++;
-			_InterlockedIncrement(&_accept_tps);
+			++_accept_total_count;
+			++_accept_tps;
 			if (false == on_accept_socket(socket_address))
 				socket.close();
 			else {
@@ -791,12 +821,9 @@ private:
 	}
 	inline int monit(void) noexcept {
 		system("cls");
-		auto& query = utility::performance_data_helper::query::instance();
-		query.collect_query_data();
 
 		SYSTEM_INFO info;
 		GetSystemInfo(&info);
-
 		printf("--------------------------------------\n"\
 			"[ System Monitor ]\n"\
 			"CPU Usage\n"\
@@ -815,19 +842,19 @@ private:
 			" Receive        :   %f\n"\
 			" Send           :   %f\n"\
 			" Retransmission :   %f\n",
-			query.get_formatted_counter_value(_processor_total_time, PDH_FMT_DOUBLE).doubleValue,
-			query.get_formatted_counter_value(_processor_user_time, PDH_FMT_DOUBLE).doubleValue,
-			query.get_formatted_counter_value(_processor_kernel_time, PDH_FMT_DOUBLE).doubleValue,
-			query.get_formatted_counter_value(_process_total_time, PDH_FMT_DOUBLE/* | PDH_FMT_NOCAP100*/).doubleValue/* / info.dwNumberOfProcessors*/,
-			query.get_formatted_counter_value(_process_user_time, PDH_FMT_DOUBLE/* | PDH_FMT_NOCAP100*/).doubleValue/* / info.dwNumberOfProcessors*/,
-			query.get_formatted_counter_value(_process_kernel_time, PDH_FMT_DOUBLE/* | PDH_FMT_NOCAP100*/).doubleValue/* / info.dwNumberOfProcessors*/,
-			query.get_formatted_counter_value(_memory_available_byte, PDH_FMT_DOUBLE).doubleValue / 0x40000000,
-			query.get_formatted_counter_value(_memory_pool_nonpaged_byte, PDH_FMT_DOUBLE).doubleValue / 0x100000,
-			query.get_formatted_counter_value(_process_private_byte, PDH_FMT_DOUBLE).doubleValue / 0x100000,
-			query.get_formatted_counter_value(_process_pool_nonpaged_byte, PDH_FMT_DOUBLE).doubleValue / 0x100000,
-			query.get_formatted_counter_value(_tcpv4_segments_received_sec, PDH_FMT_DOUBLE).doubleValue,
-			query.get_formatted_counter_value(_tcpv4_segments_sent_sec, PDH_FMT_DOUBLE).doubleValue,
-			query.get_formatted_counter_value(_tcpv4_segments_retransmitted_sec, PDH_FMT_DOUBLE).doubleValue);
+			_processor_total_time.get_formatted_value(PDH_FMT_DOUBLE).doubleValue,
+			_processor_user_time.get_formatted_value(PDH_FMT_DOUBLE).doubleValue,
+			_processor_kernel_time.get_formatted_value( PDH_FMT_DOUBLE).doubleValue,
+			_process_total_time.get_formatted_value(PDH_FMT_DOUBLE/* | PDH_FMT_NOCAP100*/).doubleValue/* / info.dwNumberOfProcessors*/,
+			_process_user_time.get_formatted_value(PDH_FMT_DOUBLE/* | PDH_FMT_NOCAP100*/).doubleValue/* / info.dwNumberOfProcessors*/,
+			_process_kernel_time.get_formatted_value(PDH_FMT_DOUBLE/* | PDH_FMT_NOCAP100*/).doubleValue/* / info.dwNumberOfProcessors*/,
+			_memory_available_byte.get_formatted_value(PDH_FMT_DOUBLE).doubleValue / 0x40000000,
+			_memory_pool_nonpaged_byte.get_formatted_value(PDH_FMT_DOUBLE).doubleValue / 0x100000,
+			_process_private_byte.get_formatted_value(PDH_FMT_DOUBLE).doubleValue / 0x100000,
+			_process_pool_nonpaged_byte.get_formatted_value(PDH_FMT_DOUBLE).doubleValue / 0x100000,
+			_tcpv4_segments_received_sec.get_formatted_value(PDH_FMT_DOUBLE).doubleValue,
+			_tcpv4_segments_sent_sec.get_formatted_value(PDH_FMT_DOUBLE).doubleValue,
+			_tcpv4_segments_retransmitted_sec.get_formatted_value(PDH_FMT_DOUBLE).doubleValue);
 
 		auto& memory_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
 		printf("--------------------------------------\n"\
@@ -927,22 +954,24 @@ public:
 	size_type _listen_socket_backlog;
 	unsigned char _header_fixed_key;
 
-	utility::performance_data_helper::counter _processor_total_time;
-	utility::performance_data_helper::counter _processor_user_time;
-	utility::performance_data_helper::counter _processor_kernel_time;
-	utility::performance_data_helper::counter _process_total_time;
-	utility::performance_data_helper::counter _process_user_time;
-	utility::performance_data_helper::counter _process_kernel_time;
-	utility::performance_data_helper::counter _memory_available_byte;
-	utility::performance_data_helper::counter _memory_pool_nonpaged_byte;
-	utility::performance_data_helper::counter _process_private_byte;
-	utility::performance_data_helper::counter _process_pool_nonpaged_byte;
-	utility::performance_data_helper::counter _tcpv4_segments_received_sec;
-	utility::performance_data_helper::counter _tcpv4_segments_sent_sec;
-	utility::performance_data_helper::counter _tcpv4_segments_retransmitted_sec;
-
+	utility::performance_data_helper::query::counter _processor_total_time;
+	utility::performance_data_helper::query::counter _processor_user_time;
+	utility::performance_data_helper::query::counter _processor_kernel_time;
+	utility::performance_data_helper::query::counter _process_total_time;
+	utility::performance_data_helper::query::counter _process_user_time;
+	utility::performance_data_helper::query::counter _process_kernel_time;
+	utility::performance_data_helper::query::counter _memory_available_byte;
+	utility::performance_data_helper::query::counter _memory_pool_nonpaged_byte;
+	utility::performance_data_helper::query::counter _process_private_byte;
+	utility::performance_data_helper::query::counter _process_pool_nonpaged_byte;
+	utility::performance_data_helper::query::counter _tcpv4_segments_received_sec;
+	utility::performance_data_helper::query::counter _tcpv4_segments_sent_sec;
+	utility::performance_data_helper::query::counter _tcpv4_segments_retransmitted_sec;
 	unsigned long long _accept_total_count = 0;
+	//unsigned long long _disconnect_total_count = 0;
 	size_type _accept_tps = 0;
 	size_type _receive_tps = 0;
 	size_type _send_tps = 0;
+
+	utility::logger _logger;
 };

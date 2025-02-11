@@ -39,6 +39,9 @@ public:
 				return true;
 			return false;
 		}
+		inline auto size(void) const noexcept -> size_type {
+			return _argument.size();
+		}
 	private:
 		data_structure::vector<std::string> _argument;
 	};
