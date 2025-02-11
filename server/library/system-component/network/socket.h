@@ -15,21 +15,21 @@ namespace system_component::network {
 		inline explicit socket(ADDRESS_FAMILY const address_family, int const type, int const protocol) noexcept
 			: _socket(::socket(address_family, type, protocol)) {
 			if (INVALID_SOCKET == _socket) {
-				//switch (GetLastError()) {
-				//default:
-				//	__debugbreak();
-				//}
+				switch (GetLastError()) {
+				default:
+					__debugbreak();
+				}
 			}
 		}
 		inline explicit socket(SOCKET const sock) noexcept
 			: _socket(sock) {
 		}
-		inline explicit socket(socket const& rhs) noexcept = delete;
+		inline explicit socket(socket const&) noexcept = delete;
 		inline explicit socket(socket&& rhs) noexcept
 			: _socket(rhs._socket) {
 			rhs._socket = INVALID_SOCKET;
 		}
-		inline auto operator=(socket const& rhs) noexcept -> socket & = delete;
+		inline auto operator=(socket const&) noexcept -> socket & = delete;
 		inline auto operator=(socket&& rhs) noexcept -> socket& {
 			closesocket(_socket);
 			_socket = rhs._socket;
@@ -39,14 +39,14 @@ namespace system_component::network {
 		inline ~socket(void) noexcept {
 			closesocket(_socket);
 		}
-	public:
+
 		inline void create(ADDRESS_FAMILY const address_family, int const type, int const protocol) noexcept {
 			_socket = ::socket(address_family, type, protocol);
 			if (INVALID_SOCKET == _socket) {
-				//switch (GetLastError()) {
-				//default:
-				//	__debugbreak();
-				//}
+				switch (GetLastError()) {
+				default:
+					__debugbreak();
+				}
 			}
 		}
 		inline auto bind(socket_address& socket_address) const noexcept -> int {
@@ -114,7 +114,6 @@ namespace system_component::network {
 			closesocket(_socket);
 			_socket = INVALID_SOCKET;
 		}
-	public:
 		inline auto send(char const* const buffer, int const length, int const flag) noexcept -> int {
 			int result = ::send(_socket, buffer, length, flag);
 			if (SOCKET_ERROR == result) {
@@ -219,10 +218,18 @@ namespace system_component::network {
 			}
 			return result;
 		}
+		inline void cancel_io(void) const noexcept {
+			CancelIo(reinterpret_cast<HANDLE>(_socket));
+		}
+		inline void cancel_io_ex(void) const noexcept {
+			CancelIoEx(reinterpret_cast<HANDLE>(_socket), nullptr);
+		}
+		inline void cancel_io_ex(input_output::overlapped overlapped) const noexcept {
+			CancelIoEx(reinterpret_cast<HANDLE>(_socket), &overlapped.data());
+		}
 		inline bool wsa_get_overlapped_result(input_output::overlapped& overlapped, unsigned long* transfer, bool const wait, unsigned long* flag) noexcept {
 			return WSAGetOverlappedResult(_socket, &overlapped.data(), transfer, wait, flag);
 		}
-	public:
 		inline void set_tcp_nodelay(int const enable) const noexcept {
 			set_option(IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char const*>(&enable), sizeof(int));
 		}
@@ -243,7 +250,6 @@ namespace system_component::network {
 			if (SOCKET_ERROR == setsockopt(_socket, level, name, value, length))
 				__debugbreak();
 		}
-	public:
 		inline void set_nonblocking(unsigned long const enable) const noexcept {
 			set_io_control(FIONBIO, enable);
 		}
@@ -251,7 +257,6 @@ namespace system_component::network {
 			if (SOCKET_ERROR == ioctlsocket(_socket, cmd, &arg))
 				__debugbreak();
 		}
-	public:
 		inline auto get_local_socket_address(void) const noexcept -> socket_address_ipv4 {
 			socket_address_ipv4 socket_address;
 			int length = socket_address.get_length();
@@ -264,19 +269,8 @@ namespace system_component::network {
 			getpeername(_socket, &socket_address.data(), &length);
 			return socket_address;
 		}
-	public:
 		inline auto data(void) noexcept -> SOCKET& {
 			return _socket;
-		}
-
-		inline void cancel_io(void) const noexcept {
-			CancelIo(reinterpret_cast<HANDLE>(_socket));
-		}
-		inline void cancel_io_ex(void) const noexcept {
-			CancelIoEx(reinterpret_cast<HANDLE>(_socket), nullptr);
-		}
-		inline void cancel_io_ex(input_output::overlapped overlapped) const noexcept {
-			CancelIoEx(reinterpret_cast<HANDLE>(_socket), &overlapped.data());
 		}
 	private:
 		SOCKET _socket;

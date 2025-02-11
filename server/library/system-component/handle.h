@@ -27,7 +27,7 @@ namespace system_component {
 		inline virtual ~handle(void) noexcept {
 			CloseHandle(_handle);
 		};
-	public:
+
 		inline void close(void) noexcept {
 			CloseHandle(_handle);
 			_handle = INVALID_HANDLE_VALUE;
@@ -50,7 +50,7 @@ namespace system_component {
 		inline auto data(void) noexcept -> HANDLE& {
 			return _handle;
 		}
-	public:
+
 		inline static auto wait_for_multiple(unsigned long const count, HANDLE* handle, bool const wait_all, unsigned long const milli_second) noexcept -> unsigned long {
 			return WaitForMultipleObjects(count, handle, wait_all, milli_second);
 		}

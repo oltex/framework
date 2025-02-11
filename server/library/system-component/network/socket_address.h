@@ -13,10 +13,9 @@ namespace system_component::network {
 		inline auto operator=(socket_address const& rhs) noexcept -> socket_address & = default;
 		inline auto operator=(socket_address&& rhs) noexcept -> socket_address & = default;
 		inline ~socket_address(void) noexcept = default;
-	public:
+
 		inline virtual ADDRESS_FAMILY get_family(void) const noexcept = 0;
 		inline virtual int get_length(void) const noexcept = 0;
-	public:
 		inline virtual sockaddr& data(void) noexcept = 0;
 	};
 
@@ -41,7 +40,7 @@ namespace system_component::network {
 			return *this;
 		};
 		inline ~socket_address_ipv4(void) noexcept = default;
-	public:
+
 		inline void set_address(unsigned long address) noexcept {
 			_sockaddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
 		}
@@ -68,7 +67,6 @@ namespace system_component::network {
 		inline virtual int get_length(void) const noexcept override {
 			return sizeof(sockaddr_in);
 		}
-	public:
 		inline virtual sockaddr& data(void) noexcept override {
 			return *reinterpret_cast<sockaddr*>(&_sockaddr);
 		}
@@ -96,7 +94,7 @@ namespace system_component::network {
 			return *this;
 		};
 		inline ~socket_address_storage(void) noexcept = default;
-	public:
+
 		inline virtual ADDRESS_FAMILY get_family(void) const noexcept {
 			return _sockaddr.ss_family;
 		}
@@ -107,7 +105,6 @@ namespace system_component::network {
 			}
 			return sizeof(sockaddr_storage);
 		}
-	public:
 		inline virtual sockaddr& data(void) noexcept override {
 			return *reinterpret_cast<sockaddr*>(&_sockaddr);
 		}

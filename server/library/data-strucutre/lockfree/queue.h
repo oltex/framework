@@ -1,5 +1,5 @@
 #pragma once
-#include "memory_pool.h"
+#include "../thread-local/memory_pool.h"
 #include <optional>
 
 namespace data_structure::lockfree {

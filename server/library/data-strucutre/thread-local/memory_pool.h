@@ -2,7 +2,6 @@
 #include "../../design-pattern/thread-local/singleton.h"
 #include "../lockfree/memory_pool.h"
 #include "../pair.h"
-#include <iostream>
 
 namespace data_structure::_thread_local {
 	template<typename type, size_t bucket_size = 1024>

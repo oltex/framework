@@ -13,6 +13,7 @@ namespace data_structure {
 	private:
 		using byte = unsigned char;
 		using size_type = unsigned int;
+		using iterator = byte*;
 	public:
 		inline explicit serialize_buffer(void) noexcept = default;
 		inline explicit serialize_buffer(serialize_buffer const& rhs) noexcept = default;
@@ -35,7 +36,7 @@ namespace data_structure {
 		}
 		inline void push(byte* const buffer, size_type const length) noexcept {
 #ifdef debug
-			if (_rear + length > _capacity) {
+			if (length + _rear > _capacity) {
 				_fail = true;
 				return;
 			}
@@ -57,7 +58,7 @@ namespace data_structure {
 		}
 		inline void peek(byte* const buffer, size_type const length) noexcept {
 #ifdef debug
-			if (_front + length > _rear) {
+			if (length + _front > _rear) {
 				_fail = true;
 				return;
 			}
@@ -67,7 +68,12 @@ namespace data_structure {
 		inline void pop(size_type const length) noexcept {
 			_front += length;
 		}
-	public:
+		inline auto begin(void) noexcept -> iterator {
+			return _array + _front;
+		}
+		inline auto end(void) noexcept -> iterator {
+			return _array + _rear;
+		}
 #ifdef debug
 		inline operator bool(void) const noexcept {
 			return !_fail;
@@ -106,7 +112,6 @@ namespace data_structure {
 	protected:
 		size_type _front = 0;
 		size_type _rear = 0;
-
 #ifdef debug
 		bool _fail = false;
 #endif
