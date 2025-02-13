@@ -39,7 +39,7 @@ namespace data_structure::lockfree {
 				head = next;
 			}
 		};
-	public:
+
 		template<typename universal>
 		inline void push(universal&& value) noexcept {
 			emplace(std::forward<universal>(value));
