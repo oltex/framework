@@ -1,6 +1,6 @@
 #pragma once
 #include "library/system-component/network/window_socket_api.h"
-#include "library/system-component/input_output/completion_port.h"
+#include "library/system-component/input-output/completion_port.h"
 #include "library/system-component/thread.h"
 #include "library/system-component/network/socket.h"
 #include "library/system-component/multi/wait_on_address.h"
@@ -222,6 +222,12 @@ public:
 			}
 			inline auto size(void) const noexcept -> size_type {
 				return _rear - _front;
+			}
+			inline auto begin(void) noexcept {
+				return _message->data() + _front;
+			}
+			inline auto end(void) noexcept {
+				return _message->data() + _rear;
 			}
 			inline auto data(void) noexcept -> message_pointer& {
 				return _message;
