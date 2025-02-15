@@ -947,6 +947,7 @@ public:
 		view_ >> value;
 		session::message_pointer message_ = make_message();
 		*message_ << value;
+		do_set_timeout(key, 3000);
 		do_send_session(key, message_);
 		return true;
 	}
