@@ -48,13 +48,13 @@ namespace data_structure::intrusive {
 		};
 		inline explicit shared_pointer(type* value) noexcept {
 			_pointer = static_cast<hook*>(value);
-			_pointer->_reference._use = 1;
+			_InterlockedExchange(&_pointer->_reference._use, 1);
 			_pointer->_reference._weak = 0;
 		}
 		inline shared_pointer(shared_pointer const& rhs) noexcept
 			: _pointer(rhs._pointer) {
 			if (nullptr != _pointer)
-				++_pointer->_reference._use;
+				_InterlockedIncrement(&_pointer->_reference._use);
 		};
 		inline explicit shared_pointer(shared_pointer&& rhs) noexcept
 			: _pointer(rhs._pointer) {
@@ -69,7 +69,7 @@ namespace data_structure::intrusive {
 			return *this;
 		};
 		inline ~shared_pointer(void) noexcept {
-			if (nullptr != _pointer && 0 == --_pointer->_reference._use)
+			if (nullptr != _pointer && 0 == _InterlockedDecrement(&_pointer->_reference._use))
 				destructor(static_cast<type*>(_pointer));
 		}
 	public:
