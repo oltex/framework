@@ -118,6 +118,12 @@ public:
 			_active = 0;
 			_size = 0;
 		}
+		inline void finalize(void) noexcept {
+			_active = -1;
+			_wait_on_address.wake_single(&_task_queue._size);
+			_thread.wait_for_single(INFINITE);
+			_thread.close();
+		}
 		template <typename function, typename... argument>
 		inline void regist_task(function&& func, argument&&... arg) noexcept {
 			if (0 == _active) {
@@ -340,10 +346,12 @@ public:
 		inline auto operator=(session&&) noexcept -> session & = delete;
 		inline ~session(void) noexcept = default;
 
-		inline void initialize(system_component::network::socket&& socket) noexcept {
+		inline void initialize(system_component::network::socket&& socket, unsigned long long timeout_duration) noexcept {
 			_key = 0xffff & _key | _static_id;
 			_static_id += 0x10000;
 			_socket = std::move(socket);
+			_timeout_currnet = GetTickCount64();
+			_timeout_duration = timeout_duration;
 			_InterlockedExchange(&_send_flag, 0);
 			_InterlockedExchange(&_cancel_flag, 0);
 			_InterlockedIncrement(&_io_count);
@@ -455,6 +463,9 @@ public:
 		volatile unsigned int _send_flag;
 		volatile unsigned int _send_size;
 		volatile unsigned int _cancel_flag;
+
+		unsigned long long _timeout_currnet;
+		unsigned long long _timeout_duration;
 	};
 	class session_array final {
 	private:
@@ -586,7 +597,7 @@ public:
 			return 0;
 			});
 		command_.add("send_mode", [&](command::parameter* param) noexcept -> int {
-			auto send_mode = param->get_string(1);
+			auto& send_mode = param->get_string(1);
 			if ("fast" == send_mode)
 				_send_mode = false;
 			else if ("direct" == send_mode)
@@ -595,6 +606,14 @@ public:
 			});
 		command_.add("send_frame", [&](command::parameter* param) noexcept -> int {
 			_send_frame = param->get_int(1);
+			return 0;
+			});
+		command_.add("timeout_duration", [&](command::parameter* param) noexcept -> int {
+			_timeout_duration = param->get_int(1);
+			return 0;
+			});
+		command_.add("timeout_frame", [&](command::parameter* param) noexcept -> int {
+			_timeout_frame = param->get_int(1);
 			return 0;
 			});
 		command_.add("tcp_ip", [&](command::parameter* param) noexcept -> int {
@@ -636,6 +655,8 @@ public:
 		_session_array.initialize(_session_array_max);
 		if (0 != _send_frame)
 			_scheduler.regist_task(&server::send, this);
+		if (0 != _timeout_duration)
+			_scheduler.regist_task(&server::timeout, this);
 		auto& query = utility::performance_data_helper::query::instance();
 		_processor_total_time = query.add_counter(L"\\Processor(_Total)\\% Processor Time");
 		_processor_user_time = query.add_counter(L"\\Processor(_Total)\\% User Time");
@@ -682,10 +703,7 @@ public:
 
 		on_stop();
 
-		_scheduler._active = -1;
-		_scheduler._wait_on_address.wake_single(&_scheduler._task_queue._size);
-		_scheduler._thread.wait_for_single(INFINITE);
-		_scheduler._thread.close();
+		_scheduler.finalize();
 		_session_array.finalize();
 
 		for (size_type index = 0; index < _worker_thread.size(); ++index)
@@ -709,7 +727,7 @@ private:
 				socket.close();
 			else {
 				session& session_ = *_session_array.acquire();
-				session_.initialize(std::move(socket));
+				session_.initialize(std::move(socket), _timeout_duration);
 
 				_complation_port.connect(session_._socket, reinterpret_cast<ULONG_PTR>(&session_));
 				on_create_session(session_._key);
@@ -756,6 +774,7 @@ private:
 				if (0 != transferred) {
 					if (&session_._recv_overlapped.data() == overlapped) {
 						session_._receive_message->move_rear(transferred);
+						session_._timeout_currnet = GetTickCount64();
 
 						for (;;) {
 							if (sizeof(session::header) > session_._receive_message->size())
@@ -830,6 +849,23 @@ private:
 			return -1;
 		return _send_frame;
 	}
+	inline int timeout(void) noexcept {
+		for (auto& iter : _session_array) {
+			if (iter._value.acquire()) {
+				if (iter._value._timeout_currnet + iter._value._timeout_duration < GetTickCount64()) {
+					iter._value.cancel();
+					++_timeout_total_count;
+				}
+			}
+			if (iter._value.release()) {
+				on_destroy_session(iter._value._key);
+				_session_array.release(&iter._value);
+			}
+		}
+		if (-1 == _scheduler._active)
+			return -1;
+		return _timeout_frame;
+	}
 	inline int monit(void) noexcept {
 		system("cls");
 		auto& query = utility::performance_data_helper::query::instance();
@@ -874,6 +910,7 @@ private:
 			"[ Server Monitor ]\n"\
 			"Connect\n"\
 			" Accept Total  :   %llu\n"\
+			" Timeout Total :   %llu\n"\
 			" Session Count :   %u\n"\
 			"Traffic\n"\
 			" Accept  :   %u TPS\n"\
@@ -882,7 +919,7 @@ private:
 			"Resource Usage\n"\
 			" Message  - Pool Count :   %u\n"\
 			"            Use Count  :   %u\n",
-			_accept_total_count, _session_array._size, _accept_tps, _receive_tps, _send_tps,
+			_accept_total_count, _timeout_total_count, _session_array._size, _accept_tps, _receive_tps, _send_tps,
 			memory_pool._stack._capacity, memory_pool._use_count);
 		_accept_tps = 0;
 		_receive_tps = 0;
@@ -934,6 +971,13 @@ public:
 		if (session_.release())
 			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
 	}
+	inline void do_set_timeout(unsigned long long key, unsigned long long duration) noexcept {
+		session& session_ = _session_array[key];
+		if (session_.acquire(key))
+			session_._timeout_duration = duration;
+		if (session_.release())
+			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
+	}
 	inline static auto make_message(void) noexcept -> session::message_pointer {
 		auto& memory_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
 		session::message_pointer message_(&memory_pool.allocate());
@@ -961,6 +1005,8 @@ public:
 	size_type _session_array_max;
 	bool _send_mode;
 	size_type _send_frame;
+	unsigned long long _timeout_duration;
+	size_type _timeout_frame;
 	std::string _listen_socket_ip;
 	size_type _listen_socket_port;
 	size_type _listen_socket_backlog;
@@ -980,7 +1026,7 @@ public:
 	utility::performance_data_helper::query::counter _tcpv4_segments_sent_sec;
 	utility::performance_data_helper::query::counter _tcpv4_segments_retransmitted_sec;
 	unsigned long long _accept_total_count = 0;
-	//unsigned long long _disconnect_total_count = 0;
+	unsigned long long _timeout_total_count = 0;
 	size_type _accept_tps = 0;
 	size_type _receive_tps = 0;
 	size_type _send_tps = 0;
