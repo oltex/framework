@@ -48,7 +48,7 @@ public:
 			inline auto operator=(task const&) noexcept -> task & = delete;
 			inline auto operator=(task&&) noexcept -> task & = delete;
 			inline ~task(void) noexcept = default;
-		public:
+
 			friend inline static void destructor(task* rhs) {
 				auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
 				memory_pool.deallocate(*rhs);
@@ -463,7 +463,6 @@ public:
 		volatile unsigned int _send_flag;
 		volatile unsigned int _send_size;
 		volatile unsigned int _cancel_flag;
-
 		unsigned long long _timeout_currnet;
 		unsigned long long _timeout_duration;
 	};
