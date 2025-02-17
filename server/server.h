@@ -796,8 +796,8 @@ private:
 							continue;
 					}
 					else {
-						session_.finish_send();
 						_interlockedadd((volatile long*)&_send_tps, session_._send_size);
+						session_.finish_send();
 						if (0 == _send_frame && session_.send())
 							continue;
 					}
