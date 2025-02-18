@@ -11,12 +11,15 @@
 #include "library/data-strucutre/lockfree/queue.h"
 #include "library/data-strucutre/priority_queue.h"
 
-#include "library/design-pattern/singleton.h"
+#include "library/database/mysql.h"
+//#include "library/database/redis.h"
 
 #include "library/utility/command.h"
 #include "library/utility/performance_data_helper.h"
 #include "library/utility/logger.h"
 #include "library/utility/crash_dump.h"
+
+#include "library/design-pattern/singleton.h"
 
 #include <optional>
 #include <iostream>
@@ -34,7 +37,6 @@ private:
 	enum class post_queue_state {
 		close_worker, destory_session, excute_task
 	};
-public:
 	class scheduler final {
 	public:
 		class task final : public data_structure::intrusive::shared_pointer_hook<0> {
@@ -548,10 +550,11 @@ public:
 		size_type _size;
 		size_type _capacity;
 	};
-
+public:
 #pragma warning(suppress: 26495)
 	inline explicit server(void) noexcept {
 		utility::crash_dump();
+		database::mysql::initialize();
 		system_component::network::window_socket_api::start_up();
 		utility::logger::instance().create("server", L"server.log");
 
@@ -642,6 +645,7 @@ public:
 	inline auto operator=(server&&) noexcept -> server & = delete;
 	inline ~server(void) noexcept {
 		system_component::network::window_socket_api::clean_up();
+		database::mysql::end();
 	};
 
 	inline void start(void) noexcept {
@@ -930,7 +934,7 @@ private:
 			return -1;
 		return 1000;
 	}
-public:
+protected:
 	inline virtual void on_start(void) noexcept {};
 	inline virtual void on_stop(void) noexcept {};
 	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept {

@@ -2,6 +2,9 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="library\database\include\openssl\applink.c">
+      <Filter>library\database\include\openssl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="server.h" />
@@ -95,6 +98,60 @@
     <ClInclude Include="library\algorithm\predicate.h">
       <Filter>library\algorithm</Filter>
     </ClInclude>
+    <ClInclude Include="library\database\mysql.h">
+      <Filter>library\database</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\redis.h">
+      <Filter>library\database</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\errmsg.h">
+      <Filter>library\database\include</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\field_types.h">
+      <Filter>library\database\include</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\my_command.h">
+      <Filter>library\database\include</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\my_compress.h">
+      <Filter>library\database\include</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\my_list.h">
+      <Filter>library\database\include</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\mysql.h">
+      <Filter>library\database\include</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\mysql_com.h">
+      <Filter>library\database\include</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\mysql_time.h">
+      <Filter>library\database\include</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\mysql_version.h">
+      <Filter>library\database\include</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\mysqld_error.h">
+      <Filter>library\database\include</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\mysqlx_ername.h">
+      <Filter>library\database\include</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\mysqlx_error.h">
+      <Filter>library\database\include</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\mysqlx_version.h">
+      <Filter>library\database\include</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\mysql\client_plugin.h">
+      <Filter>library\database\include\mysql</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\mysql\plugin_auth_common.h">
+      <Filter>library\database\include\mysql</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\include\mysql\udf_registration_types.h">
+      <Filter>library\database\include\mysql</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="library">
@@ -142,5 +199,31 @@
     <Filter Include="library\algorithm">
       <UniqueIdentifier>{e130d040-e493-4eed-bf74-09f8b530e426}</UniqueIdentifier>
     </Filter>
+    <Filter Include="library\database">
+      <UniqueIdentifier>{d448e080-80de-4185-b686-c273fe2d740b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\database\library">
+      <UniqueIdentifier>{31170b4b-ef09-4f7d-99bc-68f975de4eaf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\database\include">
+      <UniqueIdentifier>{8315c854-b351-4506-8582-33b54a607c2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\database\include\mysql">
+      <UniqueIdentifier>{912bc230-021b-4610-a405-512ca600e7cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\database\include\openssl">
+      <UniqueIdentifier>{f2592dc6-3242-4a96-a971-5652146afa66}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\database\cpp_redis">
+      <UniqueIdentifier>{323b99d2-4f89-4aa7-bf6b-83ef6416884d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\database\tacopie">
+      <UniqueIdentifier>{f70ac76c-65e5-4a3e-938a-65a11d19565f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="library\database\library\libmysql.lib">
+      <Filter>library\database\library</Filter>
+    </Library>
   </ItemGroup>
 </Project>
