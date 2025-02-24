@@ -121,7 +121,7 @@ private:
 			_size = 0;
 		}
 		inline void finalize(void) noexcept {
-			_active = -1;
+			_InterlockedExchange(&_active, -1);
 			_wait_on_address.wake_single(&_task_queue._size);
 			_thread.wait_for_single(INFINITE);
 			_thread.close();
