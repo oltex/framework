@@ -126,21 +126,6 @@ private:
 			_thread.wait_for_single(INFINITE);
 			_thread.close();
 		}
-		template <typename function, typename... argument>
-		inline void regist_task(function&& func, argument&&... arg) noexcept {
-			if (0 == _active) {
-				_InterlockedIncrement(&_size);
-				if (0 == _active) {
-					auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
-					task* task_(&memory_pool.allocate(std::forward<function>(func), std::forward<argument>(arg)...));
-					_task_queue.push(task_);
-					_wait_on_address.wake_single(&_task_queue._size);
-				}
-				else {
-					_InterlockedDecrement(&_size);
-				}
-			}
-		}
 	public:
 		size_type _active;
 		system_component::thread _thread;
@@ -657,9 +642,9 @@ public:
 
 		_session_array.initialize(_session_array_max);
 		if (0 != _send_frame)
-			_scheduler.regist_task(&server::send, this);
+			regist_task(&server::send, this);
 		if (0 != _timeout_duration)
-			_scheduler.regist_task(&server::timeout, this);
+			regist_task(&server::timeout, this);
 		auto& query = utility::performance_data_helper::query::instance();
 		_processor_total_time = query.add_counter(L"\\Processor(_Total)\\% Processor Time");
 		_processor_user_time = query.add_counter(L"\\Processor(_Total)\\% User Time");
@@ -674,7 +659,7 @@ public:
 		_tcpv4_segments_received_sec = query.add_counter(L"\\TCPv4\\Segments Received/sec");
 		_tcpv4_segments_sent_sec = query.add_counter(L"\\TCPv4\\Segments Sent/sec");
 		_tcpv4_segments_retransmitted_sec = query.add_counter(L"\\TCPv4\\Segments Retransmitted/sec");
-		_scheduler.regist_task(&server::monit, this);
+		regist_task(&server::monit, this);
 
 		on_start();
 
@@ -993,8 +978,17 @@ protected:
 		return message_;
 	}
 	template <typename function, typename... argument>
-	inline void register_task(function&& func, argument&&... arg) noexcept {
-		_scheduler.regist_task(std::forward<function>(func), std::forward<argument>(arg)...);
+	inline void regist_task(function&& func, argument&&... arg) noexcept {
+		if (0 == _scheduler._active) {
+			_InterlockedIncrement(&_scheduler._size);
+			if (0 == _scheduler._active) {
+				auto& memory_pool = data_structure::_thread_local::memory_pool<scheduler::task>::instance();
+				scheduler::task* task_(&memory_pool.allocate(std::forward<function>(func), std::forward<argument>(arg)...));
+				_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(task_));
+			}
+			else
+				_InterlockedDecrement(&_scheduler._size);
+		}
 	}
 private:
 	system_component::input_output::completion_port _complation_port;

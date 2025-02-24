@@ -11,9 +11,6 @@
     <ClInclude Include="library\system-component\network\window_socket_api.h">
       <Filter>library\system-component\network</Filter>
     </ClInclude>
-    <ClInclude Include="library\system-component\input_output\completion_port.h">
-      <Filter>library\system-component\input_output</Filter>
-    </ClInclude>
     <ClInclude Include="library\system-component\network\socket.h">
       <Filter>library\system-component\network</Filter>
     </ClInclude>
@@ -151,6 +148,9 @@
     </ClInclude>
     <ClInclude Include="library\database\include\mysql\udf_registration_types.h">
       <Filter>library\database\include\mysql</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\input-output\completion_port.h">
+      <Filter>library\system-component\input_output</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
