@@ -37,103 +37,6 @@ private:
 	enum class post_queue_state {
 		close_worker, destory_session, excute_task
 	};
-	class scheduler final {
-	public:
-		class task final : public data_structure::intrusive::shared_pointer_hook<0> {
-		public:
-			template <typename function, typename... argument>
-			inline explicit task(function&& func, argument&&... arg) noexcept
-				: _time(0), _function(std::bind(std::forward<function>(func), std::forward<argument>(arg)...)) {
-			};
-			inline explicit task(task const&) noexcept = delete;
-			inline explicit task(task&&) noexcept = delete;
-			inline auto operator=(task const&) noexcept -> task & = delete;
-			inline auto operator=(task&&) noexcept -> task & = delete;
-			inline ~task(void) noexcept = default;
-
-			friend inline static void destructor(task* rhs) {
-				auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
-				memory_pool.deallocate(*rhs);
-			}
-		public:
-			unsigned long long _time;
-			std::function<int(void)> _function;
-		};
-	private:
-		inline static auto less(task* const& source, task* const& destination) noexcept -> std::strong_ordering {
-			return source->_time <=> destination->_time;
-		}
-		class task_queue final : protected data_structure::lockfree::queue<task*> {
-		private:
-			using base = data_structure::lockfree::queue<task*>;
-		public:
-			inline explicit task_queue(void) noexcept = default;
-			inline explicit task_queue(task_queue const&) noexcept = delete;
-			inline explicit task_queue(task_queue&&) noexcept = delete;
-			inline auto operator=(task_queue const&) noexcept -> task_queue & = delete;
-			inline auto operator=(task_queue&&) noexcept -> task_queue & = delete;
-			inline ~task_queue(void) noexcept = default;
-
-			inline void push(task* task_) noexcept {
-				base::emplace(task_);
-				_InterlockedIncrement(&_size);
-			}
-			inline auto pop(void) noexcept -> task* {
-				unsigned long long head = _head;
-				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
-				unsigned long long next = address->_next;
-
-				if (0x10000 > (0x00007FFFFFFFFFFFULL & next))
-					__debugbreak();
-				unsigned long long tail = _tail;
-				if (tail == head)
-					_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
-
-				task* result = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value;
-				_head = next;
-				_memory_pool::instance().deallocate(*address);
-				_InterlockedDecrement(&_size);
-				return result;
-			}
-			inline auto empty(void) const noexcept {
-				unsigned long long head = _head;
-				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
-				unsigned long long next = address->_next;
-				if (_nullptr == (0x00007FFFFFFFFFFFULL & next))
-					return true;
-				return false;
-			}
-		public:
-			size_type _size = 0;
-		};
-		using ready_queue = data_structure::priority_queue<task*, less>;
-	public:
-#pragma warning(suppress: 26495)
-		inline explicit scheduler(void) noexcept = default;
-		inline explicit scheduler(scheduler const&) noexcept = delete;
-		inline explicit scheduler(scheduler&&) noexcept = delete;
-		inline auto operator=(scheduler const&) noexcept -> scheduler & = delete;
-		inline auto operator=(scheduler&&) noexcept -> scheduler & = delete;
-		inline ~scheduler(void) noexcept = default;
-
-		inline void initialize(void) noexcept {
-			_active = 0;
-			_size = 0;
-		}
-		inline void finalize(void) noexcept {
-			_InterlockedExchange(&_active, -1);
-			_wait_on_address.wake_single(&_task_queue._size);
-			_thread.wait_for_single(INFINITE);
-			_thread.close();
-		}
-	public:
-		size_type _active;
-		system_component::thread _thread;
-		system_component::multi::wait_on_address _wait_on_address;
-		task_queue _task_queue;
-		ready_queue _ready_queue;
-		size_type _size;
-	};
 	class session final {
 	public:
 		struct header final {
@@ -535,6 +438,138 @@ private:
 		size_type _size;
 		size_type _capacity;
 	};
+	class scheduler final {
+	public:
+		class task : public data_structure::intrusive::shared_pointer_hook<0> {
+		public:
+			enum class type : unsigned char {
+				function, group
+			};
+			inline explicit task(type const type_) noexcept
+				: _type(type_), _time(0) {
+			};
+			inline explicit task(task const&) noexcept = delete;
+			inline explicit task(task&&) noexcept = delete;
+			inline auto operator=(task const&) noexcept -> task & = delete;
+			inline auto operator=(task&&) noexcept -> task & = delete;
+			inline ~task(void) noexcept = default;
+
+			friend inline static void destructor(task* rhs) {
+				auto& memory_pool = data_structure::_thread_local::memory_pool<task>::instance();
+				memory_pool.deallocate(*rhs);
+			}
+		public:
+			type _type;
+			unsigned long long _time;
+		};
+		class function : public task {
+		public:
+			template <typename function_, typename... argument>
+			inline explicit function(function_&& func, argument&&... arg) noexcept
+				: task(type::function), _function(std::bind(std::forward<function_>(func), std::forward<argument>(arg)...)) {
+			};
+			inline explicit function(function const&) noexcept = delete;
+			inline explicit function(function&&) noexcept = delete;
+			inline auto operator=(function const&) noexcept -> function & = delete;
+			inline auto operator=(function&&) noexcept -> function & = delete;
+			inline ~function(void) noexcept = default;
+
+			std::function<int(void)> _function;
+		};
+		class group final : public task {
+		public:
+			inline explicit group(void) noexcept
+				: task(type::group) {
+			};
+			inline explicit group(group const&) noexcept = delete;
+			inline explicit group(group&&) noexcept = delete;
+			inline auto operator=(group const&) noexcept -> group & = delete;
+			inline auto operator=(group&&) noexcept -> group & = delete;
+			inline ~group(void) noexcept = default;
+
+			inline virtual bool on_receive_session(unsigned long long key, session::view& view_) noexcept {
+				return true;
+			}
+			inline virtual int on_update(void) noexcept {
+				printf("group update");
+				return 1000;
+			}
+		};
+	private:
+		inline static auto less(task* const& source, task* const& destination) noexcept -> std::strong_ordering {
+			return source->_time <=> destination->_time;
+		}
+		using ready_queue = data_structure::priority_queue<task*, less>;
+		class task_queue final : protected data_structure::lockfree::queue<task*> {
+		private:
+			using base = data_structure::lockfree::queue<task*>;
+		public:
+			inline explicit task_queue(void) noexcept = default;
+			inline explicit task_queue(task_queue const&) noexcept = delete;
+			inline explicit task_queue(task_queue&&) noexcept = delete;
+			inline auto operator=(task_queue const&) noexcept -> task_queue & = delete;
+			inline auto operator=(task_queue&&) noexcept -> task_queue & = delete;
+			inline ~task_queue(void) noexcept = default;
+
+			inline void push(task* task_) noexcept {
+				base::emplace(task_);
+				_InterlockedIncrement(&_size);
+			}
+			inline auto pop(void) noexcept -> task* {
+				unsigned long long head = _head;
+				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
+				unsigned long long next = address->_next;
+
+				if (0x10000 > (0x00007FFFFFFFFFFFULL & next))
+					__debugbreak();
+				unsigned long long tail = _tail;
+				if (tail == head)
+					_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
+
+				task* result = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value;
+				_head = next;
+				_memory_pool::instance().deallocate(*address);
+				_InterlockedDecrement(&_size);
+				return result;
+			}
+			inline auto empty(void) const noexcept {
+				unsigned long long head = _head;
+				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
+				unsigned long long next = address->_next;
+				if (_nullptr == (0x00007FFFFFFFFFFFULL & next))
+					return true;
+				return false;
+			}
+		public:
+			size_type _size = 0;
+		};
+	public:
+#pragma warning(suppress: 26495)
+		inline explicit scheduler(void) noexcept = default;
+		inline explicit scheduler(scheduler const&) noexcept = delete;
+		inline explicit scheduler(scheduler&&) noexcept = delete;
+		inline auto operator=(scheduler const&) noexcept -> scheduler & = delete;
+		inline auto operator=(scheduler&&) noexcept -> scheduler & = delete;
+		inline ~scheduler(void) noexcept = default;
+
+		inline void initialize(void) noexcept {
+			_active = 0;
+			_size = 0;
+		}
+		inline void finalize(void) noexcept {
+			_InterlockedExchange(&_active, -1);
+			_wait_on_address.wake_single(&_task_queue._size);
+			_thread.wait_for_single(INFINITE);
+			_thread.close();
+		}
+	public:
+		size_type _active;
+		system_component::thread _thread;
+		system_component::multi::wait_on_address _wait_on_address;
+		task_queue _task_queue;
+		ready_queue _ready_queue;
+		size_type _size;
+	};
 public:
 #pragma warning(suppress: 26495)
 	inline explicit server(void) noexcept {
@@ -642,9 +677,9 @@ public:
 
 		_session_array.initialize(_session_array_max);
 		if (0 != _send_frame)
-			regist_task(&server::send, this);
+			regist_task_function(&server::send, this);
 		if (0 != _timeout_duration)
-			regist_task(&server::timeout, this);
+			regist_task_function(&server::timeout, this);
 		auto& query = utility::performance_data_helper::query::instance();
 		_processor_total_time = query.add_counter(L"\\Processor(_Total)\\% Processor Time");
 		_processor_user_time = query.add_counter(L"\\Processor(_Total)\\% User Time");
@@ -659,7 +694,9 @@ public:
 		_tcpv4_segments_received_sec = query.add_counter(L"\\TCPv4\\Segments Received/sec");
 		_tcpv4_segments_sent_sec = query.add_counter(L"\\TCPv4\\Segments Sent/sec");
 		_tcpv4_segments_retransmitted_sec = query.add_counter(L"\\TCPv4\\Segments Retransmitted/sec");
-		regist_task(&server::monit, this);
+		regist_task_function(&server::monit, this);
+
+		regis_task_group<scheduler::group>();
 
 		on_start();
 
@@ -741,10 +778,19 @@ private:
 			} break;
 			case excute_task: {
 				scheduler::task& task = *reinterpret_cast<scheduler::task*>(overlapped);
-				int time;
-				do
-					time = task._function();
-				while (time == 0);
+				int time = 0;
+				switch (task._type) {
+				case scheduler::task::type::function: {
+					do
+						time = reinterpret_cast<scheduler::function*>(&task)->_function();
+					while (time == 0);
+				} break;
+				case scheduler::task::type::group: {
+					do
+						time = reinterpret_cast<scheduler::group*>(&task)->on_update();
+					while (time == 0);
+				} break;
+				}
 
 				if (-1 == time) {
 					_InterlockedDecrement(&_scheduler._size);
@@ -922,6 +968,8 @@ private:
 protected:
 	inline virtual void on_start(void) noexcept {};
 	inline virtual void on_stop(void) noexcept {};
+	inline virtual void on_monit(void) noexcept {
+	}
 	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept {
 		return true;
 	}
@@ -935,13 +983,11 @@ protected:
 		view_ >> value;
 		session::message_pointer message_ = make_message();
 		*message_ << value;
-		do_set_timeout(key, 3000);
+		do_set_timeout_session(key, 3000);
 		do_send_session(key, message_);
 		return true;
 	}
 	inline virtual void on_destroy_session(unsigned long long key) noexcept {
-	}
-	inline virtual void on_monit(void) noexcept {
 	}
 	inline void do_send_session(unsigned long long key, session::message_pointer& message_ptr) noexcept {
 		session& session_ = _session_array[key];
@@ -960,7 +1006,7 @@ protected:
 		if (session_.release())
 			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
 	}
-	inline void do_set_timeout(unsigned long long key, unsigned long long duration) noexcept {
+	inline void do_set_timeout_session(unsigned long long key, unsigned long long duration) noexcept {
 		session& session_ = _session_array[key];
 		if (session_.acquire(key))
 			session_._timeout_duration = duration;
@@ -978,12 +1024,25 @@ protected:
 		return message_;
 	}
 	template <typename function, typename... argument>
-	inline void regist_task(function&& func, argument&&... arg) noexcept {
+	inline void regist_task_function(function&& func, argument&&... arg) noexcept {
 		if (0 == _scheduler._active) {
 			_InterlockedIncrement(&_scheduler._size);
 			if (0 == _scheduler._active) {
-				auto& memory_pool = data_structure::_thread_local::memory_pool<scheduler::task>::instance();
+				auto& memory_pool = data_structure::_thread_local::memory_pool<scheduler::function>::instance();
 				scheduler::task* task_(&memory_pool.allocate(std::forward<function>(func), std::forward<argument>(arg)...));
+				_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(task_));
+			}
+			else
+				_InterlockedDecrement(&_scheduler._size);
+		}
+	}
+	template<typename group, typename... argument>
+	inline void regis_task_group(argument&&... arg) noexcept {
+		if (0 == _scheduler._active) {
+			_InterlockedIncrement(&_scheduler._size);
+			if (0 == _scheduler._active) {
+				auto& memory_pool = data_structure::_thread_local::memory_pool<scheduler::group>::instance();
+				scheduler::task* task_(&memory_pool.allocate(std::forward<argument>(arg)...));
 				_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(task_));
 			}
 			else
