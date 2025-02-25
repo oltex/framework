@@ -282,6 +282,7 @@ private:
 						_socket.cancel_io_ex();
 					return true;
 				}
+				cancel();
 			}
 			return false;
 		}
@@ -311,6 +312,7 @@ private:
 								_socket.cancel_io_ex();
 							return true;
 						}
+						cancel();
 						return false;
 					}
 				}
@@ -334,8 +336,8 @@ private:
 				return true;
 			}
 			cancel();
-			log_message("server", utility::logger::level::info, L"session(%llu) close / reason : receive buffer full")
-				return false;
+			log_message("server", utility::logger::level::info, L"session(%llu) close / reason : receive buffer full");
+			return false;
 		}
 		inline void finish_send(void) noexcept {
 			for (size_type index = 0; index < _send_size; ++index)
