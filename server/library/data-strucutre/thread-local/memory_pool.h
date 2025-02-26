@@ -4,21 +4,32 @@
 #include "../pair.h"
 
 namespace data_structure::_thread_local {
-	template<typename type, size_t bucket_size = 1024>
+	template<typename type, size_t bucket_size = 100, bool use_union = true>
 	class memory_pool final : public design_pattern::_thread_local::singleton<memory_pool<type, bucket_size>> {
 	private:
 		friend class design_pattern::_thread_local::singleton<memory_pool<type, bucket_size>>;
 		using size_type = unsigned int;
-		union node final {
-			inline explicit node(void) noexcept = delete;
-			inline explicit node(node const&) noexcept = delete;
-			inline explicit node(node&&) noexcept = delete;
-			inline auto operator=(node const&) noexcept = delete;
-			inline auto operator=(node&&) noexcept = delete;
-			inline ~node(void) noexcept = delete;
-			node* _next;
+		union union_node final {
+			inline explicit union_node(void) noexcept = delete;
+			inline explicit union_node(union_node const&) noexcept = delete;
+			inline explicit union_node(union_node&&) noexcept = delete;
+			inline auto operator=(union_node const&) noexcept = delete;
+			inline auto operator=(union_node&&) noexcept = delete;
+			inline ~union_node(void) noexcept = delete;
+			union_node* _next;
 			type _value;
 		};
+		struct strcut_node {
+			inline explicit strcut_node(void) noexcept = delete;
+			inline explicit strcut_node(strcut_node const&) noexcept = delete;
+			inline explicit strcut_node(strcut_node&&) noexcept = delete;
+			inline auto operator=(strcut_node const&) noexcept = delete;
+			inline auto operator=(strcut_node&&) noexcept = delete;
+			inline ~strcut_node(void) noexcept = delete;
+			strcut_node* _next;
+			type _value;
+		};
+		using node = typename std::conditional<use_union, union union_node, struct strcut_node>::type;
 		class stack final {
 		private:
 			struct bucket final {
