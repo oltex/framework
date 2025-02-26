@@ -508,11 +508,12 @@ public:
 			inline void cancel(void) noexcept {
 				_InterlockedExchange(&_cancel_flag, 1);
 			}
-			inline virtual void destructor(void) noexcept = 0;
 
 			unsigned long long _key;
 			volatile unsigned int _io_count; // release_flag
 			volatile unsigned int _cancel_flag;
+			std::function<void(void*)> _destructor;
+
 		};
 		class group_array final {
 		private:
@@ -552,18 +553,6 @@ public:
 				current->_value = nullptr;
 				_head = reinterpret_cast<unsigned long long>(_array);
 			}
-
-			//for (;;) {
-			//	unsigned long long head = _head;
-			//	node* current = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
-			//	if (nullptr == current)
-			//		return nullptr;
-			//	unsigned long long next = reinterpret_cast<unsigned long long>(current->_next) + (0xFFFF800000000000ULL & head) + 0x0000800000000000ULL;
-			//	if (head == _InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_head), next, head)) {
-			//		_InterlockedIncrement(&_size);
-			//		return &current->_value;
-			//	}
-			//}
 			template<typename type, typename... argument>
 			inline auto acquire(argument&&... arg) noexcept -> group* {
 				for (;;) {
@@ -578,6 +567,7 @@ public:
 						auto& memory_pool = data_structure::_thread_local::memory_pool<type, 1024, false>::instance();
 						group* group_ = &memory_pool.allocate(std::forward<argument>(arg)...);
 						group_->_key |= current->_index;
+						group_->_destructor = server::delete_group<type>;
 						current->_value = group_;
 						return current->_value;
 					}
@@ -593,7 +583,7 @@ public:
 						break;
 				}
 				_InterlockedDecrement(&_size);
-				value->destructor();
+				value->_destructor(value);
 			}
 			inline auto operator[](unsigned long long const key) noexcept -> group* {
 				return _array[key & 0xffff]._value;
@@ -1101,6 +1091,7 @@ protected:
 	inline virtual void on_stop(void) noexcept {};
 	inline virtual void on_monit(void) noexcept {
 	}
+public:
 	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept {
 		return true;
 	}
@@ -1112,7 +1103,7 @@ protected:
 	inline virtual bool on_receive_session(unsigned long long key, session::view& view_) noexcept {
 		unsigned long long value;
 		view_ >> value;
-		session::message_pointer message_ = make_message();
+		session::message_pointer message_ = create_message();
 		*message_ << value;
 		do_set_timeout_session(key, 3000);
 		do_send_session(key, message_);
@@ -1144,7 +1135,7 @@ protected:
 		if (session_.release())
 			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
 	}
-	inline static auto make_message(void) noexcept -> session::message_pointer {
+	inline static auto create_message(void) noexcept -> session::message_pointer {
 		auto& memory_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
 		session::message_pointer message_(&memory_pool.allocate());
 		message_->clear();
@@ -1154,20 +1145,7 @@ protected:
 		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(session::header));
 		return message_;
 	}
-public:
-	template <typename function, typename... argument>
-	inline void do_create_function(function&& func, argument&&... arg) noexcept {
-		if (0 == _scheduler._active) {
-			_InterlockedIncrement(&_scheduler._size);
-			if (0 == _scheduler._active) {
-				auto& memory_pool = data_structure::_thread_local::memory_pool<scheduler::function>::instance();
-				scheduler::task* task_(&memory_pool.allocate(std::forward<function>(func), std::forward<argument>(arg)...));
-				_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(task_));
-			}
-			else
-				_InterlockedDecrement(&_scheduler._size);
-		}
-	}
+
 	template<typename group, typename... argument>
 	inline auto do_create_group(argument&&... arg) noexcept -> unsigned long long {
 		if (0 == _scheduler._active) {
@@ -1175,7 +1153,6 @@ public:
 			if (0 == _scheduler._active) {
 				scheduler::group* group_ = _group_array.acquire<group>(std::forward<argument>(arg)...);
 				_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(static_cast<scheduler::task*>(group_)));
-
 				return group_->_key;
 			}
 			else
@@ -1193,6 +1170,28 @@ public:
 				group_->cancel();
 			if (group_->release())
 				_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(group_));
+		}
+	}
+	inline void do_add_group_session(void) {
+
+	}
+	template<typename type>
+	inline static void delete_group(void* rhs) noexcept {
+		auto& memory_pool = data_structure::_thread_local::memory_pool<type, 1024, false>::instance();
+		memory_pool.deallocate(*reinterpret_cast<type*>(rhs));
+	}
+
+	template <typename function, typename... argument>
+	inline void do_create_function(function&& func, argument&&... arg) noexcept {
+		if (0 == _scheduler._active) {
+			_InterlockedIncrement(&_scheduler._size);
+			if (0 == _scheduler._active) {
+				auto& memory_pool = data_structure::_thread_local::memory_pool<scheduler::function>::instance();
+				scheduler::task* task_(&memory_pool.allocate(std::forward<function>(func), std::forward<argument>(arg)...));
+				_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(task_));
+			}
+			else
+				_InterlockedDecrement(&_scheduler._size);
 		}
 	}
 private:

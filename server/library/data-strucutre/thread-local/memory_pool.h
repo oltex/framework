@@ -5,9 +5,9 @@
 
 namespace data_structure::_thread_local {
 	template<typename type, size_t bucket_size = 100, bool use_union = true>
-	class memory_pool final : public design_pattern::_thread_local::singleton<memory_pool<type, bucket_size>> {
+	class memory_pool final : public design_pattern::_thread_local::singleton<memory_pool<type, bucket_size, use_union>> {
 	private:
-		friend class design_pattern::_thread_local::singleton<memory_pool<type, bucket_size>>;
+		friend class design_pattern::_thread_local::singleton<memory_pool<type, bucket_size, use_union>>;
 		using size_type = unsigned int;
 		union union_node final {
 			inline explicit union_node(void) noexcept = delete;
@@ -163,8 +163,14 @@ namespace data_structure::_thread_local {
 		inline void deallocate(type& value) noexcept {
 			if constexpr (std::is_destructible_v<type> && !std::is_trivially_destructible_v<type>)
 				value.~type();
-			reinterpret_cast<node*>(&value)->_next = _head;
-			_head = reinterpret_cast<node*>(&value);
+			if constexpr (true == use_union) {
+				reinterpret_cast<node*>(&value)->_next = _head;
+				_head = reinterpret_cast<node*>(&value);
+			}
+			else {
+				reinterpret_cast<node*>(reinterpret_cast<uintptr_t*>(&value) - 1)->_next = _head;
+				_head = reinterpret_cast<node*>(reinterpret_cast<uintptr_t*>(&value) - 1);
+			}
 			++_size;
 			_InterlockedDecrement(&_use_count);
 

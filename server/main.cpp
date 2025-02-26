@@ -4,6 +4,8 @@
 #include "server.h"
 
 class g : public server::scheduler::group {
+	// 持失切
+	// 社瑚切
 	bool on_receive_session(unsigned long long key, server::session::view& view_) noexcept override
 	{
 		return false;
@@ -13,9 +15,10 @@ class g : public server::scheduler::group {
 		printf("Test");
 		return 1000;
 	}
-	void destructor() noexcept override
-	{
-	}
+	//void destructor() noexcept override {
+	//	auto& memory_pool = data_structure::_thread_local::memory_pool<g, 1024, false>::instance();
+	//	memory_pool.deallocate(*this);
+	//}
 };
 
 int main(void) noexcept {
@@ -30,6 +33,7 @@ int main(void) noexcept {
 	system("pause");
 	_server.do_destroy_group(key);
 	system("pause");
+	_server.do_destroy_group(key);
 	{
 		command::parameter param("server_stop");
 		command::instance().execute("server_stop", &param);
