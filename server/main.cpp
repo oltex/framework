@@ -6,7 +6,16 @@
 class g : public server::scheduler::group {
 	// 持失切
 	// 社瑚切
+
+	bool on_enter_session(unsigned long long key) noexcept override
+	{
+		return false;
+	}
 	bool on_receive_session(unsigned long long key, server::session::view& view_) noexcept override
+	{
+		return false;
+	}
+	bool on_leave_session(unsigned long long key) noexcept override
 	{
 		return false;
 	}
@@ -15,10 +24,6 @@ class g : public server::scheduler::group {
 		printf("Test");
 		return 1000;
 	}
-	//void destructor() noexcept override {
-	//	auto& memory_pool = data_structure::_thread_local::memory_pool<g, 1024, false>::instance();
-	//	memory_pool.deallocate(*this);
-	//}
 };
 
 int main(void) noexcept {

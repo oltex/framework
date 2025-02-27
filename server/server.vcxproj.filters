@@ -152,6 +152,9 @@
     <ClInclude Include="library\system-component\input-output\completion_port.h">
       <Filter>library\system-component\input_output</Filter>
     </ClInclude>
+    <ClInclude Include="library\data-strucutre\intrusive\list.h">
+      <Filter>library\data-strucutre\intrusive</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="library">

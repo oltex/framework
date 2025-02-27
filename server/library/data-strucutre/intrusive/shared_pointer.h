@@ -70,7 +70,7 @@ namespace data_structure::intrusive {
 		};
 		inline ~shared_pointer(void) noexcept {
 			if (nullptr != _pointer && 0 == _InterlockedDecrement(&_pointer->_reference._use))
-				destructor(static_cast<type*>(_pointer));
+				static_cast<type*>(_pointer)->destructor();
 		}
 	public:
 		inline auto operator*(void) noexcept -> type& {
@@ -97,10 +97,10 @@ namespace data_structure::intrusive {
 		inline void reset(void) noexcept {
 			_pointer = nullptr;
 		}
-		template <class type, size_t index>
-		friend inline bool operator==(shared_pointer<type, index> const& rhs, nullptr_t) noexcept {
-			return rhs._pointer == nullptr;
-		}
+		//template <class type, size_t index>
+		//friend inline bool operator==(shared_pointer<type, index> const& rhs, nullptr_t) noexcept {
+		//	return rhs._pointer == nullptr;
+		//}
 	private:
 		hook* _pointer;
 	};
