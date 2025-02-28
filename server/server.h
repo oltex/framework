@@ -606,9 +606,9 @@ public:
 					_job_queue.pop();
 			};
 
-			inline virtual bool on_enter_session(unsigned long long key) noexcept = 0;
-			inline virtual bool on_receive_session(unsigned long long key, session::view& view_) noexcept = 0;
-			inline virtual bool on_leave_session(unsigned long long key) noexcept = 0;
+			inline virtual void on_enter_session(unsigned long long key) noexcept = 0;
+			inline virtual bool on_receive_session(unsigned long long key, session::view_pointer& view_ptr) noexcept = 0;
+			inline virtual void on_leave_session(unsigned long long key) noexcept = 0;
 			inline void do_leave_session(unsigned long long key) noexcept {
 				auto iter = _session_map.find(key);
 				if (iter == _session_map.end())
@@ -651,6 +651,7 @@ public:
 			std::function<void(void*)> _destructor;
 			job_queue _job_queue;
 			std::unordered_map<unsigned long long, session*> _session_map;
+			server* _server;
 		};
 		class group_array final {
 		private:
@@ -704,6 +705,7 @@ public:
 						auto& memory_pool = data_structure::_thread_local::memory_pool<type, 1024, false>::instance();
 						group* group_ = &memory_pool.allocate(std::forward<argument>(arg)...);
 						group_->_key |= current->_index;
+						group_->_server = 
 						group_->_destructor = group::destructor<type>;
 						current->_value = group_;
 						return current->_value;
@@ -1175,6 +1177,8 @@ private:
 							continue;
 					}
 				}
+				else
+					session_.cancel();
 				if (session_.release()) {
 					on_destroy_session(session_._key);
 					_session_array.release(&session_);
@@ -1321,7 +1325,7 @@ public:
 		*view_ptr >> value;
 		session::message_pointer message_ = create_message();
 		*message_ << value;
-		do_set_timeout_session(key, 3000);
+		do_set_timeout_session(key, 40000);
 		do_send_session(key, message_);
 		return true;
 	}
