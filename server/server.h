@@ -623,6 +623,15 @@ public:
 			}
 			inline void do_move_session_to_group(unsigned long long session_key, unsigned long long group_key) noexcept {
 			}
+			inline void do_send_session(unsigned long long key, session::message_pointer& message_ptr) noexcept {
+				_server->do_send_session(key, message_ptr);
+			}
+			inline void do_destroy_session(unsigned long long key) noexcept {
+				_server->do_destroy_session(key);
+			}
+			inline void do_set_timeout_session(unsigned long long key, unsigned long long duration) noexcept {
+				_server->do_set_timeout_session(key, duration);
+			}
 			inline virtual int on_update(void) noexcept = 0;
 		private:
 			inline auto acquire(unsigned long long key) noexcept -> bool {
@@ -649,9 +658,9 @@ public:
 			volatile unsigned int _io_count; // release_flag
 			volatile unsigned int _cancel_flag;
 			std::function<void(void*)> _destructor;
+			server* _server;
 			job_queue _job_queue;
 			std::unordered_map<unsigned long long, session*> _session_map;
-			server* _server;
 		};
 		class group_array final {
 		private:
@@ -692,7 +701,7 @@ public:
 				_head = reinterpret_cast<unsigned long long>(_array);
 			}
 			template<typename type, typename... argument>
-			inline auto acquire(argument&&... arg) noexcept -> group* {
+			inline auto acquire(server& server_, argument&&... arg) noexcept -> group* {
 				for (;;) {
 					unsigned long long head = _head;
 					node* current = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
@@ -705,7 +714,7 @@ public:
 						auto& memory_pool = data_structure::_thread_local::memory_pool<type, 1024, false>::instance();
 						group* group_ = &memory_pool.allocate(std::forward<argument>(arg)...);
 						group_->_key |= current->_index;
-						group_->_server = 
+						group_->_server = &server_;
 						group_->_destructor = group::destructor<type>;
 						current->_value = group_;
 						return current->_value;
@@ -727,7 +736,7 @@ public:
 			inline auto operator[](unsigned long long const key) noexcept -> group* {
 				return _array[key & 0xffff]._value;
 			}
-		private:
+		public:
 			unsigned long long _head;
 			node* _array;
 			size_type _size;
@@ -1281,22 +1290,26 @@ private:
 			_tcpv4_segments_sent_sec.get_formatted_value(PDH_FMT_DOUBLE).doubleValue,
 			_tcpv4_segments_retransmitted_sec.get_formatted_value(PDH_FMT_DOUBLE).doubleValue);
 
-		auto& memory_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
+		auto& message_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
+		auto& view_pool = data_structure::_thread_local::memory_pool<session::view>::instance();
 		printf("--------------------------------------\n"\
 			"[ Server Monitor ]\n"\
 			"Connect\n"\
 			" Accept Total  :   %llu\n"\
 			" Timeout Total :   %llu\n"\
 			" Session Count :   %u\n"\
+			" Group Count   :   %u\n"\
 			"Traffic\n"\
 			" Accept  :   %u TPS\n"\
 			" Receive :   %u TPS\n"\
 			" Send    :   %u TPS\n"\
 			"Resource Usage\n"\
 			" Message  - Pool Count :   %u\n"\
+			"            Use Count  :   %u\n"\
+			" View     - Pool Count :   %u\n"\
 			"            Use Count  :   %u\n",
-			_accept_total_count, _timeout_total_count, _session_array._size, _accept_tps, _receive_tps, _send_tps,
-			memory_pool._stack._capacity, memory_pool._use_count);
+			_accept_total_count, _timeout_total_count, _session_array._size, _group_array._size, _accept_tps, _receive_tps, _send_tps,
+			message_pool._stack._capacity, message_pool._use_count, view_pool._stack._capacity, view_pool._use_count);
 		_accept_tps = 0;
 		_receive_tps = 0;
 		_send_tps = 0;
@@ -1374,7 +1387,7 @@ public:
 		if (0 == _scheduler._active) {
 			_InterlockedIncrement(&_scheduler._size);
 			if (0 == _scheduler._active) {
-				scheduler::group& group_ = *_group_array.acquire<group>(std::forward<argument>(arg)...);
+				scheduler::group& group_ = *_group_array.acquire<group>(*this, std::forward<argument>(arg)...);
 				_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(static_cast<scheduler::task*>(&group_)));
 				return group_._key;
 			}
