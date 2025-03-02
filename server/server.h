@@ -283,11 +283,10 @@ public:
 			_socket = std::move(socket);
 			_timeout_currnet = GetTickCount64();
 			_timeout_duration = timeout_duration;
-			_InterlockedExchange(&_receive_flag, 0);
 			_InterlockedExchange(&_send_flag, 0);
 			_InterlockedExchange(&_cancel_flag, 0);
-			_InterlockedExchange(&_group_flag, 0);
 			_InterlockedIncrement(&_io_count);
+			_InterlockedAnd((long*)&_receive_count, 0x3FFFFFFF);
 			_InterlockedAnd((long*)&_io_count, 0x7FFFFFFF);
 		}
 		inline auto acquire(void) noexcept -> bool {
@@ -391,6 +390,23 @@ public:
 				_send_queue.pop();
 			_InterlockedExchange(&_send_flag, 0);
 		}
+
+		inline auto receive_acquire(void) noexcept -> bool {
+			auto receive_count = _InterlockedIncrement(&_receive_count);
+			if (0xC0000000 & receive_count)
+				return false;
+			return true;
+		}
+		inline bool receive_release(void) noexcept {
+			if (0x40000000 == _InterlockedDecrement(&_receive_count) && 0x40000000 == _InterlockedCompareExchange(&_receive_count, 0xC0000000, 0x40000000))
+				return true;
+			return false;
+		}
+		inline bool group(void) noexcept {
+			if (0x40000000 & _InterlockedOr((volatile long*)&_receive_count, (long)0x40000000))
+				return false;
+			return true;
+		}
 	public:
 		unsigned long long _key;
 		system_component::network::socket _socket;
@@ -400,13 +416,13 @@ public:
 		system_component::input_output::overlapped _recv_overlapped;
 		system_component::input_output::overlapped _send_overlapped;
 		volatile unsigned int _io_count; // release_flag
-		volatile unsigned int _receive_flag;
+		volatile unsigned int _receive_count; // release_flag, group_flag
 		volatile unsigned int _send_flag;
 		volatile unsigned int _send_size;
 		volatile unsigned int _cancel_flag;
-		volatile unsigned int _group_flag;
 		unsigned long long _timeout_currnet;
 		unsigned long long _timeout_duration;
+		unsigned long long _group_key;
 	};
 	class session_array final {
 	private:
@@ -647,6 +663,14 @@ public:
 			}
 			inline void cancel(void) noexcept {
 				_InterlockedExchange(&_cancel_flag, 1);
+			}
+
+			inline void insert_job_session_enter(session& session_) noexcept {
+				auto& memory_pool = data_structure::_thread_local::memory_pool<job>::instance();
+				job_pointer job_ptr(&memory_pool.allocate());
+				job_ptr->_type = scheduler::group::job::type::enter_session;
+				job_ptr->_session = &session_;
+				_job_queue.push(job_ptr);
 			}
 			template<typename type>
 			inline static void destructor(void* rhs) noexcept {
@@ -1060,8 +1084,6 @@ private:
 							scheduler::group::job_pointer job_ptr = group_._job_queue.pop();
 							switch (job_ptr->_type) {
 							case scheduler::group::job::type::enter_session: {
-								while (0 == _InterlockedExchange(&job_ptr->_session->_receive_flag, 1)) {
-								}
 								group_._session_map.emplace(job_ptr->_session->_key, job_ptr->_session);
 								group_.on_enter_session(job_ptr->_session->_key);
 							} break;
@@ -1072,8 +1094,7 @@ private:
 								session& session_ = *iter->second;
 								group_.on_leave_session(session_._key);
 								group_._session_map.erase(iter);
-								_InterlockedExchange(&session_._receive_flag, 0);
-								_InterlockedExchange(&session_._group_flag, 0);
+								_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
 								if (session_.release()) {
 									on_destroy_session(session_._key);
 									_session_array.release(&session_);
@@ -1091,7 +1112,7 @@ private:
 							if (!session_._cancel_flag) {
 								while (!session_._receive_queue.empty()) {
 									auto view_ptr = session_._receive_queue.pop();
-									if (false == on_receive_session(session_._key, view_ptr)) {
+									if (false == group_.on_receive_session(session_._key, view_ptr)) {
 										session_.cancel();
 										break;
 									}
@@ -1160,20 +1181,32 @@ private:
 							_InterlockedIncrement(&_receive_tps);
 						}
 
-						while (0 == session_._group_flag && !session_._receive_queue.empty() && 0 == _InterlockedExchange(&session_._receive_flag, 1)) {
-							if (session_._receive_queue.empty()) {
-								_InterlockedExchange(&session_._receive_flag, 0);
-								break;
-							}
-							else {
-								auto view_ptr = session_._receive_queue.pop();
-								if (false == on_receive_session(session_._key, view_ptr)) {
-									session_.cancel();
-									_InterlockedExchange(&session_._receive_flag, 0);
-									break;
+						bool loop = true;
+						while (loop && !session_._receive_queue.empty()) {
+							if (session_.receive_acquire()) {
+								if (!session_._receive_queue.empty()) {
+									auto view_ptr = session_._receive_queue.pop();
+									if (false == on_receive_session(session_._key, view_ptr)) {
+										session_.cancel();
+										loop = false;
+									}
 								}
 							}
-							_InterlockedExchange(&session_._receive_flag, 0);
+							else
+								loop = false;
+							if (session_.receive_release()) {
+								auto group_ = _group_array[session_._group_key];
+								if (group_->acquire(session_._group_key)) {
+									session_.acquire();
+									group_->insert_job_session_enter(session_);
+								}
+								else {
+									loop = false;
+									_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
+								}
+								if (group_->release())
+									_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(group_));
+							}
 						}
 
 						if (session_.ready_receive() && session_.receive())
@@ -1406,28 +1439,30 @@ public:
 		}
 	}
 	inline void do_enter_session_to_group(unsigned long long session_key, unsigned long long group_key) noexcept {
-		auto group_ = _group_array[group_key];
-		if (nullptr != group_) {
-			if (group_->acquire(group_key)) {
-				do {
-					session& session_ = _session_array[session_key];
-					if (session_.acquire(session_key)) {
-						if (0 == _InterlockedExchange(&session_._group_flag, 1)) {
-							auto& memory_pool = data_structure::_thread_local::memory_pool<scheduler::group::job>::instance();
-							scheduler::group::job_pointer job_ptr(&memory_pool.allocate());
-							job_ptr->_type = scheduler::group::job::type::enter_session;
-							job_ptr->_session = &session_;
-							group_->_job_queue.push(job_ptr);
-							break;
-						}
-					}
-					if (session_.release())
-						_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
-				} while (false);
+		session& session_ = _session_array[session_key];
+		if (session_.acquire(session_key)) {
+			if (session_.receive_acquire()) {
+				if (session_.group()) {
+					session_._group_key = group_key;
+				}
 			}
-			if (group_->release())
-				_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(group_));
+			if (session_.receive_release()) {
+				auto group_ = _group_array[session_._group_key];
+				bool success = false;
+				if (group_->acquire(session_._group_key)) {
+					group_->insert_job_session_enter(session_);
+					success = true;
+				}
+				else
+					_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
+				if (group_->release())
+					_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(group_));
+				if (true == success)
+					return;
+			}
 		}
+		if (session_.release())
+			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
 	}
 
 	template <typename function, typename... argument>
