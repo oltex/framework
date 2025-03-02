@@ -415,10 +415,10 @@ public:
 		send_queue _send_queue;
 		system_component::input_output::overlapped _recv_overlapped;
 		system_component::input_output::overlapped _send_overlapped;
-		volatile unsigned int _io_count; // release_flag
-		volatile unsigned int _receive_count; // release_flag, group_flag
-		volatile unsigned int _send_flag;
-		volatile unsigned int _send_size;
+		alignas(64) unsigned int _io_count; // release_flag
+		alignas(64) unsigned int _receive_count; // release_flag, group_flag
+		alignas(64) unsigned int _send_flag;
+		unsigned int _send_size;
 		volatile unsigned int _cancel_flag;
 		unsigned long long _timeout_currnet;
 		unsigned long long _timeout_duration;
