@@ -226,6 +226,7 @@ public:
 					return true;
 				return false;
 			}
+			size_type _size;
 		};
 		class receive_queue final : protected data_structure::lockfree::queue<view*> {
 		private:
