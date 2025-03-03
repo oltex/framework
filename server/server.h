@@ -545,12 +545,12 @@ public:
 				enum class type : unsigned char {
 					enter_session, leave_session, move_session
 				};
-				inline explicit job(void) noexcept = default;
+				inline explicit job(void) noexcept = delete;
 				inline explicit job(job&) noexcept = delete;
 				inline explicit job(job&&) noexcept = delete;
 				inline auto operator=(job&) noexcept -> job & = delete;
 				inline auto operator=(job&&) noexcept -> job & = delete;
-				inline ~job(void) noexcept = default;
+				inline ~job(void) noexcept = delete;
 
 				inline void destructor(void) noexcept {
 					auto& memory_pool = data_structure::_thread_local::memory_pool<job>::instance();
