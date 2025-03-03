@@ -226,7 +226,6 @@ public:
 					return true;
 				return false;
 			}
-			size_type _size;
 		};
 		class receive_queue final : protected data_structure::lockfree::queue<view*> {
 		private:
@@ -418,7 +417,7 @@ public:
 		unsigned int _receive_count; // release_flag, group_flag
 		unsigned int _send_flag;
 		unsigned int _send_size;
-		volatile unsigned int _cancel_flag;
+		unsigned int _cancel_flag;
 		unsigned long long _timeout_currnet;
 		unsigned long long _timeout_duration;
 		unsigned long long _group_key;
