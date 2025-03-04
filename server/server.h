@@ -843,8 +843,8 @@ public:
 public:
 #pragma warning(suppress: 26495)
 	inline explicit server(void) noexcept {
-		//utility::crash_dump();
-		//database::mysql::initialize();
+		utility::crash_dump();
+		database::mysql::initialize();
 		system_component::network::window_socket_api::start_up();
 		//utility::logger::instance().create("server", L"server.log");
 
@@ -1128,7 +1128,7 @@ private:
 								++iter;
 						}
 
-						int time = static_cast<scheduler::group*>(&task)->on_update();
+						int time = group_.on_update();
 						if (0 == time) {
 						}
 						else if (-1 == time) {
@@ -1174,43 +1174,38 @@ private:
 							auto& memory_pool = data_structure::_thread_local::memory_pool<session::view>::instance();
 							session::view_pointer view_ptr(&memory_pool.allocate(session_._receive_message, session_._receive_message->front(), session_._receive_message->front() + header_._size));
 							session_._receive_message->pop(header_._size);
-							//session_._receive_queue.push(view_ptr);
-
-							if (false == on_receive_session(session_._key, view_ptr)) {
-								session_.cancel();
-								//loop = false;
-							}
+							session_._receive_queue.push(view_ptr);
 
 							_InterlockedIncrement(&_receive_tps);
 						}
 
-						//bool loop = true;
-						//while (loop && !session_._receive_queue.empty()) {
-						//	if (session_.receive_acquire()) {
-						//		if (!session_._receive_queue.empty()) {
-						//			auto view_ptr = session_._receive_queue.pop();
-						//			if (false == on_receive_session(session_._key, view_ptr)) {
-						//				session_.cancel();
-						//				loop = false;
-						//			}
-						//		}
-						//	}
-						//	else
-						//		loop = false;
-						//	if (session_.receive_release()) {
-						//		auto group_ = _group_array[session_._group_key];
-						//		if (group_->acquire(session_._group_key)) {
-						//			session_.acquire();
-						//			group_->insert_job_session_enter(session_);
-						//		}
-						//		else {
-						//			loop = false;
-						//			_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
-						//		}
-						//		if (group_->release())
-						//			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(group_));
-						//	}
-						//}
+						bool loop = true;
+						while (loop && !session_._receive_queue.empty()) {
+							if (session_.receive_acquire()) {
+								if (!session_._receive_queue.empty()) {
+									auto view_ptr = session_._receive_queue.pop();
+									if (false == on_receive_session(session_._key, view_ptr)) {
+										session_.cancel();
+										loop = false;
+									}
+								}
+							}
+							else
+								loop = false;
+							if (session_.receive_release()) {
+								auto group_ = _group_array[session_._group_key];
+								if (group_->acquire(session_._group_key)) {
+									session_.acquire();
+									group_->insert_job_session_enter(session_);
+								}
+								else {
+									loop = false;
+									_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
+								}
+								if (group_->release())
+									_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(group_));
+							}
+						}
 
 						if (session_.ready_receive() && session_.receive())
 							continue;
