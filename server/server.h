@@ -1038,6 +1038,14 @@ protected:
 			_listen_socket_backlog = param->get_int(1);
 			return 0;
 			});
+		command_.add("header_code", [&](command::parameter* param) noexcept -> int {
+			_header_code = param->get_int(1);
+			return 0;
+			});
+		command_.add("header_key", [&](command::parameter* param) noexcept -> int {
+			_header_fixed_key = param->get_int(1);
+			return 0;
+			});
 		command_.add("server_start", [&](command::parameter* param) noexcept -> int {
 			this->start();
 			return 0;
@@ -1459,30 +1467,30 @@ protected:
 		//}
 	}
 	inline void do_enter_session_to_group(unsigned long long session_key, unsigned long long group_key) noexcept {
-		//session& session_ = _session_array[session_key];
-		//if (session_.acquire(session_key)) {
-		//	if (session_.acquire_receive()) {
-		//		if (session_.group()) {
-		//			session_._group_key = group_key;
-		//		}
-		//	}
-		//	if (session_.release_receive()) {
-		//		auto group_ = _group_array[session_._group_key];
-		//		bool success = false;
-		//		if (group_->acquire(session_._group_key)) {
-		//			group_->insert_job_session_enter(session_);
-		//			success = true;
-		//		}
-		//		else
-		//			_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
-		//		if (group_->release())
-		//			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(group_));
-		//		if (true == success)
-		//			return;
-		//	}
-		//}
-		//if (session_.release())
-		//	_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
+		session& session_ = _session_array[session_key];
+		if (session_.acquire(session_key)) {
+			if (session_.acquire_receive()) {
+				if (session_.group()) {
+					session_._group_key = group_key;
+				}
+			}
+			if (session_.release_receive()) {
+				auto& group_ = _group_array[session_._group_key];
+				bool success = false;
+				if (group_.acquire(session_._group_key)) {
+					group_.insert_job_session_enter(session_);
+					success = true;
+				}
+				else
+					_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
+				if (group_.release())
+					_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(&group_));
+				if (true == success)
+					return;
+			}
+		}
+		if (session_.release())
+			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
 	}
 
 	template <typename function, typename... argument>
@@ -1517,6 +1525,7 @@ public:
 	std::string _listen_socket_ip;
 	size_type _listen_socket_port;
 	size_type _listen_socket_backlog;
+	unsigned char _header_code;
 	unsigned char _header_fixed_key;
 
 	utility::performance_data_helper::query::counter _processor_total_time;
