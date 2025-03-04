@@ -37,134 +37,6 @@ private:
 	enum class post_queue_state {
 		close_worker, destory_session, excute_task, destory_group
 	};
-	class scheduler final {
-	private:
-		class task {
-		public:
-			enum class type : unsigned char {
-				function, group
-			};
-			inline explicit task(type const type_) noexcept
-				: _type(type_), _time(0) {
-			};
-			inline explicit task(task const&) noexcept = delete;
-			inline explicit task(task&&) noexcept = delete;
-			inline auto operator=(task const&) noexcept -> task & = delete;
-			inline auto operator=(task&&) noexcept -> task & = delete;
-			inline ~task(void) noexcept = default;
-		public:
-			type _type;
-			unsigned long long _time;
-		};
-		class function : public task {
-		public:
-			template <typename function_, typename... argument>
-			inline explicit function(function_&& func, argument&&... arg) noexcept
-				: task(type::function), _function(std::bind(std::forward<function_>(func), std::forward<argument>(arg)...)) {
-			};
-			inline explicit function(function const&) noexcept = delete;
-			inline explicit function(function&&) noexcept = delete;
-			inline auto operator=(function const&) noexcept -> function & = delete;
-			inline auto operator=(function&&) noexcept -> function & = delete;
-			inline ~function(void) noexcept = default;
-
-			inline bool excute(void) noexcept {
-				for (;;) {
-					switch (_function()) {
-					case 0:
-						break;
-					case -1:
-						return false;
-					default:
-						_time = _time + GetTickCount64();
-						return true;
-					}
-				}
-			}
-
-			std::function<int(void)> _function;
-		};
-		friend class server;
-		inline static auto less(task* const& source, task* const& destination) noexcept -> std::strong_ordering {
-			return source->_time <=> destination->_time;
-		}
-		using ready_queue = data_structure::priority_queue<task*, less>;
-		//class task_queue final : protected data_structure::lockfree::queue<task*> {
-		//private:
-		//	using base = data_structure::lockfree::queue<task*>;
-		//public:
-		//	inline explicit task_queue(void) noexcept = default;
-		//	inline explicit task_queue(task_queue const&) noexcept = delete;
-		//	inline explicit task_queue(task_queue&&) noexcept = delete;
-		//	inline auto operator=(task_queue const&) noexcept -> task_queue & = delete;
-		//	inline auto operator=(task_queue&&) noexcept -> task_queue & = delete;
-		//	inline ~task_queue(void) noexcept = default;
-
-		//	inline void push(task& task_) noexcept {
-		//		base::emplace(task_);
-		//		_InterlockedIncrement(&_size);
-		//	}
-		//	inline auto pop(void) noexcept -> task& {
-		//		unsigned long long head = _head;
-		//		node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
-		//		unsigned long long next = address->_next;
-
-		//		if (0x10000 > (0x00007FFFFFFFFFFFULL & next))
-		//			__debugbreak();
-		//		unsigned long long tail = _tail;
-		//		if (tail == head)
-		//			_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
-
-		//		task& result = *reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value;
-		//		_head = next;
-		//		_memory_pool::instance().deallocate(*address);
-		//		_InterlockedDecrement(&_size);
-		//		return result;
-		//	}
-		//	inline auto empty(void) const noexcept {
-		//		unsigned long long head = _head;
-		//		node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
-		//		unsigned long long next = address->_next;
-		//		if (_nullptr == (0x00007FFFFFFFFFFFULL & next))
-		//			return true;
-		//		return false;
-		//	}
-		//public:
-		//	size_type _size = 0;
-		//};
-	public:
-#pragma warning(suppress: 26495)
-		inline explicit scheduler(void) noexcept = default;
-		inline explicit scheduler(scheduler const&) noexcept = delete;
-		inline explicit scheduler(scheduler&&) noexcept = delete;
-		inline auto operator=(scheduler const&) noexcept -> scheduler & = delete;
-		inline auto operator=(scheduler&&) noexcept -> scheduler & = delete;
-		inline ~scheduler(void) noexcept = default;
-
-		inline void initialize(void) noexcept {
-			_active = 0;
-			_size = 0;
-		}
-		inline void finalize(void) noexcept {
-			_InterlockedExchange(&_active, -1);
-			//_wait_on_address.wake_single(&_task_queue._size);
-			_thread.wait_for_single(INFINITE);
-			_thread.close();
-		}
-		//inline void push(task& task_) noexcept {
-		//	_task_queue.push(task_);
-		//	_wait_on_address.wake_single(&_task_queue._size);
-		//}
-		inline bool wait(unsigned long wait_time) noexcept {
-			//bool result = _wait_on_address.wait(&_task_queue._size, &_active, sizeof(size_type), wait_time);
-		}
-
-		size_type _active;
-		system_component::thread _thread;
-		system_component::multi::wait_on_address _wait_on_address;
-		//task_queue _task_queue;
-		size_type _size;
-	};
 	class session final {
 	public:
 		struct header final {
@@ -282,6 +154,7 @@ private:
 			message_pointer _message;
 		};
 		using view_pointer = data_structure::intrusive::shared_pointer<view, 0>;
+	private:
 		class send_queue final : protected data_structure::lockfree::queue<message*> {
 		private:
 			using base = data_structure::lockfree::queue<message*>;
@@ -358,6 +231,13 @@ private:
 		private:
 			using base = data_structure::lockfree::queue<view*>;
 		public:
+			inline explicit receive_queue(void) noexcept = default;
+			inline explicit receive_queue(receive_queue const&) noexcept = delete;
+			inline explicit receive_queue(receive_queue&&) noexcept = delete;
+			inline auto operator=(receive_queue const&) noexcept -> receive_queue & = delete;
+			inline auto operator=(receive_queue&&) noexcept -> receive_queue & = delete;
+			inline ~receive_queue(void) noexcept = default;
+
 			inline void push(view_pointer view_ptr) noexcept {
 				base::emplace(view_ptr.get());
 				view_ptr.reset();
@@ -605,8 +485,8 @@ private:
 				}
 			}
 		}
-		inline void release(session* value) noexcept {
-			node* current = reinterpret_cast<node*>(reinterpret_cast<uintptr_t*>(value) - 1);
+		inline void release(session& value) noexcept {
+			node* current = reinterpret_cast<node*>(reinterpret_cast<uintptr_t*>(&value) - 1);
 			for (;;) {
 				unsigned long long head = _head;
 				current->_next = reinterpret_cast<node*>(head & 0x00007FFFFFFFFFFFULL);
@@ -625,53 +505,389 @@ private:
 		inline auto operator[](unsigned long long const key) noexcept -> session& {
 			return _array[key & 0xffff]._value;
 		}
-	public:
+		inline void wait(void) const noexcept {
+			while (_size != 0) {
+			}
+		}
+	private:
 		unsigned long long _head;
 		node* _array;
 		size_type _size;
 		size_type _capacity;
 	};
-protected:
-	class group : public scheduler::task {
+	class scheduler final {
 	private:
 		friend class server;
-		struct job final : public data_structure::intrusive::shared_pointer_hook<0> {
+		class task {
 		public:
 			enum class type : unsigned char {
-				enter_session, leave_session, move_session
+				function, group
 			};
-			inline explicit job(void) noexcept = delete;
-			inline explicit job(job&) noexcept = delete;
-			inline explicit job(job&&) noexcept = delete;
-			inline auto operator=(job&) noexcept -> job & = delete;
-			inline auto operator=(job&&) noexcept -> job & = delete;
-			inline ~job(void) noexcept = delete;
-
-			inline void destructor(void) noexcept {
-				auto& memory_pool = data_structure::_thread_local::memory_pool<job>::instance();
-				memory_pool.deallocate(*this);
-			}
+			inline explicit task(type const type_) noexcept
+				: _type(type_) {
+			};
+			inline explicit task(task const&) noexcept = delete;
+			inline explicit task(task&&) noexcept = delete;
+			inline auto operator=(task const&) noexcept -> task & = delete;
+			inline auto operator=(task&&) noexcept -> task & = delete;
+			inline ~task(void) noexcept = default;
+		public:
 			type _type;
-			session* _session;
-			unsigned long long _group_key;
+			unsigned long long _time;
 		};
-		using job_pointer = data_structure::intrusive::shared_pointer<job, 0>;
-		class job_queue final : protected data_structure::lockfree::queue<job*> {
-		private:
-			using base = data_structure::lockfree::queue<job*>;
+		class function : public task {
 		public:
-			inline explicit job_queue(void) noexcept = default;
-			inline explicit job_queue(job_queue const&) noexcept = default;
-			inline explicit job_queue(job_queue&&) noexcept = default;
-			inline auto operator=(job_queue const&) noexcept -> job_queue&;
-			inline auto operator=(job_queue&&) noexcept -> job_queue&;
-			inline ~job_queue(void) noexcept = default;
-		public:
-			inline void push(job_pointer job_ptr) noexcept {
-				base::emplace(job_ptr.get());
-				job_ptr.reset();
+			template <typename function_, typename... argument>
+			inline explicit function(function_&& func, argument&&... arg) noexcept
+				: task(type::function), _function(std::bind(std::forward<function_>(func), std::forward<argument>(arg)...)) {
+			};
+			inline explicit function(function const&) noexcept = delete;
+			inline explicit function(function&&) noexcept = delete;
+			inline auto operator=(function const&) noexcept -> function & = delete;
+			inline auto operator=(function&&) noexcept -> function & = delete;
+			inline ~function(void) noexcept = default;
+
+			inline bool excute(void) noexcept {
+				for (;;) {
+					switch (_function()) {
+					case 0:
+						break;
+					case -1:
+						return false;
+					default:
+						_time = _time + GetTickCount64();
+						return true;
+					}
+				}
 			}
-			inline auto pop(void) noexcept -> job_pointer {
+		private:
+			std::function<int(void)> _function;
+		};
+		class group : public scheduler::task {
+		private:
+			friend class server;
+			struct job final : public data_structure::intrusive::shared_pointer_hook<0> {
+			public:
+				enum class type : unsigned char {
+					enter_session, leave_session, move_session
+				};
+				inline explicit job(void) noexcept = delete;
+				inline explicit job(job&) noexcept = delete;
+				inline explicit job(job&&) noexcept = delete;
+				inline auto operator=(job&) noexcept -> job & = delete;
+				inline auto operator=(job&&) noexcept -> job & = delete;
+				inline ~job(void) noexcept = delete;
+
+				inline void destructor(void) noexcept {
+					auto& memory_pool = data_structure::_thread_local::memory_pool<job>::instance();
+					memory_pool.deallocate(*this);
+				}
+				type _type;
+				session* _session;
+				unsigned long long _group_key;
+			};
+			using job_pointer = data_structure::intrusive::shared_pointer<job, 0>;
+			class job_queue final : protected data_structure::lockfree::queue<job*> {
+			private:
+				using base = data_structure::lockfree::queue<job*>;
+			public:
+				inline explicit job_queue(void) noexcept = default;
+				inline explicit job_queue(job_queue const&) noexcept = default;
+				inline explicit job_queue(job_queue&&) noexcept = default;
+				inline auto operator=(job_queue const&) noexcept -> job_queue&;
+				inline auto operator=(job_queue&&) noexcept -> job_queue&;
+				inline ~job_queue(void) noexcept = default;
+			public:
+				inline void push(job_pointer job_ptr) noexcept {
+					base::emplace(job_ptr.get());
+					job_ptr.reset();
+				}
+				inline auto pop(void) noexcept -> job_pointer {
+					unsigned long long head = _head;
+					node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
+					unsigned long long next = address->_next;
+
+					if (0x10000 > (0x00007FFFFFFFFFFFULL & next))
+						__debugbreak();
+					unsigned long long tail = _tail;
+					if (tail == head)
+						_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
+
+					job_pointer result;
+					result.set(reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value);
+					_head = next;
+					_memory_pool::instance().deallocate(*address);
+					return result;
+				}
+				inline auto empty(void) const noexcept {
+					unsigned long long head = _head;
+					node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
+					unsigned long long next = address->_next;
+					if (_nullptr == (0x00007FFFFFFFFFFFULL & next))
+						return true;
+					return false;
+				}
+			};
+			inline static unsigned long long _static_id = 0x10000;
+		public:
+			inline explicit group(void) noexcept
+				: task(type::group) {
+				_key = _interlockedadd64((volatile long long*)&_static_id, 0x10000);
+				_InterlockedExchange(&_cancel_flag, 0);
+				_InterlockedIncrement(&_io_count);
+				_InterlockedAnd((long*)&_io_count, 0x7FFFFFFF);
+			};
+			inline explicit group(group const&) noexcept = delete;
+			inline explicit group(group&&) noexcept = delete;
+			inline auto operator=(group const&) noexcept -> group & = delete;
+			inline auto operator=(group&&) noexcept -> group & = delete;
+			inline ~group(void) noexcept {
+				while (!_job_queue.empty())
+					_job_queue.pop();
+			};
+
+			inline virtual void on_enter_session(unsigned long long key) noexcept = 0;
+			inline virtual bool on_receive_session(unsigned long long key, session::view_pointer& view_ptr) noexcept = 0;
+			inline virtual void on_leave_session(unsigned long long key) noexcept = 0;
+			inline void do_leave_session(unsigned long long key) noexcept {
+				//auto iter = _session_map.find(key);
+				//if (iter == _session_map.end())
+				//	__debugbreak();
+				//session& session_ = *iter->second;
+
+				//auto& memory_pool = data_structure::_thread_local::memory_pool<group::job>::instance();
+				//job_pointer job_ptr(&memory_pool.allocate());
+				//job_ptr->_type = group::job::type::leave_session;
+				//job_ptr->_session = &session_;
+				//_job_queue.push(job_ptr);
+			}
+			inline void do_move_session_to_group(unsigned long long session_key, unsigned long long group_key) noexcept {
+				//auto iter = _session_map.find(session_key);
+				//if (_session_map.end() == iter)
+				//	return;
+			}
+			inline void do_send_session(unsigned long long key, session::message_pointer& message_ptr) noexcept {
+				//auto iter = _session_map.find(key);
+				//if (_session_map.end() == iter)
+				//	return;
+				//_server->do_send_session(key, message_ptr);
+			}
+			inline void do_destroy_session(unsigned long long key) noexcept {
+				//auto iter = _session_map.find(key);
+				//if (_session_map.end() == iter)
+				//	return;
+				//_server->do_destroy_session(key);
+			}
+			inline void do_set_timeout_session(unsigned long long key, unsigned long long duration) noexcept {
+				//auto iter = _session_map.find(key);
+				//if (_session_map.end() == iter)
+				//	return;
+				//_server->do_set_timeout_session(key, duration);
+			}
+			inline virtual int on_update(void) noexcept = 0;
+		private:
+			inline auto acquire(unsigned long long key) noexcept -> bool {
+				auto io_count = _InterlockedIncrement(&_io_count);
+				if ((0x80000000 & io_count) || _key != key)
+					return false;
+				return true;
+			}
+			inline bool release(void) noexcept {
+				if (0 == _InterlockedDecrement(&_io_count) && 0 == _InterlockedCompareExchange(&_io_count, 0x80000000, 0))
+					return true;
+				return false;
+			}
+			inline void cancel(void) noexcept {
+				_InterlockedExchange(&_cancel_flag, 1);
+			}
+			inline bool update(void) noexcept {
+				//while (!_cancel_flag) {
+				//	while (!_job_queue.empty()) {
+				//		scheduler::group::job_pointer job_ptr = _job_queue.pop();
+				//		switch (job_ptr->_type) {
+				//		case scheduler::group::job::type::enter_session: {
+				//			_session_map.emplace(job_ptr->_session->_key, job_ptr->_session);
+				//			on_enter_session(job_ptr->_session->_key);
+				//		} break;
+				//		case scheduler::group::job::type::leave_session: {
+				//			auto iter = _session_map.find(job_ptr->_session->_key);
+				//			if (iter == _session_map.end())
+				//				__debugbreak();
+				//			session& session_ = *iter->second;
+				//			on_leave_session(session_._key);
+				//			_session_map.erase(iter);
+				//			_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
+				//			if (session_.release()) {
+				//				_server->on_destroy_session(session_._key);
+				//				_server->_session_array.release(&session_);
+				//			}
+				//		} break;
+				//		case scheduler::group::job::type::move_session: {
+
+				//		} break;
+				//		default:
+				//			__debugbreak();
+				//		}
+				//	}
+
+				//	for (auto iter = _session_map.begin(); iter != _session_map.end();) {
+				//		session& session_ = *iter->second;
+				//		if (!session_._cancel_flag) {
+				//			while (!session_._receive_queue.empty()) {
+				//				auto view_ptr = session_._receive_queue.pop();
+				//				if (false == on_receive_session(session_._key, view_ptr)) {
+				//					session_.cancel();
+				//					break;
+				//				}
+				//			}
+				//		}
+				//		if (session_._cancel_flag) {
+				//			on_leave_session(session_._key);
+				//			iter = _session_map.erase(iter);
+				//			if (session_.release()) {
+				//				_server->on_destroy_session(session_._key);
+				//				_server->_session_array.release(&session_);
+				//			}
+				//		}
+				//		else
+				//			++iter;
+				//	}
+
+				//	int time = on_update();
+
+				//	_time = time + GetTickCount64();
+				//	_server->_scheduler._task_queue.push(*static_cast<task*>(this));
+				//	_server->_scheduler._wait_on_address.wake_single(&_server->_scheduler._task_queue._size);
+				//	//switch () {
+				//	//case 0:
+				//	//case -1:
+				//	//	result = false;
+				//	//default:
+
+				//	//	break;
+				//	//}
+				//}
+				return false;
+			}
+
+			inline void insert_job_session_enter(session& session_) noexcept {
+				//auto& memory_pool = data_structure::_thread_local::memory_pool<job>::instance();
+				//job_pointer job_ptr(&memory_pool.allocate());
+				//job_ptr->_type = scheduler::group::job::type::enter_session;
+				//job_ptr->_session = &session_;
+				//_job_queue.push(job_ptr);
+			}
+			template<typename type>
+			inline static void destructor(void* rhs) noexcept {
+				auto& memory_pool = data_structure::_thread_local::memory_pool<type, 1024, false>::instance();
+				memory_pool.deallocate(*reinterpret_cast<type*>(rhs));
+			}
+
+			unsigned long long _key;
+			volatile unsigned int _io_count; // release_flag
+			volatile unsigned int _cancel_flag;
+			std::function<void(void*)> _destructor;
+			server* _server;
+			job_queue _job_queue;
+			std::unordered_map<unsigned long long, session*> _session_map;
+		};
+		class group_array final {
+		private:
+			struct node final {
+				inline explicit node(void) noexcept = delete;
+				inline explicit node(node const&) noexcept = delete;
+				inline explicit node(node&&) noexcept = delete;
+				inline auto operator=(node const&) noexcept -> node & = delete;
+				inline auto operator=(node&&) noexcept -> node & = delete;
+				inline ~node(void) noexcept = delete;
+				node* _next;
+				size_type _index;
+				group* _value;
+			};
+		public:
+			inline explicit group_array(void) noexcept = default;
+			inline explicit group_array(group_array const&) noexcept = delete;
+			inline explicit group_array(group_array&&) noexcept = delete;
+			inline auto operator=(group_array const&) noexcept -> group_array & = delete;
+			inline auto operator=(group_array&&) noexcept -> group_array & = delete;
+			inline ~group_array(void) noexcept = default;
+
+			inline void initialize(size_type const capacity) noexcept {
+				_size = 0;
+				_capacity = capacity;
+				_array = reinterpret_cast<node*>(malloc(sizeof(node) * capacity));
+				node* current = _array;
+				node* next = current + 1;
+				for (size_type index = 0; index < capacity - 1; ++index, current = next++) {
+					current->_next = next;
+					current->_index = index;
+					current->_value = nullptr;
+				}
+#pragma warning(suppress: 6011)
+				current->_next = nullptr;
+				current->_index = capacity - 1;
+				current->_value = nullptr;
+				_head = reinterpret_cast<unsigned long long>(_array);
+			}
+			template<typename type, typename... argument>
+			inline auto acquire(server& server_, argument&&... arg) noexcept -> group* {
+				for (;;) {
+					unsigned long long head = _head;
+					node* current = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
+					if (nullptr == current)
+						return nullptr;
+					unsigned long long next = reinterpret_cast<unsigned long long>(current->_next) + (0xFFFF800000000000ULL & head) + 0x0000800000000000ULL;
+					if (head == _InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_head), next, head)) {
+						_InterlockedIncrement(&_size);
+
+						auto& memory_pool = data_structure::_thread_local::memory_pool<type, 1024, false>::instance();
+						group* group_ = &memory_pool.allocate(std::forward<argument>(arg)...);
+						group_->_key |= current->_index;
+						group_->_server = &server_;
+						group_->_destructor = group::destructor<type>;
+						current->_value = group_;
+						return current->_value;
+					}
+				}
+			}
+			inline void release(group& value) noexcept {
+				node* current = _array + (value._key & 0xffff);
+				for (;;) {
+					unsigned long long head = _head;
+					current->_next = reinterpret_cast<node*>(head & 0x00007FFFFFFFFFFFULL);
+					unsigned long long next = reinterpret_cast<unsigned long long>(current) + (head & 0xFFFF800000000000ULL);
+					if (head == _InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_head), next, head))
+						break;
+				}
+				_InterlockedDecrement(&_size);
+				value._destructor(&value);
+			}
+			inline auto operator[](unsigned long long const key) noexcept -> group& {
+				return *_array[key & 0xffff]._value;
+			}
+		private:
+			unsigned long long _head;
+			node* _array;
+			size_type _size;
+			size_type _capacity;
+		};
+		class task_queue final : protected data_structure::lockfree::queue<task*> {
+		private:
+			using base = data_structure::lockfree::queue<task*>;
+		public:
+			inline explicit task_queue(void) noexcept = default;
+			inline explicit task_queue(task_queue const&) noexcept = delete;
+			inline explicit task_queue(task_queue&&) noexcept = delete;
+			inline auto operator=(task_queue const&) noexcept -> task_queue & = delete;
+			inline auto operator=(task_queue&&) noexcept -> task_queue & = delete;
+			inline ~task_queue(void) noexcept = default;
+
+			inline void push(task& task_) noexcept {
+				base::emplace(&task_);
+				_InterlockedIncrement(&_size);
+				_wait_on_address.wake_single(&_size);
+			}
+			inline auto pop(void) noexcept -> task& {
 				unsigned long long head = _head;
 				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
 				unsigned long long next = address->_next;
@@ -682,10 +898,10 @@ protected:
 				if (tail == head)
 					_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
 
-				job_pointer result;
-				result.set(reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value);
+				task& result = *reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value;
 				_head = next;
 				_memory_pool::instance().deallocate(*address);
+				_InterlockedDecrement(&_size);
 				return result;
 			}
 			inline auto empty(void) const noexcept {
@@ -696,250 +912,50 @@ protected:
 					return true;
 				return false;
 			}
+			inline void wake(void) noexcept {
+				_wait_on_address.wake_single(&_size);
+			}
+			inline bool wait(void* compare, unsigned long wait_time) noexcept {
+				return _wait_on_address.wait(&_size, compare, sizeof(size_type), wait_time);
+			}
+		private:
+			size_type _size = 0;
+			system_component::multi::wait_on_address _wait_on_address;
 		};
-		inline static unsigned long long _static_id = 0x10000;
+		inline static auto less(task* const& source, task* const& destination) noexcept -> std::strong_ordering {
+			return source->_time <=> destination->_time;
+		}
+		using ready_queue = data_structure::priority_queue<task*, less>;
 	public:
-		inline explicit group(void) noexcept
-			: task(type::group) {
-			_key = _interlockedadd64((volatile long long*)&_static_id, 0x10000);
-			_InterlockedExchange(&_cancel_flag, 0);
-			_InterlockedIncrement(&_io_count);
-			_InterlockedAnd((long*)&_io_count, 0x7FFFFFFF);
-		};
-		inline explicit group(group const&) noexcept = delete;
-		inline explicit group(group&&) noexcept = delete;
-		inline auto operator=(group const&) noexcept -> group & = delete;
-		inline auto operator=(group&&) noexcept -> group & = delete;
-		inline ~group(void) noexcept {
-			while (!_job_queue.empty())
-				_job_queue.pop();
-		};
+#pragma warning(suppress: 26495)
+		inline explicit scheduler(void) noexcept = default;
+		inline explicit scheduler(scheduler const&) noexcept = delete;
+		inline explicit scheduler(scheduler&&) noexcept = delete;
+		inline auto operator=(scheduler const&) noexcept -> scheduler & = delete;
+		inline auto operator=(scheduler&&) noexcept -> scheduler & = delete;
+		inline ~scheduler(void) noexcept = default;
 
-		inline virtual void on_enter_session(unsigned long long key) noexcept = 0;
-		inline virtual bool on_receive_session(unsigned long long key, session::view_pointer& view_ptr) noexcept = 0;
-		inline virtual void on_leave_session(unsigned long long key) noexcept = 0;
-		inline void do_leave_session(unsigned long long key) noexcept {
-			//auto iter = _session_map.find(key);
-			//if (iter == _session_map.end())
-			//	__debugbreak();
-			//session& session_ = *iter->second;
-
-			//auto& memory_pool = data_structure::_thread_local::memory_pool<group::job>::instance();
-			//job_pointer job_ptr(&memory_pool.allocate());
-			//job_ptr->_type = group::job::type::leave_session;
-			//job_ptr->_session = &session_;
-			//_job_queue.push(job_ptr);
-		}
-		inline void do_move_session_to_group(unsigned long long session_key, unsigned long long group_key) noexcept {
-			//auto iter = _session_map.find(session_key);
-			//if (_session_map.end() == iter)
-			//	return;
-		}
-		inline void do_send_session(unsigned long long key, session::message_pointer& message_ptr) noexcept {
-			//auto iter = _session_map.find(key);
-			//if (_session_map.end() == iter)
-			//	return;
-			//_server->do_send_session(key, message_ptr);
-		}
-		inline void do_destroy_session(unsigned long long key) noexcept {
-			//auto iter = _session_map.find(key);
-			//if (_session_map.end() == iter)
-			//	return;
-			//_server->do_destroy_session(key);
-		}
-		inline void do_set_timeout_session(unsigned long long key, unsigned long long duration) noexcept {
-			//auto iter = _session_map.find(key);
-			//if (_session_map.end() == iter)
-			//	return;
-			//_server->do_set_timeout_session(key, duration);
-		}
-		inline virtual int on_update(void) noexcept = 0;
-	private:
-		inline auto acquire(unsigned long long key) noexcept -> bool {
-			auto io_count = _InterlockedIncrement(&_io_count);
-			if ((0x80000000 & io_count) || _key != key)
-				return false;
-			return true;
-		}
-		inline bool release(void) noexcept {
-			if (0 == _InterlockedDecrement(&_io_count) && 0 == _InterlockedCompareExchange(&_io_count, 0x80000000, 0))
-				return true;
-			return false;
-		}
-		inline void cancel(void) noexcept {
-			_InterlockedExchange(&_cancel_flag, 1);
-		}
-		inline bool update(void) noexcept {
-			//while (!_cancel_flag) {
-			//	while (!_job_queue.empty()) {
-			//		scheduler::group::job_pointer job_ptr = _job_queue.pop();
-			//		switch (job_ptr->_type) {
-			//		case scheduler::group::job::type::enter_session: {
-			//			_session_map.emplace(job_ptr->_session->_key, job_ptr->_session);
-			//			on_enter_session(job_ptr->_session->_key);
-			//		} break;
-			//		case scheduler::group::job::type::leave_session: {
-			//			auto iter = _session_map.find(job_ptr->_session->_key);
-			//			if (iter == _session_map.end())
-			//				__debugbreak();
-			//			session& session_ = *iter->second;
-			//			on_leave_session(session_._key);
-			//			_session_map.erase(iter);
-			//			_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
-			//			if (session_.release()) {
-			//				_server->on_destroy_session(session_._key);
-			//				_server->_session_array.release(&session_);
-			//			}
-			//		} break;
-			//		case scheduler::group::job::type::move_session: {
-
-			//		} break;
-			//		default:
-			//			__debugbreak();
-			//		}
-			//	}
-
-			//	for (auto iter = _session_map.begin(); iter != _session_map.end();) {
-			//		session& session_ = *iter->second;
-			//		if (!session_._cancel_flag) {
-			//			while (!session_._receive_queue.empty()) {
-			//				auto view_ptr = session_._receive_queue.pop();
-			//				if (false == on_receive_session(session_._key, view_ptr)) {
-			//					session_.cancel();
-			//					break;
-			//				}
-			//			}
-			//		}
-			//		if (session_._cancel_flag) {
-			//			on_leave_session(session_._key);
-			//			iter = _session_map.erase(iter);
-			//			if (session_.release()) {
-			//				_server->on_destroy_session(session_._key);
-			//				_server->_session_array.release(&session_);
-			//			}
-			//		}
-			//		else
-			//			++iter;
-			//	}
-
-			//	int time = on_update();
-
-			//	_time = time + GetTickCount64();
-			//	_server->_scheduler._task_queue.push(*static_cast<task*>(this));
-			//	_server->_scheduler._wait_on_address.wake_single(&_server->_scheduler._task_queue._size);
-			//	//switch () {
-			//	//case 0:
-			//	//case -1:
-			//	//	result = false;
-			//	//default:
-
-			//	//	break;
-			//	//}
-			//}
-			return false;
-		}
-
-		inline void insert_job_session_enter(session& session_) noexcept {
-			//auto& memory_pool = data_structure::_thread_local::memory_pool<job>::instance();
-			//job_pointer job_ptr(&memory_pool.allocate());
-			//job_ptr->_type = scheduler::group::job::type::enter_session;
-			//job_ptr->_session = &session_;
-			//_job_queue.push(job_ptr);
-		}
-		template<typename type>
-		inline static void destructor(void* rhs) noexcept {
-			auto& memory_pool = data_structure::_thread_local::memory_pool<type, 1024, false>::instance();
-			memory_pool.deallocate(*reinterpret_cast<type*>(rhs));
-		}
-
-		unsigned long long _key;
-		volatile unsigned int _io_count; // release_flag
-		volatile unsigned int _cancel_flag;
-		std::function<void(void*)> _destructor;
-		server* _server;
-		job_queue _job_queue;
-		std::unordered_map<unsigned long long, session*> _session_map;
-	};
-private:
-	class group_array final {
-	private:
-		struct node final {
-			inline explicit node(void) noexcept = delete;
-			inline explicit node(node const&) noexcept = delete;
-			inline explicit node(node&&) noexcept = delete;
-			inline auto operator=(node const&) noexcept -> node & = delete;
-			inline auto operator=(node&&) noexcept -> node & = delete;
-			inline ~node(void) noexcept = delete;
-			node* _next;
-			size_type _index;
-			group* _value;
-		};
-	public:
-		inline explicit group_array(void) noexcept = default;
-		inline explicit group_array(group_array const&) noexcept = delete;
-		inline explicit group_array(group_array&&) noexcept = delete;
-		inline auto operator=(group_array const&) noexcept -> group_array & = delete;
-		inline auto operator=(group_array&&) noexcept -> group_array & = delete;
-		inline ~group_array(void) noexcept = default;
-
-		inline void initialize(size_type const capacity) noexcept {
+		inline void initialize(void) noexcept {
+			_active = 0;
 			_size = 0;
-			_capacity = capacity;
-			_array = reinterpret_cast<node*>(malloc(sizeof(node) * capacity));
-			node* current = _array;
-			node* next = current + 1;
-			for (size_type index = 0; index < capacity - 1; ++index, current = next++) {
-				current->_next = next;
-				current->_index = index;
-				current->_value = nullptr;
-			}
-#pragma warning(suppress: 6011)
-			current->_next = nullptr;
-			current->_index = capacity - 1;
-			current->_value = nullptr;
-			_head = reinterpret_cast<unsigned long long>(_array);
 		}
-		template<typename type, typename... argument>
-		inline auto acquire(server& server_, argument&&... arg) noexcept -> group* {
-			for (;;) {
-				unsigned long long head = _head;
-				node* current = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
-				if (nullptr == current)
-					return nullptr;
-				unsigned long long next = reinterpret_cast<unsigned long long>(current->_next) + (0xFFFF800000000000ULL & head) + 0x0000800000000000ULL;
-				if (head == _InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_head), next, head)) {
-					_InterlockedIncrement(&_size);
+		inline void finalize(void) noexcept {
+			_InterlockedExchange(&_active, -1);
+			_task_queue.wake();
+			_thread.wait_for_single(INFINITE);
+			_thread.close();
+		}
+		inline void push(task& task_) noexcept {
+			_task_queue.push(task_);
+		}
+		inline bool wait(unsigned long wait_time) noexcept {
+			return _task_queue.wait(&_active, wait_time);
+		}
 
-					auto& memory_pool = data_structure::_thread_local::memory_pool<type, 1024, false>::instance();
-					group* group_ = &memory_pool.allocate(std::forward<argument>(arg)...);
-					group_->_key |= current->_index;
-					group_->_server = &server_;
-					group_->_destructor = group::destructor<type>;
-					current->_value = group_;
-					return current->_value;
-				}
-			}
-		}
-		inline void release(group* value) noexcept {
-			node* current = _array + (value->_key & 0xffff);
-			for (;;) {
-				unsigned long long head = _head;
-				current->_next = reinterpret_cast<node*>(head & 0x00007FFFFFFFFFFFULL);
-				unsigned long long next = reinterpret_cast<unsigned long long>(current) + (head & 0xFFFF800000000000ULL);
-				if (head == _InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_head), next, head))
-					break;
-			}
-			_InterlockedDecrement(&_size);
-			value->_destructor(value);
-		}
-		inline auto operator[](unsigned long long const key) noexcept -> group* {
-			return _array[key & 0xffff]._value;
-		}
-	public:
-		unsigned long long _head;
-		node* _array;
+		size_type _active;
+		system_component::thread _thread;
+		task_queue _task_queue;
 		size_type _size;
-		size_type _capacity;
 	};
 public:
 #pragma warning(suppress: 26495)
@@ -1090,11 +1106,10 @@ public:
 				iter._value.cancel();
 			if (iter._value.release()) {
 				on_destroy_session(iter._value._key);
-				_session_array.release(&iter._value);
+				_session_array.release(iter._value);
 			}
 		}
-		while (_session_array._size != 0) {
-		}
+		_session_array.wait();
 
 		on_stop();
 
@@ -1129,7 +1144,7 @@ private:
 
 				if (!session_.receive() && session_.release()) {
 					on_destroy_session(session_._key);
-					_session_array.release(&session_);
+					_session_array.release(session_);
 				}
 			}
 		}
@@ -1144,11 +1159,11 @@ private:
 			case destory_session: {
 				session& session_ = *reinterpret_cast<session*>(overlapped);
 				on_destroy_session(session_._key);
-				_session_array.release(&session_);
+				_session_array.release(session_);
 			} break;
 			case destory_group: {
-				group* group_ = reinterpret_cast<group*>(overlapped);
-				on_destory_group(group_->_key);
+				scheduler::group& group_ = *reinterpret_cast<scheduler::group*>(overlapped);
+				on_destory_group(group_._key);
 				_group_array.release(group_);
 			} break;
 			case excute_task: {
@@ -1212,15 +1227,15 @@ private:
 							}
 						}
 						if (session_.release_receive()) {
-							auto group_ = _group_array[session_._group_key];
-							if (group_->acquire(session_._group_key)) {
+							auto& group_ = _group_array[session_._group_key];
+							if (group_.acquire(session_._group_key)) {
 								session_.acquire();
-								group_->insert_job_session_enter(session_);
+								group_.insert_job_session_enter(session_);
 							}
 							else
 								_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
-							if (group_->release())
-								_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(group_));
+							if (group_.release())
+								_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(&group_));
 						}
 
 						if (session_.ready_receive() && session_.receive())
@@ -1237,7 +1252,7 @@ private:
 					session_.cancel();
 				if (session_.release()) {
 					on_destroy_session(session_._key);
-					_session_array.release(&session_);
+					_session_array.release(session_);
 				}
 			} break;
 			}
@@ -1275,7 +1290,7 @@ private:
 			}
 			if (iter._value.release()) {
 				on_destroy_session(iter._value._key);
-				_session_array.release(&iter._value);
+				_session_array.release(iter._value);
 			}
 		}
 		if (-1 == _scheduler._active)
@@ -1292,7 +1307,7 @@ private:
 			}
 			if (iter._value.release()) {
 				on_destroy_session(iter._value._key);
-				_session_array.release(&iter._value);
+				_session_array.release(iter._value);
 			}
 		}
 		if (-1 == _scheduler._active)
@@ -1369,29 +1384,14 @@ private:
 		return 1000;
 	}
 protected:
-	inline virtual void on_start(void) noexcept {}
-	inline virtual void on_stop(void) noexcept {}
-	inline virtual void on_monit(void) noexcept {}
+	inline virtual void on_start(void) noexcept = 0;
+	inline virtual void on_stop(void) noexcept = 0;
+	inline virtual void on_monit(void) noexcept = 0;
 public:
-	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept {
-		return true;
-	}
-	inline virtual void on_create_session(unsigned long long key) noexcept {
-		//session::message_pointer message_ = make_message();
-		//*message_ << 0x7fffffffffffffff;
-		//do_send_session(key, message_);
-	}
-	inline virtual bool on_receive_session(unsigned long long key, session::view_pointer& view_ptr) noexcept {
-		unsigned long long value;
-		*view_ptr >> value;
-		session::message_pointer message_ = create_message();
-		*message_ << value;
-		do_set_timeout_session(key, 40000);
-		do_send_session(key, message_);
-		return true;
-	}
-	inline virtual void on_destroy_session(unsigned long long key) noexcept {
-	}
+	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept = 0;
+	inline virtual void on_create_session(unsigned long long key) noexcept = 0;
+	inline virtual bool on_receive_session(unsigned long long key, session::view_pointer& view_ptr) noexcept = 0;
+	inline virtual void on_destroy_session(unsigned long long key) noexcept = 0;
 	inline void do_send_session(unsigned long long key, session::message_pointer& message_ptr) noexcept {
 		session& session_ = _session_array[key];
 		if (session_.acquire(key)) {
@@ -1497,7 +1497,7 @@ private:
 	system_component::input_output::completion_port _complation_port;
 	data_structure::vector<system_component::thread> _worker_thread;
 	scheduler _scheduler;
-	group_array _group_array;
+	scheduler::group_array _group_array;
 	session_array _session_array;
 	system_component::network::socket _listen_socket;
 	system_component::thread _accept_thread;
