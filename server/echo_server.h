@@ -27,16 +27,12 @@ public:
 
 	inline virtual void on_start(void) noexcept override {
 		do_create_group<my_group>();
-
 	}
 	inline virtual void on_worker_start(void) noexcept override {
-
 	}
 	inline virtual void on_stop(void) noexcept override {
-
 	}
 	inline virtual void on_monit(void) noexcept override {
-
 	}
 
 	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept override {
@@ -57,6 +53,7 @@ public:
 		return true;
 	}
 	inline virtual void on_destroy_session(unsigned long long key) noexcept override {
-
 	}
+	inline virtual void on_destory_group(unsigned long long key) noexcept override {
+	};
 };

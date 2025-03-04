@@ -583,7 +583,7 @@ private:
 					memory_pool.deallocate(*this);
 				}
 				type _type;
-				session* _session;
+				unsigned long long _session_key;
 				unsigned long long _group_key;
 			};
 			using job_pointer = data_structure::intrusive::shared_pointer<job, 0>;
@@ -651,18 +651,13 @@ private:
 			inline virtual void on_leave_session(unsigned long long key) noexcept = 0;
 			inline virtual int on_update(void) noexcept = 0;
 			inline void do_leave_session(unsigned long long key) noexcept {
-				//auto iter = _session_map.find(key);
-				//if (iter == _session_map.end())
-				//	__debugbreak();
-				//session& session_ = *iter->second;
-
-				//auto& memory_pool = data_structure::_thread_local::memory_pool<group::job>::instance();
-				//job_pointer job_ptr(&memory_pool.allocate());
-				//job_ptr->_type = group::job::type::leave_session;
-				//job_ptr->_session = &session_;
-				//_job_queue.push(job_ptr);
+				auto& memory_pool = data_structure::_thread_local::memory_pool<group::job>::instance();
+				job_pointer job_ptr(&memory_pool.allocate());
+				job_ptr->_type = group::job::type::leave_session;
+				job_ptr->_session_key = key;
+				_job_queue.push(job_ptr);
 			}
-			inline void do_move_session_to_group(unsigned long long session_key, unsigned long long group_key) noexcept {
+			inline void do_move_session(unsigned long long session_key, unsigned long long group_key) noexcept {
 				//auto iter = _session_map.find(session_key);
 				//if (_session_map.end() == iter)
 				//	return;
@@ -706,24 +701,49 @@ private:
 						scheduler::group::job_pointer job_ptr = _job_queue.pop();
 						switch (job_ptr->_type) {
 						case scheduler::group::job::type::enter_session: {
-							_session_map.emplace(job_ptr->_session->_key, job_ptr->_session);
-							on_enter_session(job_ptr->_session->_key);
+							auto& session_ = _server->_session_array[job_ptr->_session_key];
+							if (session_.acquire(job_ptr->_session_key)) {
+								_session_map.emplace(job_ptr->_session_key, &session_);
+								on_enter_session(job_ptr->_session_key);
+								break;
+							}
+							if (session_.release()) {
+								_server->on_destroy_session(session_._key);
+								_server->_session_array.release(session_);
+							}
 						} break;
 						case scheduler::group::job::type::leave_session: {
-							//auto iter = _session_map.find(job_ptr->_session->_key);
-							//if (iter == _session_map.end())
-							//	__debugbreak();
-							//session& session_ = *iter->second;
-							//on_leave_session(session_._key);
-							//_session_map.erase(iter);
-							//_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
-							//if (session_.release()) {
-							//	_server->on_destroy_session(session_._key);
-							//	_server->_session_array.release(&session_);
-							//}
+							auto iter = _session_map.find(job_ptr->_session_key);
+							if (iter == _session_map.end())
+								break;
+							session& session_ = *iter->second;
+							on_leave_session(session_._key);
+							iter = _session_map.erase(iter);
+							_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
+							if (session_.release()) {
+								_server->on_destroy_session(session_._key);
+								_server->_session_array.release(session_);
+							}
 						} break;
 						case scheduler::group::job::type::move_session: {
+							auto iter = _session_map.find(job_ptr->_session_key);
+							if (iter == _session_map.end())
+								break;
+							session& session_ = *iter->second;
 
+							auto& group_ = _server->_group_array[job_ptr->_group_key];
+							if (group_.acquire(job_ptr->_group_key)) {
+								iter = _session_map.erase(iter);
+								on_leave_session(session_._key);
+								group_.do_enter_session(job_ptr->_session_key);
+								if (session_.release()) {
+									_server->on_destroy_session(session_._key);
+									_server->_session_array.release(session_);
+								}
+							}
+							if (group_.release()) {
+								// temp
+							}
 						} break;
 						default:
 							__debugbreak();
@@ -766,12 +786,12 @@ private:
 				}
 				return false;
 			}
-			inline void insert_job_session_enter(session& session_) noexcept {
-				//auto& memory_pool = data_structure::_thread_local::memory_pool<job>::instance();
-				//job_pointer job_ptr(&memory_pool.allocate());
-				//job_ptr->_type = scheduler::group::job::type::enter_session;
-				//job_ptr->_session = &session_;
-				//_job_queue.push(job_ptr);
+			inline void do_enter_session(unsigned long long key) noexcept {
+				auto& memory_pool = data_structure::_thread_local::memory_pool<job>::instance();
+				job_pointer job_ptr(&memory_pool.allocate());
+				job_ptr->_type = scheduler::group::job::type::enter_session;
+				job_ptr->_session_key = key;
+				_job_queue.push(job_ptr);
 			}
 
 			template<typename type>
@@ -1240,10 +1260,8 @@ private:
 						}
 						if (session_.release_receive()) {
 							auto& group_ = _group_array[session_._group_key];
-							if (group_.acquire(session_._group_key)) {
-								session_.acquire();
-								group_.insert_job_session_enter(session_);
-							}
+							if (group_.acquire(session_._group_key))
+								group_.do_enter_session(session_._key);
 							else
 								_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
 							if (group_.release())
@@ -1457,35 +1475,26 @@ protected:
 		return 0;
 	}
 	inline void do_destroy_group(unsigned long long key) noexcept {
-		//auto group_ = _group_array[key];
-		//if (nullptr != group_) {
-		//	if (group_->acquire(key))
-		//		group_->cancel();
-		//	if (group_->release())
-		//		_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(group_));
-		//}
+		auto& group_ = _group_array[key];
+		if (group_.acquire(key))
+			group_.cancel();
+		if (group_.release())
+			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(&group_));
 	}
 	inline void do_enter_session_to_group(unsigned long long session_key, unsigned long long group_key) noexcept {
 		session& session_ = _session_array[session_key];
 		if (session_.acquire(session_key)) {
-			if (session_.acquire_receive()) {
-				if (session_.group()) {
+			if (session_.acquire_receive())
+				if (session_.group())
 					session_._group_key = group_key;
-				}
-			}
 			if (session_.release_receive()) {
 				auto& group_ = _group_array[session_._group_key];
-				bool success = false;
-				if (group_.acquire(session_._group_key)) {
-					group_.insert_job_session_enter(session_);
-					success = true;
-				}
+				if (group_.acquire(session_._group_key))
+					group_.do_enter_session(session_key);
 				else
 					_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
 				if (group_.release())
 					_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(&group_));
-				if (true == success)
-					return;
 			}
 		}
 		if (session_.release())
