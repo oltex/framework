@@ -18,6 +18,7 @@ namespace system_component::network {
 				switch (GetLastError()) {
 				default:
 					__debugbreak();
+#pragma warning(suppress: 4065)
 				}
 			}
 		}
@@ -46,6 +47,7 @@ namespace system_component::network {
 				switch (GetLastError()) {
 				default:
 					__debugbreak();
+#pragma warning(suppress: 4065)
 				}
 			}
 		}

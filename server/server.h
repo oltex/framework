@@ -412,7 +412,7 @@ private:
 				return false;
 			return true;
 		}
-	public:
+
 		unsigned long long _key;
 		system_component::network::socket _socket;
 		message_pointer _receive_message;
@@ -509,15 +509,14 @@ private:
 			while (_size != 0) {
 			}
 		}
-	private:
+
 		unsigned long long _head;
 		node* _array;
 		size_type _size;
 		size_type _capacity;
 	};
 	class scheduler final {
-	private:
-		friend class server;
+	public:
 		class task {
 		public:
 			enum class type : unsigned char {
@@ -531,7 +530,9 @@ private:
 			inline auto operator=(task const&) noexcept -> task & = delete;
 			inline auto operator=(task&&) noexcept -> task & = delete;
 			inline ~task(void) noexcept = default;
-		public:
+
+			inline virtual bool excute(void) noexcept = 0;
+
 			type _type;
 			unsigned long long _time;
 		};
@@ -547,9 +548,10 @@ private:
 			inline auto operator=(function&&) noexcept -> function & = delete;
 			inline ~function(void) noexcept = default;
 
-			inline bool excute(void) noexcept {
+			inline virtual bool excute(void) noexcept override {
 				for (;;) {
-					switch (_function()) {
+					_time = _function();
+					switch (_time) {
 					case 0:
 						break;
 					case -1:
@@ -597,7 +599,7 @@ private:
 				inline auto operator=(job_queue const&) noexcept -> job_queue&;
 				inline auto operator=(job_queue&&) noexcept -> job_queue&;
 				inline ~job_queue(void) noexcept = default;
-			public:
+
 				inline void push(job_pointer job_ptr) noexcept {
 					base::emplace(job_ptr.get());
 					job_ptr.reset();
@@ -700,7 +702,7 @@ private:
 			inline void cancel(void) noexcept {
 				_InterlockedExchange(&_cancel_flag, 1);
 			}
-			inline bool update(void) noexcept {
+			inline virtual bool excute(void) noexcept override {
 				//while (!_cancel_flag) {
 				//	while (!_job_queue.empty()) {
 				//		scheduler::group::job_pointer job_ptr = _job_queue.pop();
@@ -769,7 +771,6 @@ private:
 				//}
 				return false;
 			}
-
 			inline void insert_job_session_enter(session& session_) noexcept {
 				//auto& memory_pool = data_structure::_thread_local::memory_pool<job>::instance();
 				//job_pointer job_ptr(&memory_pool.allocate());
@@ -777,6 +778,7 @@ private:
 				//job_ptr->_session = &session_;
 				//_job_queue.push(job_ptr);
 			}
+
 			template<typename type>
 			inline static void destructor(void* rhs) noexcept {
 				auto& memory_pool = data_structure::_thread_local::memory_pool<type, 1024, false>::instance();
@@ -865,7 +867,7 @@ private:
 			inline auto operator[](unsigned long long const key) noexcept -> group& {
 				return *_array[key & 0xffff]._value;
 			}
-		private:
+
 			unsigned long long _head;
 			node* _array;
 			size_type _size;
@@ -926,7 +928,7 @@ private:
 			return source->_time <=> destination->_time;
 		}
 		using ready_queue = data_structure::priority_queue<task*, less>;
-	public:
+
 #pragma warning(suppress: 26495)
 		inline explicit scheduler(void) noexcept = default;
 		inline explicit scheduler(scheduler const&) noexcept = delete;
@@ -957,10 +959,14 @@ private:
 		task_queue _task_queue;
 		size_type _size;
 	};
-public:
+protected:
+	using message_pointer = session::message_pointer;
+	using view_pointer = session::view_pointer;
+	using group = scheduler::group;
+
 #pragma warning(suppress: 26495)
 	inline explicit server(void) noexcept {
-		utility::crash_dump();
+		//utility::crash_dump();
 		database::mysql::initialize();
 		system_component::network::window_socket_api::start_up();
 		//utility::logger::instance().create("server", L"server.log");
@@ -1150,6 +1156,7 @@ private:
 		}
 	}
 	inline void worker(void) noexcept {
+		on_worker_start();
 		for (;;) {
 			auto [result, transferred, key, overlapped] = _complation_port.get_queue_state(INFINITE);
 			switch (static_cast<post_queue_state>(key)) {
@@ -1168,26 +1175,23 @@ private:
 			} break;
 			case excute_task: {
 				scheduler::task& task = *reinterpret_cast<scheduler::task*>(overlapped);
+				if (task.excute()) {
+					_scheduler.push(task);
+					continue;
+				}
+				_InterlockedDecrement(&_scheduler._size);
 				switch (task._type) {
 				case scheduler::task::type::function: {
 					scheduler::function& function_ = *static_cast<scheduler::function*>(&task);
-					if (function_.excute()) {
-						//_scheduler.push(task);
-						continue;
-					}
-					_InterlockedDecrement(&_scheduler._size);
 					auto& memory_pool = data_structure::_thread_local::memory_pool<scheduler::function>::instance();
 					memory_pool.deallocate(function_);
 				} break;
 				case scheduler::task::type::group: {
-					//group& group_ = *static_cast<group*>(&task);
-					//if (group_.update())
-					//	continue;
-					//_InterlockedDecrement(&_scheduler._size);
-					//if (group_.release()) {
-					//	on_destory_group(group_._key);
-					//	_group_array.release(&group_);
-					//}
+					scheduler::group& group_ = *static_cast<scheduler::group*>(&task);
+					if (group_.release()) {
+						on_destory_group(group_._key);
+						_group_array.release(group_);
+					}
 				} break;
 				default:
 					__debugbreak();
@@ -1259,28 +1263,28 @@ private:
 		}
 	}
 	inline void schedule(void) {
-		//scheduler::ready_queue _ready_queue;
-		//unsigned long wait_time = INFINITE;
-		//while (0 == _scheduler._active || 0 != _scheduler._size) {
-		//	bool result = _scheduler.wait(wait_time);
-		//	if (result) {
-		//		while (!_scheduler._task_queue.empty())
-		//			_ready_queue.push(_scheduler._task_queue.pop());
-		//	}
-		//	wait_time = INFINITE;
-		//	unsigned long long time = GetTickCount64();
-		//	while (!_ready_queue.empty()) {
-		//		auto task_ = _ready_queue.top();
-		//		if (time >= task_->_time) {
-		//			_ready_queue.pop();
-		//			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(task_));
-		//		}
-		//		else {
-		//			wait_time = static_cast<unsigned long>(task_->_time - time);
-		//			break;
-		//		}
-		//	}
-		//}
+		scheduler::ready_queue _ready_queue;
+		unsigned long wait_time = INFINITE;
+		while (0 == _scheduler._active || 0 != _scheduler._size) {
+			bool result = _scheduler.wait(wait_time);
+			if (result) {
+				while (!_scheduler._task_queue.empty())
+					_ready_queue.push(&_scheduler._task_queue.pop());
+			}
+			wait_time = INFINITE;
+			unsigned long long time = GetTickCount64();
+			while (!_ready_queue.empty()) {
+				auto task_ = _ready_queue.top();
+				if (time >= task_->_time) {
+					_ready_queue.pop();
+					_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(task_));
+				}
+				else {
+					wait_time = static_cast<unsigned long>(task_->_time - time);
+					break;
+				}
+			}
+		}
 	}
 	inline int send(void) noexcept {
 		for (auto& iter : _session_array) {
@@ -1385,9 +1389,10 @@ private:
 	}
 protected:
 	inline virtual void on_start(void) noexcept = 0;
+	inline virtual void on_worker_start(void) noexcept = 0;
 	inline virtual void on_stop(void) noexcept = 0;
 	inline virtual void on_monit(void) noexcept = 0;
-public:
+
 	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept = 0;
 	inline virtual void on_create_session(unsigned long long key) noexcept = 0;
 	inline virtual bool on_receive_session(unsigned long long key, session::view_pointer& view_ptr) noexcept = 0;
@@ -1432,16 +1437,16 @@ public:
 	}
 	template<typename type, typename... argument>
 	inline auto do_create_group(argument&&... arg) noexcept -> unsigned long long {
-		//if (0 == _scheduler._active) {
-		//	_InterlockedIncrement(&_scheduler._size);
-		//	if (0 == _scheduler._active) {
-		//		group& group_ = *_group_array.acquire<type>(*this, std::forward<argument>(arg)...);
-		//		_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(static_cast<scheduler::task*>(&group_)));
-		//		return group_._key;
-		//	}
-		//	else
-		//		_InterlockedDecrement(&_scheduler._size);
-		//}
+		if (0 == _scheduler._active) {
+			_InterlockedIncrement(&_scheduler._size);
+			if (0 == _scheduler._active) {
+				group& group_ = *_group_array.acquire<type>(*this, std::forward<argument>(arg)...);
+				_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(static_cast<scheduler::task*>(&group_)));
+				return group_._key;
+			}
+			else
+				_InterlockedDecrement(&_scheduler._size);
+		}
 		return 0;
 	}
 	inline void do_destroy_group(unsigned long long key) noexcept {
