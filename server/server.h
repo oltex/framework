@@ -531,8 +531,6 @@ private:
 			inline auto operator=(task&&) noexcept -> task & = delete;
 			inline ~task(void) noexcept = default;
 
-			inline virtual bool excute(void) noexcept = 0;
-
 			type _type;
 			unsigned long long _time;
 		};
@@ -548,7 +546,7 @@ private:
 			inline auto operator=(function&&) noexcept -> function & = delete;
 			inline ~function(void) noexcept = default;
 
-			inline virtual bool excute(void) noexcept override {
+			inline bool excute(void) noexcept {
 				for (;;) {
 					_time = _function();
 					switch (_time) {
@@ -651,6 +649,7 @@ private:
 			inline virtual void on_enter_session(unsigned long long key) noexcept = 0;
 			inline virtual bool on_receive_session(unsigned long long key, session::view_pointer& view_ptr) noexcept = 0;
 			inline virtual void on_leave_session(unsigned long long key) noexcept = 0;
+			inline virtual int on_update(void) noexcept = 0;
 			inline void do_leave_session(unsigned long long key) noexcept {
 				//auto iter = _session_map.find(key);
 				//if (iter == _session_map.end())
@@ -686,7 +685,6 @@ private:
 				//	return;
 				//_server->do_set_timeout_session(key, duration);
 			}
-			inline virtual int on_update(void) noexcept = 0;
 		private:
 			inline auto acquire(unsigned long long key) noexcept -> bool {
 				auto io_count = _InterlockedIncrement(&_io_count);
@@ -702,73 +700,70 @@ private:
 			inline void cancel(void) noexcept {
 				_InterlockedExchange(&_cancel_flag, 1);
 			}
-			inline virtual bool excute(void) noexcept override {
-				//while (!_cancel_flag) {
-				//	while (!_job_queue.empty()) {
-				//		scheduler::group::job_pointer job_ptr = _job_queue.pop();
-				//		switch (job_ptr->_type) {
-				//		case scheduler::group::job::type::enter_session: {
-				//			_session_map.emplace(job_ptr->_session->_key, job_ptr->_session);
-				//			on_enter_session(job_ptr->_session->_key);
-				//		} break;
-				//		case scheduler::group::job::type::leave_session: {
-				//			auto iter = _session_map.find(job_ptr->_session->_key);
-				//			if (iter == _session_map.end())
-				//				__debugbreak();
-				//			session& session_ = *iter->second;
-				//			on_leave_session(session_._key);
-				//			_session_map.erase(iter);
-				//			_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
-				//			if (session_.release()) {
-				//				_server->on_destroy_session(session_._key);
-				//				_server->_session_array.release(&session_);
-				//			}
-				//		} break;
-				//		case scheduler::group::job::type::move_session: {
+			inline bool excute(void) noexcept {
+				while (!_cancel_flag) {
+					while (!_job_queue.empty()) {
+						scheduler::group::job_pointer job_ptr = _job_queue.pop();
+						switch (job_ptr->_type) {
+						case scheduler::group::job::type::enter_session: {
+							_session_map.emplace(job_ptr->_session->_key, job_ptr->_session);
+							on_enter_session(job_ptr->_session->_key);
+						} break;
+						case scheduler::group::job::type::leave_session: {
+							//auto iter = _session_map.find(job_ptr->_session->_key);
+							//if (iter == _session_map.end())
+							//	__debugbreak();
+							//session& session_ = *iter->second;
+							//on_leave_session(session_._key);
+							//_session_map.erase(iter);
+							//_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
+							//if (session_.release()) {
+							//	_server->on_destroy_session(session_._key);
+							//	_server->_session_array.release(&session_);
+							//}
+						} break;
+						case scheduler::group::job::type::move_session: {
 
-				//		} break;
-				//		default:
-				//			__debugbreak();
-				//		}
-				//	}
+						} break;
+						default:
+							__debugbreak();
+						}
+					}
 
-				//	for (auto iter = _session_map.begin(); iter != _session_map.end();) {
-				//		session& session_ = *iter->second;
-				//		if (!session_._cancel_flag) {
-				//			while (!session_._receive_queue.empty()) {
-				//				auto view_ptr = session_._receive_queue.pop();
-				//				if (false == on_receive_session(session_._key, view_ptr)) {
-				//					session_.cancel();
-				//					break;
-				//				}
-				//			}
-				//		}
-				//		if (session_._cancel_flag) {
-				//			on_leave_session(session_._key);
-				//			iter = _session_map.erase(iter);
-				//			if (session_.release()) {
-				//				_server->on_destroy_session(session_._key);
-				//				_server->_session_array.release(&session_);
-				//			}
-				//		}
-				//		else
-				//			++iter;
-				//	}
+					for (auto iter = _session_map.begin(); iter != _session_map.end();) {
+						session& session_ = *iter->second;
+						if (!session_._cancel_flag) {
+							while (!session_._receive_queue.empty()) {
+								auto view_ptr = session_._receive_queue.pop();
+								if (false == on_receive_session(session_._key, view_ptr)) {
+									session_.cancel();
+									break;
+								}
+							}
+						}
+						if (session_._cancel_flag) {
+							on_leave_session(session_._key);
+							iter = _session_map.erase(iter);
+							if (session_.release()) {
+								_server->on_destroy_session(session_._key);
+								_server->_session_array.release(session_);
+							}
+						}
+						else
+							++iter;
+					}
 
-				//	int time = on_update();
-
-				//	_time = time + GetTickCount64();
-				//	_server->_scheduler._task_queue.push(*static_cast<task*>(this));
-				//	_server->_scheduler._wait_on_address.wake_single(&_server->_scheduler._task_queue._size);
-				//	//switch () {
-				//	//case 0:
-				//	//case -1:
-				//	//	result = false;
-				//	//default:
-
-				//	//	break;
-				//	//}
-				//}
+					_time = on_update();
+					switch (_time) {
+					case 0:
+						break;
+					case -1:
+						return false;
+					default:
+						_time = _time + GetTickCount64();
+						return true;
+					}
+				}
 				return false;
 			}
 			inline void insert_job_session_enter(session& session_) noexcept {
@@ -1175,19 +1170,24 @@ private:
 			} break;
 			case excute_task: {
 				scheduler::task& task = *reinterpret_cast<scheduler::task*>(overlapped);
-				if (task.excute()) {
-					_scheduler.push(task);
-					continue;
-				}
-				_InterlockedDecrement(&_scheduler._size);
 				switch (task._type) {
 				case scheduler::task::type::function: {
 					scheduler::function& function_ = *static_cast<scheduler::function*>(&task);
+					if (function_.excute()) {
+						_scheduler.push(task);
+						continue;
+					}
+					_InterlockedDecrement(&_scheduler._size);
 					auto& memory_pool = data_structure::_thread_local::memory_pool<scheduler::function>::instance();
 					memory_pool.deallocate(function_);
 				} break;
 				case scheduler::task::type::group: {
 					scheduler::group& group_ = *static_cast<scheduler::group*>(&task);
+					if (group_.excute()) {
+						_scheduler.push(task);
+						continue;
+					}
+					_InterlockedDecrement(&_scheduler._size);
 					if (group_.release()) {
 						on_destory_group(group_._key);
 						_group_array.release(group_);

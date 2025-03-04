@@ -3,6 +3,20 @@
 
 class echo_server final : public server {
 public:
+	class my_group : public server::group {
+		inline virtual void on_enter_session(unsigned long long key) noexcept override {
+		};
+		inline virtual bool on_receive_session(unsigned long long key, view_pointer& view_ptr) noexcept override {
+			return true;
+		};
+		inline virtual void on_leave_session(unsigned long long key) noexcept override {
+		};
+		inline virtual int on_update(void) noexcept override {
+			printf("my_group");
+			return 20;
+		};
+	};
+public:
 	inline explicit echo_server(void) noexcept {
 	};
 	inline explicit echo_server(echo_server const&) noexcept = delete;
@@ -12,6 +26,7 @@ public:
 	inline ~echo_server(void) noexcept = default;
 
 	inline virtual void on_start(void) noexcept override {
+		do_create_group<my_group>();
 
 	}
 	inline virtual void on_worker_start(void) noexcept override {
