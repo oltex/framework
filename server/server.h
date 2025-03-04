@@ -389,13 +389,13 @@ public:
 			_InterlockedExchange(&_send_flag, 0);
 		}
 
-		inline auto receive_acquire(void) noexcept -> bool {
+		inline auto acquire_receive(void) noexcept -> bool {
 			auto receive_count = _InterlockedIncrement(&_receive_count);
 			if (0xC0000000 & receive_count)
 				return false;
 			return true;
 		}
-		inline bool receive_release(void) noexcept {
+		inline bool release_receive(void) noexcept {
 			if (0x40000000 == _InterlockedDecrement(&_receive_count) && 0x40000000 == _InterlockedCompareExchange(&_receive_count, 0xC0000000, 0x40000000))
 				return true;
 			return false;
@@ -413,11 +413,11 @@ public:
 		send_queue _send_queue;
 		system_component::input_output::overlapped _recv_overlapped;
 		system_component::input_output::overlapped _send_overlapped;
-		unsigned int _io_count; // release_flag
-		unsigned int _receive_count; // release_flag, group_flag
-		unsigned int _send_flag;
-		unsigned int _send_size;
-		unsigned int _cancel_flag;
+		unsigned long _io_count; // release_flag
+		unsigned long _cancel_flag;
+		unsigned long _receive_count; // group_flag, cancel_flag
+		unsigned long _send_flag;
+		unsigned long _send_size;
 		unsigned long long _timeout_currnet;
 		unsigned long long _timeout_duration;
 		unsigned long long _group_key;
@@ -1179,32 +1179,25 @@ private:
 							_InterlockedIncrement(&_receive_tps);
 						}
 
-						bool loop = true;
-						while (loop && !session_._receive_queue.empty()) {
-							if (session_.receive_acquire()) {
-								if (!session_._receive_queue.empty()) {
-									auto view_ptr = session_._receive_queue.pop();
-									if (false == on_receive_session(session_._key, view_ptr)) {
-										session_.cancel();
-										loop = false;
-									}
+						if (session_.acquire_receive()) {
+							while (0 == (session_._receive_count & 0x40000000) && !session_._receive_queue.empty()) {
+								auto view_ptr = session_._receive_queue.pop();
+								if (false == on_receive_session(session_._key, view_ptr)) {
+									session_.cancel();
+									break;
 								}
 							}
-							else
-								loop = false;
-							if (session_.receive_release()) {
-								auto group_ = _group_array[session_._group_key];
-								if (group_->acquire(session_._group_key)) {
-									session_.acquire();
-									group_->insert_job_session_enter(session_);
-								}
-								else {
-									loop = false;
-									_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
-								}
-								if (group_->release())
-									_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(group_));
+						}
+						if (session_.release_receive()) {
+							auto group_ = _group_array[session_._group_key];
+							if (group_->acquire(session_._group_key)) {
+								session_.acquire();
+								group_->insert_job_session_enter(session_);
 							}
+							else 
+								_InterlockedAnd((long*)&session_._receive_count, 0x3FFFFFFF);
+							if (group_->release())
+								_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(group_));
 						}
 
 						if (session_.ready_receive() && session_.receive())
@@ -1439,12 +1432,12 @@ public:
 	inline void do_enter_session_to_group(unsigned long long session_key, unsigned long long group_key) noexcept {
 		session& session_ = _session_array[session_key];
 		if (session_.acquire(session_key)) {
-			if (session_.receive_acquire()) {
+			if (session_.acquire_receive()) {
 				if (session_.group()) {
 					session_._group_key = group_key;
 				}
 			}
-			if (session_.receive_release()) {
+			if (session_.release_receive()) {
 				auto group_ = _group_array[session_._group_key];
 				bool success = false;
 				if (group_->acquire(session_._group_key)) {
