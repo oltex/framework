@@ -563,7 +563,7 @@ private:
 		private:
 			std::function<int(void)> _function;
 		};
-		class group : public scheduler::task {
+		class group : public task {
 		private:
 			friend class server;
 			struct job final : public data_structure::intrusive::shared_pointer_hook<0> {
@@ -658,9 +658,12 @@ private:
 				_job_queue.push(job_ptr);
 			}
 			inline void do_move_session(unsigned long long session_key, unsigned long long group_key) noexcept {
-				//auto iter = _session_map.find(session_key);
-				//if (_session_map.end() == iter)
-				//	return;
+				auto& memory_pool = data_structure::_thread_local::memory_pool<group::job>::instance();
+				job_pointer job_ptr(&memory_pool.allocate());
+				job_ptr->_type = group::job::type::move_session;
+				job_ptr->_session_key = session_key;
+				job_ptr->_group_key = group_key;
+				_job_queue.push(job_ptr);
 			}
 			inline void do_send_session(unsigned long long key, session::message_pointer& message_ptr) noexcept {
 				//auto iter = _session_map.find(key);
@@ -1013,7 +1016,6 @@ protected:
 				utility::logger::instance().set_level(utility::logger::level::fatal);
 			return 0;
 			});
-
 		command_.add("iocp_concurrent", [&](command::parameter* param) noexcept -> int {
 			_concurrent_thread_count = param->get_int(1);
 			return 0;
@@ -1245,7 +1247,6 @@ private:
 							session::view_pointer view_ptr(&memory_pool.allocate(session_._receive_message, session_._receive_message->front(), session_._receive_message->front() + header_._size));
 							session_._receive_message->pop(header_._size);
 							session_._receive_queue.push(view_ptr);
-
 							_InterlockedIncrement(&_receive_tps);
 						}
 
@@ -1301,14 +1302,12 @@ private:
 			unsigned long long time = GetTickCount64();
 			while (!_ready_queue.empty()) {
 				auto task_ = _ready_queue.top();
-				if (time >= task_->_time) {
-					_ready_queue.pop();
-					_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(task_));
-				}
-				else {
+				if (time < task_->_time) {
 					wait_time = static_cast<unsigned long>(task_->_time - time);
 					break;
 				}
+				_ready_queue.pop();
+				_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(task_));
 			}
 		}
 	}
