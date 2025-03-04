@@ -12,7 +12,7 @@
 #include "library/data-strucutre/lockfree/queue.h"
 #include "library/data-strucutre/priority_queue.h"
 
-//#include "library/database/mysql.h"
+#include "library/database/mysql.h"
 //#include "library/database/redis.h"
 
 #include "library/utility/command.h"
