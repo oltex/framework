@@ -155,6 +155,7 @@
     <ClInclude Include="library\data-strucutre\intrusive\list.h">
       <Filter>library\data-strucutre\intrusive</Filter>
     </ClInclude>
+    <ClInclude Include="echo_server.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="library">
