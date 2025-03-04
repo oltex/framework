@@ -1440,9 +1440,8 @@ protected:
 		return message_;
 	}
 
-	inline virtual void on_destory_group(unsigned long long key) noexcept {
-
-	}
+	//inline virtual void on_create_group(unsigned long long key) noexcept = 0;
+	inline virtual void on_destory_group(unsigned long long key) noexcept = 0;
 	template<typename type, typename... argument>
 	inline auto do_create_group(argument&&... arg) noexcept -> unsigned long long {
 		if (0 == _scheduler._active) {
