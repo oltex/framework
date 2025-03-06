@@ -46,6 +46,7 @@ namespace system_component {
 			_socket = ::socket(address_family, type, protocol);
 			if (INVALID_SOCKET == _socket) {
 				switch (GetLastError()) {
+				case WSANOTINITIALISED:
 				default:
 					__debugbreak();
 #pragma warning(suppress: 4065)

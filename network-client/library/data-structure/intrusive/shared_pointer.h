@@ -21,7 +21,7 @@ namespace data_structure::intrusive {
 		inline explicit shared_pointer_hook(shared_pointer_hook&& rhs) noexcept = default;
 		inline auto operator=(shared_pointer_hook const& rhs) noexcept -> shared_pointer_hook & = default;
 		inline auto operator=(shared_pointer_hook&& rhs) noexcept -> shared_pointer_hook & = default;
-		inline ~shared_pointer_hook(void) noexcept = delete;
+		inline ~shared_pointer_hook(void) noexcept = default;
 	public:
 		inline auto add_reference(void) noexcept -> size_type {
 			return _InterlockedIncrement(&_reference._use);

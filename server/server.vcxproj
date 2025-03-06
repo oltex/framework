@@ -190,9 +190,7 @@
     <ClInclude Include="library\system-component\file.h" />
     <ClInclude Include="library\system-component\handle.h" />
     <ClInclude Include="library\system-component\input-output\completion_port.h" />
-    <ClInclude Include="library\system-component\multi\lock\critical_section.h" />
-    <ClInclude Include="library\system-component\multi\wait_on_address.h" />
-    <ClInclude Include="library\system-component\network\window_socket_api.h" />
+    <ClInclude Include="library\system-component\lock\critical_section.h" />
     <ClInclude Include="library\system-component\overlapped.h" />
     <ClInclude Include="library\system-component\socket.h" />
     <ClInclude Include="library\system-component\socket_address.h" />
@@ -200,6 +198,7 @@
     <ClInclude Include="library\system-component\time\date.h" />
     <ClInclude Include="library\system-component\time\multimedia.h" />
     <ClInclude Include="library\system-component\time\unix.h" />
+    <ClInclude Include="library\system-component\wait_on_address.h" />
     <ClInclude Include="library\utility\command.h" />
     <ClInclude Include="library\utility\crash_dump.h" />
     <ClInclude Include="library\utility\logger.h" />

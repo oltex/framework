@@ -1,9 +1,8 @@
 #pragma once
-#include "library/system-component/network/window_socket_api.h"
 #include "library/system-component/input-output/completion_port.h"
 #include "library/system-component/thread.h"
 #include "library/system-component/socket.h"
-#include "library/system-component/multi/wait_on_address.h"
+#include "library/system-component/wait_on_address.h"
 
 #include "library/data-structure/serialize_buffer.h"
 #include "library/data-structure/thread-local/memory_pool.h"
@@ -906,7 +905,7 @@ private:
 			inline void push(task& task_) noexcept {
 				base::emplace(&task_);
 				_InterlockedIncrement(&_size);
-				_wait_on_address.wake_single(&_size);
+				system_component::wait_on_address::wake_single(&_size);
 			}
 			inline auto pop(void) noexcept -> task& {
 				unsigned long long head = _head;
@@ -934,14 +933,13 @@ private:
 				return false;
 			}
 			inline void wake(void) noexcept {
-				_wait_on_address.wake_single(&_size);
+				system_component::wait_on_address::wake_single(&_size);
 			}
 			inline bool wait(void* compare, unsigned long wait_time) noexcept {
-				return _wait_on_address.wait(&_size, compare, sizeof(size_type), wait_time);
+				return system_component::wait_on_address::wait(&_size, compare, sizeof(size_type), wait_time);
 			}
 		private:
 			size_type _size = 0;
-			system_component::multi::wait_on_address _wait_on_address;
 		};
 		inline static auto less(task* const& source, task* const& destination) noexcept -> std::strong_ordering {
 			return source->_time <=> destination->_time;
@@ -987,7 +985,7 @@ protected:
 	inline explicit server(void) noexcept {
 		utility::crash_dump();
 		database::mysql::initialize();
-		system_component::network::window_socket_api::start_up();
+		system_component::wsa_start_up();
 		//utility::logger::instance().create("server", L"server.log");
 
 		auto& command_ = command::instance();
@@ -1083,7 +1081,7 @@ protected:
 	inline auto operator=(server const&) noexcept -> server & = delete;
 	inline auto operator=(server&&) noexcept -> server & = delete;
 	inline ~server(void) noexcept {
-		system_component::network::window_socket_api::clean_up();
+		system_component::wsa_clean_up();
 		database::mysql::end();
 	};
 

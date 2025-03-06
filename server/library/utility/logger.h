@@ -1,6 +1,6 @@
 #pragma once
 #include "../design-pattern/singleton.h"
-#include "../system-component/multi/lock/critical_section.h"
+#include "../system-component/lock/critical_section.h"
 #include "../system-component/file.h"
 #include "../system-component/time/unix.h"
 #include "../system-component/time/date.h"
@@ -30,7 +30,7 @@ namespace utility {
 			inline ~logged(void) noexcept = default;
 		public:
 			system_component::file _file;
-			system_component::multi::lock::critical_section _lock;
+			system_component::lock::critical_section _lock;
 		};
 	private:
 		inline explicit logger(void) noexcept = default;

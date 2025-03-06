@@ -14,7 +14,6 @@ public:
 		inline virtual void on_leave_session(unsigned long long key) noexcept override {
 		};
 		inline virtual int on_update(void) noexcept override {
-			printf("my_group");
 			return 20;
 		};
 	};
@@ -28,7 +27,7 @@ public:
 	inline ~echo_server(void) noexcept = default;
 
 	inline virtual void on_start(void) noexcept override {
-		do_create_group<my_group>();
+		//do_create_group<my_group>();
 	}
 	inline virtual void on_worker_start(void) noexcept override {
 	}

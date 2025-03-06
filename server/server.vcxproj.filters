@@ -8,9 +8,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="server.h" />
-    <ClInclude Include="library\system-component\network\window_socket_api.h">
-      <Filter>library\system-component\network</Filter>
-    </ClInclude>
     <ClInclude Include="library\design-pattern\thread-local\singleton.h">
       <Filter>library\design-pattern\thread-local</Filter>
     </ClInclude>
@@ -32,14 +29,8 @@
     <ClInclude Include="library\utility\command.h">
       <Filter>library\utility</Filter>
     </ClInclude>
-    <ClInclude Include="library\system-component\multi\wait_on_address.h">
-      <Filter>library\system-component\multi</Filter>
-    </ClInclude>
     <ClInclude Include="library\utility\logger.h">
       <Filter>library\utility</Filter>
-    </ClInclude>
-    <ClInclude Include="library\system-component\multi\lock\critical_section.h">
-      <Filter>library\system-component\multi\lock</Filter>
     </ClInclude>
     <ClInclude Include="library\system-component\time\date.h">
       <Filter>library\system-component\time</Filter>
@@ -156,6 +147,12 @@
     <ClInclude Include="library\data-structure\vector.h">
       <Filter>library\data-structure</Filter>
     </ClInclude>
+    <ClInclude Include="library\system-component\wait_on_address.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\lock\critical_section.h">
+      <Filter>library\system-component\lock</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="library">
@@ -163,12 +160,6 @@
     </Filter>
     <Filter Include="library\system-component">
       <UniqueIdentifier>{bf0e1dbf-00e5-4cc9-b669-0482046b407a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="library\system-component\network">
-      <UniqueIdentifier>{a14d8ebf-c2f4-4dd6-839f-befead5a08b7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="library\system-component\multi">
-      <UniqueIdentifier>{9d212570-778d-419a-8c92-e4f754f80371}</UniqueIdentifier>
     </Filter>
     <Filter Include="library\system-component\input_output">
       <UniqueIdentifier>{602c4aea-b12f-489c-a7ce-475b7f8a17cf}</UniqueIdentifier>
@@ -181,9 +172,6 @@
     </Filter>
     <Filter Include="library\utility">
       <UniqueIdentifier>{5af8e7e7-d5ae-4ed0-8ca7-52e16751cae6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="library\system-component\multi\lock">
-      <UniqueIdentifier>{305beaca-5201-46f7-9195-2ef979d7cdc0}</UniqueIdentifier>
     </Filter>
     <Filter Include="library\system-component\time">
       <UniqueIdentifier>{cf8c7b21-5ce0-4459-8e26-7ac95ff5384a}</UniqueIdentifier>
@@ -223,6 +211,9 @@
     </Filter>
     <Filter Include="library\data-structure\intrusive">
       <UniqueIdentifier>{e9ac73de-010a-4402-a086-5dfa08238bae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\system-component\lock">
+      <UniqueIdentifier>{24e3b71e-6555-4515-85bc-f28258cfc254}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
