@@ -70,9 +70,6 @@ private:
 			inline explicit view(void) noexcept
 				: _front(0), _rear(0), _fail(false) {
 			}
-			inline explicit view(message_pointer message_) noexcept
-				: _message(message_), _front(0), _rear(0), _fail(false) {
-			}
 			inline explicit view(message_pointer message_, size_type front, size_type rear) noexcept
 				: _message(message_), _front(front), _rear(rear), _fail(false) {
 			}
