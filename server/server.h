@@ -519,6 +519,7 @@ private:
 			enum class type : unsigned char {
 				function, group
 			};
+#pragma warning(suppress: 26495)
 			inline explicit task(type const type_) noexcept
 				: _type(type_) {
 			};
@@ -627,6 +628,7 @@ private:
 			};
 			inline static unsigned long long _static_id = 0x10000;
 		public:
+#pragma warning(suppress: 26495)
 			inline explicit group(void) noexcept
 				: task(type::group) {
 				_key = _interlockedadd64((volatile long long*)&_static_id, 0x10000);
@@ -643,6 +645,7 @@ private:
 					_job_queue.pop();
 			};
 
+			inline virtual void on_monit(void) noexcept = 0;
 			inline virtual void on_enter_session(unsigned long long key) noexcept = 0;
 			inline virtual bool on_receive_session(unsigned long long key, session::view_pointer& view_ptr) noexcept = 0;
 			inline virtual void on_leave_session(unsigned long long key) noexcept = 0;
@@ -666,19 +669,19 @@ private:
 				//auto iter = _session_map.find(key);
 				//if (_session_map.end() == iter)
 				//	return;
-				//_server->do_send_session(key, message_ptr);
+				_server->do_send_session(key, message_ptr);
 			}
 			inline void do_destroy_session(unsigned long long key) noexcept {
 				//auto iter = _session_map.find(key);
 				//if (_session_map.end() == iter)
 				//	return;
-				//_server->do_destroy_session(key);
+				_server->do_destroy_session(key);
 			}
 			inline void do_set_timeout_session(unsigned long long key, unsigned long long duration) noexcept {
 				//auto iter = _session_map.find(key);
 				//if (_session_map.end() == iter)
 				//	return;
-				//_server->do_set_timeout_session(key, duration);
+				_server->do_set_timeout_session(key, duration);
 			}
 		private:
 			inline auto acquire(unsigned long long key) noexcept -> bool {
@@ -750,7 +753,8 @@ private:
 						}
 					}
 
-					for (auto iter = _session_map.begin(); iter != _session_map.end();) {
+					auto end = _session_map.end();
+					for (auto iter = _session_map.begin(); iter != end;) {
 						session& session_ = *iter->second;
 						if (!session_._cancel_flag) {
 							while (!session_._receive_queue.empty()) {
@@ -981,7 +985,7 @@ protected:
 
 #pragma warning(suppress: 26495)
 	inline explicit server(void) noexcept {
-		//utility::crash_dump();
+		utility::crash_dump();
 		database::mysql::initialize();
 		system_component::network::window_socket_api::start_up();
 		//utility::logger::instance().create("server", L"server.log");
@@ -1080,7 +1084,7 @@ protected:
 	inline auto operator=(server&&) noexcept -> server & = delete;
 	inline ~server(void) noexcept {
 		system_component::network::window_socket_api::clean_up();
-		//database::mysql::end();
+		database::mysql::end();
 	};
 
 	inline void start(void) noexcept {
