@@ -4,6 +4,34 @@
 class echo_server final : public server {
 public:
 	class my_group : public server::group {
+	public:
+		inline my_group(void) noexcept {
+			int a = 10;
+		};
+		inline ~my_group(void) noexcept {
+			int a = 10;
+		};
+		inline virtual void on_monit(void) noexcept override {
+		}
+		inline virtual void on_enter_session(unsigned long long key) noexcept override {
+		};
+		inline virtual bool on_receive_session(unsigned long long key, view_pointer& view_ptr) noexcept override {
+			return true;
+		};
+		inline virtual void on_leave_session(unsigned long long key) noexcept override {
+		};
+		inline virtual int on_update(void) noexcept override {
+			return 20;
+		};
+	};
+	class my_group2 : public server::group {
+	public:
+		inline my_group2(void) noexcept {
+			int a = 10;
+		};
+		inline ~my_group2(void) noexcept {
+			int a = 10;
+		};
 		inline virtual void on_monit(void) noexcept override {
 		}
 		inline virtual void on_enter_session(unsigned long long key) noexcept override {
@@ -27,11 +55,12 @@ public:
 	inline ~echo_server(void) noexcept = default;
 
 	inline virtual void on_start(void) noexcept override {
-		//do_create_group<my_group>();
+		_group_key = do_create_group<my_group>();
 	}
 	inline virtual void on_worker_start(void) noexcept override {
 	}
 	inline virtual void on_stop(void) noexcept override {
+		do_destroy_group(_group_key);
 	}
 	inline virtual void on_monit(void) noexcept override {
 	}
@@ -57,4 +86,6 @@ public:
 	}
 	inline virtual void on_destory_group(unsigned long long key) noexcept override {
 	};
+
+	unsigned long long _group_key;
 };

@@ -528,6 +528,8 @@ private:
 			inline auto operator=(task&&) noexcept -> task & = delete;
 			inline ~task(void) noexcept = default;
 
+			inline virtual bool excute(void) noexcept = 0;
+
 			type _type;
 			unsigned long long _time;
 		};
@@ -543,7 +545,7 @@ private:
 			inline auto operator=(function&&) noexcept -> function & = delete;
 			inline ~function(void) noexcept = default;
 
-			inline bool excute(void) noexcept {
+			inline virtual bool excute(void) noexcept override {
 				for (;;) {
 					_time = _function();
 					switch (_time) {
@@ -643,61 +645,8 @@ private:
 				while (!_job_queue.empty())
 					_job_queue.pop();
 			};
-
-			inline virtual void on_monit(void) noexcept = 0;
-			inline virtual void on_enter_session(unsigned long long key) noexcept = 0;
-			inline virtual bool on_receive_session(unsigned long long key, session::view_pointer& view_ptr) noexcept = 0;
-			inline virtual void on_leave_session(unsigned long long key) noexcept = 0;
-			inline virtual int on_update(void) noexcept = 0;
-			inline void do_leave_session(unsigned long long key) noexcept {
-				auto& memory_pool = data_structure::_thread_local::memory_pool<group::job>::instance();
-				job_pointer job_ptr(&memory_pool.allocate());
-				job_ptr->_type = group::job::type::leave_session;
-				job_ptr->_session_key = key;
-				_job_queue.push(job_ptr);
-			}
-			inline void do_move_session(unsigned long long session_key, unsigned long long group_key) noexcept {
-				auto& memory_pool = data_structure::_thread_local::memory_pool<group::job>::instance();
-				job_pointer job_ptr(&memory_pool.allocate());
-				job_ptr->_type = group::job::type::move_session;
-				job_ptr->_session_key = session_key;
-				job_ptr->_group_key = group_key;
-				_job_queue.push(job_ptr);
-			}
-			inline void do_send_session(unsigned long long key, session::message_pointer& message_ptr) noexcept {
-				//auto iter = _session_map.find(key);
-				//if (_session_map.end() == iter)
-				//	return;
-				_server->do_send_session(key, message_ptr);
-			}
-			inline void do_destroy_session(unsigned long long key) noexcept {
-				//auto iter = _session_map.find(key);
-				//if (_session_map.end() == iter)
-				//	return;
-				_server->do_destroy_session(key);
-			}
-			inline void do_set_timeout_session(unsigned long long key, unsigned long long duration) noexcept {
-				//auto iter = _session_map.find(key);
-				//if (_session_map.end() == iter)
-				//	return;
-				_server->do_set_timeout_session(key, duration);
-			}
 		private:
-			inline auto acquire(unsigned long long key) noexcept -> bool {
-				auto io_count = _InterlockedIncrement(&_io_count);
-				if ((0x80000000 & io_count) || _key != key)
-					return false;
-				return true;
-			}
-			inline bool release(void) noexcept {
-				if (0 == _InterlockedDecrement(&_io_count) && 0 == _InterlockedCompareExchange(&_io_count, 0x80000000, 0))
-					return true;
-				return false;
-			}
-			inline void cancel(void) noexcept {
-				_InterlockedExchange(&_cancel_flag, 1);
-			}
-			inline bool excute(void) noexcept {
+			inline virtual bool excute(void) noexcept override {
 				while (!_cancel_flag) {
 					while (!_job_queue.empty()) {
 						scheduler::group::job_pointer job_ptr = _job_queue.pop();
@@ -789,6 +738,20 @@ private:
 				}
 				return false;
 			}
+			inline auto acquire(unsigned long long key) noexcept -> bool {
+				auto io_count = _InterlockedIncrement(&_io_count);
+				if ((0x80000000 & io_count) || _key != key)
+					return false;
+				return true;
+			}
+			inline bool release(void) noexcept {
+				if (0 == _InterlockedDecrement(&_io_count) && 0 == _InterlockedCompareExchange(&_io_count, 0x80000000, 0))
+					return true;
+				return false;
+			}
+			inline void cancel(void) noexcept {
+				_InterlockedExchange(&_cancel_flag, 1);
+			}
 			inline void do_enter_session(unsigned long long key) noexcept {
 				auto& memory_pool = data_structure::_thread_local::memory_pool<job>::instance();
 				job_pointer job_ptr(&memory_pool.allocate());
@@ -796,13 +759,51 @@ private:
 				job_ptr->_session_key = key;
 				_job_queue.push(job_ptr);
 			}
-
 			template<typename type>
 			inline static void destructor(void* rhs) noexcept {
-				auto& memory_pool = data_structure::_thread_local::memory_pool<type, 1024, false>::instance();
+				auto& memory_pool = data_structure::_thread_local::memory_pool<type, 128, false>::instance();
 				memory_pool.deallocate(*reinterpret_cast<type*>(rhs));
 			}
-
+		protected:
+			inline virtual void on_monit(void) noexcept = 0;
+			inline virtual void on_enter_session(unsigned long long key) noexcept = 0;
+			inline virtual bool on_receive_session(unsigned long long key, session::view_pointer& view_ptr) noexcept = 0;
+			inline virtual void on_leave_session(unsigned long long key) noexcept = 0;
+			inline virtual int on_update(void) noexcept = 0;
+			inline void do_leave_session(unsigned long long key) noexcept {
+				auto& memory_pool = data_structure::_thread_local::memory_pool<group::job>::instance();
+				job_pointer job_ptr(&memory_pool.allocate());
+				job_ptr->_type = group::job::type::leave_session;
+				job_ptr->_session_key = key;
+				_job_queue.push(job_ptr);
+			}
+			inline void do_move_session(unsigned long long session_key, unsigned long long group_key) noexcept {
+				auto& memory_pool = data_structure::_thread_local::memory_pool<group::job>::instance();
+				job_pointer job_ptr(&memory_pool.allocate());
+				job_ptr->_type = group::job::type::move_session;
+				job_ptr->_session_key = session_key;
+				job_ptr->_group_key = group_key;
+				_job_queue.push(job_ptr);
+			}
+			inline void do_send_session(unsigned long long key, session::message_pointer& message_ptr) noexcept {
+				//auto iter = _session_map.find(key);
+				//if (_session_map.end() == iter)
+				//	return;
+				_server->do_send_session(key, message_ptr);
+			}
+			inline void do_destroy_session(unsigned long long key) noexcept {
+				//auto iter = _session_map.find(key);
+				//if (_session_map.end() == iter)
+				//	return;
+				_server->do_destroy_session(key);
+			}
+			inline void do_set_timeout_session(unsigned long long key, unsigned long long duration) noexcept {
+				//auto iter = _session_map.find(key);
+				//if (_session_map.end() == iter)
+				//	return;
+				_server->do_set_timeout_session(key, duration);
+			}
+		private:
 			unsigned long long _key;
 			volatile unsigned int _io_count; // release_flag
 			volatile unsigned int _cancel_flag;
@@ -860,7 +861,7 @@ private:
 					if (head == _InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_head), next, head)) {
 						_InterlockedIncrement(&_size);
 
-						auto& memory_pool = data_structure::_thread_local::memory_pool<type, 1024, false>::instance();
+						auto& memory_pool = data_structure::_thread_local::memory_pool<type, 128, false>::instance();
 						group* group_ = &memory_pool.allocate(std::forward<argument>(arg)...);
 						group_->_key |= current->_index;
 						group_->_server = &server_;
@@ -871,6 +872,7 @@ private:
 				}
 			}
 			inline void release(group& value) noexcept {
+				value._destructor(&value);
 				node* current = _array + (value._key & 0xffff);
 				for (;;) {
 					unsigned long long head = _head;
@@ -880,7 +882,6 @@ private:
 						break;
 				}
 				_InterlockedDecrement(&_size);
-				value._destructor(&value);
 			}
 			inline auto operator[](unsigned long long const key) noexcept -> group& {
 				return *_array[key & 0xffff]._value;
@@ -1199,23 +1200,19 @@ private:
 			} break;
 			case excute_task: {
 				scheduler::task& task = *reinterpret_cast<scheduler::task*>(overlapped);
+				if (task.excute()) {
+					_scheduler.push(task);
+					continue;
+				}
 				switch (task._type) {
 				case scheduler::task::type::function: {
 					scheduler::function& function_ = *static_cast<scheduler::function*>(&task);
-					if (function_.excute()) {
-						_scheduler.push(task);
-						continue;
-					}
 					_InterlockedDecrement(&_scheduler._size);
 					auto& memory_pool = data_structure::_thread_local::memory_pool<scheduler::function>::instance();
 					memory_pool.deallocate(function_);
 				} break;
 				case scheduler::task::type::group: {
 					scheduler::group& group_ = *static_cast<scheduler::group*>(&task);
-					if (group_.excute()) {
-						_scheduler.push(task);
-						continue;
-					}
 					_InterlockedDecrement(&_scheduler._size);
 					if (group_.release()) {
 						on_destory_group(group_._key);
