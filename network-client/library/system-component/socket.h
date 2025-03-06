@@ -5,7 +5,7 @@
 #include <optional>
 #include "socket_address.h"
 #include "overlapped.h"
-#include "../data-strucutre/pair.h"
+#include "../data-structure/pair.h"
 
 namespace system_component {
 	class socket final {

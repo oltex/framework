@@ -25,10 +25,13 @@
     <Filter Include="library\data-structure\lockfree">
       <UniqueIdentifier>{5a5c6002-2aee-4743-a54f-f1cb88c82de5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="library\data-structure\intrusive">
+      <UniqueIdentifier>{936d37d8-1096-40eb-8cef-ae56afb0edc3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="network_client.h" />
-    <ClInclude Include="my_network_client.h" />
+    <ClInclude Include="client.h" />
     <ClInclude Include="library\system-component\socket.h">
       <Filter>library\system-component</Filter>
     </ClInclude>
@@ -38,23 +41,29 @@
     <ClInclude Include="library\system-component\overlapped.h">
       <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="library\data-strcuture\pair.h">
-      <Filter>library\data-structure</Filter>
-    </ClInclude>
     <ClInclude Include="library\system-component\thread.h">
       <Filter>library\system-component</Filter>
     </ClInclude>
     <ClInclude Include="library\system-component\handle.h">
       <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="library\data-strcuture\thread-local\memory_pool.h">
-      <Filter>library\data-structure\thread-local</Filter>
-    </ClInclude>
     <ClInclude Include="library\design-pattern\thread-local\singleton.h">
       <Filter>library\design-pattern\thread-local</Filter>
     </ClInclude>
-    <ClInclude Include="library\data-strcuture\lockfree\memory_pool.h">
+    <ClInclude Include="library\data-structure\lockfree\memory_pool.h">
       <Filter>library\data-structure\lockfree</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\thread-local\memory_pool.h">
+      <Filter>library\data-structure\thread-local</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\pair.h">
+      <Filter>library\data-structure</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\intrusive\shared_pointer.h">
+      <Filter>library\data-structure\intrusive</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\serialize_buffer.h">
+      <Filter>library\data-structure</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
