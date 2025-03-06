@@ -35,7 +35,7 @@ public:
 	inline virtual void on_monit(void) noexcept override {
 	}
 
-	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept override {
+	inline virtual bool on_accept_socket(system_component::socket_address_ipv4& socket_address) noexcept override {
 		return true;
 	}
 	inline virtual void on_create_session(unsigned long long key) noexcept override {

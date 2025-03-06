@@ -2,7 +2,7 @@
 #include "library/system-component/network/window_socket_api.h"
 #include "library/system-component/input-output/completion_port.h"
 #include "library/system-component/thread.h"
-#include "library/system-component/network/socket.h"
+#include "library/system-component/socket.h"
 #include "library/system-component/multi/wait_on_address.h"
 
 #include "library/data-strucutre/serialize_buffer.h"
@@ -281,7 +281,7 @@ private:
 		inline auto operator=(session&&) noexcept -> session & = delete;
 		inline ~session(void) noexcept = default;
 
-		inline void initialize(system_component::network::socket&& socket, unsigned long long timeout_duration) noexcept {
+		inline void initialize(system_component::socket&& socket, unsigned long long timeout_duration) noexcept {
 			_key = 0xffff & _key | _static_id;
 			_static_id += 0x10000;
 			_socket = std::move(socket);
@@ -411,12 +411,12 @@ private:
 		}
 
 		unsigned long long _key;
-		system_component::network::socket _socket;
+		system_component::socket _socket;
 		message_pointer _receive_message;
 		receive_queue _receive_queue;
 		send_queue _send_queue;
-		system_component::input_output::overlapped _recv_overlapped;
-		system_component::input_output::overlapped _send_overlapped;
+		system_component::overlapped _recv_overlapped;
+		system_component::overlapped _send_overlapped;
 		unsigned long _io_count; // release_flag
 		unsigned long _cancel_flag;
 		unsigned long _receive_count; // group_flag, cancel_flag
@@ -1118,7 +1118,7 @@ protected:
 
 		on_start();
 
-		system_component::network::socket_address_ipv4 socket_address;
+		system_component::socket_address_ipv4 socket_address;
 		socket_address.set_address(_listen_socket_ip.c_str());
 		socket_address.set_port(_listen_socket_port);
 		_listen_socket.create(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -1419,7 +1419,7 @@ protected:
 	inline virtual void on_stop(void) noexcept = 0;
 	inline virtual void on_monit(void) noexcept = 0;
 
-	inline virtual bool on_accept_socket(system_component::network::socket_address_ipv4& socket_address) noexcept = 0;
+	inline virtual bool on_accept_socket(system_component::socket_address_ipv4& socket_address) noexcept = 0;
 	inline virtual void on_create_session(unsigned long long key) noexcept = 0;
 	inline virtual bool on_receive_session(unsigned long long key, session::view_pointer& view_ptr) noexcept = 0;
 	inline virtual void on_destroy_session(unsigned long long key) noexcept = 0;
@@ -1520,7 +1520,7 @@ private:
 	scheduler _scheduler;
 	scheduler::group_array _group_array;
 	session_array _session_array;
-	system_component::network::socket _listen_socket;
+	system_component::socket _listen_socket;
 	system_component::thread _accept_thread;
 public:
 	size_type _concurrent_thread_count;

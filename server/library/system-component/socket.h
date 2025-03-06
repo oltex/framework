@@ -2,11 +2,12 @@
 #pragma comment(lib,"ws2_32.lib")
 #include <WinSock2.h>
 #include <intrin.h>
+#include <optional>
 #include "socket_address.h"
-#include "../../data-strucutre/pair.h"
-#include "../input-output/overlapped.h"
+#include "overlapped.h"
+#include "../data-strucutre/pair.h"
 
-namespace system_component::network {
+namespace system_component {
 	class socket final {
 	public:
 		inline explicit socket(void) noexcept
@@ -151,7 +152,7 @@ namespace system_component::network {
 			}
 			return result;
 		}
-		inline auto wsa_send(WSABUF* buffer, unsigned long count, unsigned long flag, input_output::overlapped& overlapped) noexcept -> int {
+		inline auto wsa_send(WSABUF* buffer, unsigned long count, unsigned long flag, overlapped& overlapped) noexcept -> int {
 			int result = WSASend(_socket, buffer, count, nullptr, flag, &overlapped.data(), nullptr);
 			if (SOCKET_ERROR == result) {
 				switch (GetLastError()) {
@@ -205,7 +206,7 @@ namespace system_component::network {
 			}
 			return result;
 		}
-		inline auto wsa_receive(WSABUF* buffer, unsigned long count, unsigned long* flag, input_output::overlapped& overlapped) noexcept -> int {
+		inline auto wsa_receive(WSABUF* buffer, unsigned long count, unsigned long* flag, overlapped& overlapped) noexcept -> int {
 			int result = WSARecv(_socket, buffer, count, nullptr, flag, &overlapped.data(), nullptr);
 			if (SOCKET_ERROR == result) {
 				switch (GetLastError()) {
@@ -226,10 +227,10 @@ namespace system_component::network {
 		inline void cancel_io_ex(void) const noexcept {
 			CancelIoEx(reinterpret_cast<HANDLE>(_socket), nullptr);
 		}
-		inline void cancel_io_ex(input_output::overlapped overlapped) const noexcept {
+		inline void cancel_io_ex(overlapped overlapped) const noexcept {
 			CancelIoEx(reinterpret_cast<HANDLE>(_socket), &overlapped.data());
 		}
-		inline bool wsa_get_overlapped_result(input_output::overlapped& overlapped, unsigned long* transfer, bool const wait, unsigned long* flag) noexcept {
+		inline bool wsa_get_overlapped_result(overlapped& overlapped, unsigned long* transfer, bool const wait, unsigned long* flag) noexcept {
 			return WSAGetOverlappedResult(_socket, &overlapped.data(), transfer, wait, flag);
 		}
 		inline void set_tcp_nodelay(int const enable) const noexcept {
@@ -259,16 +260,30 @@ namespace system_component::network {
 			if (SOCKET_ERROR == ioctlsocket(_socket, cmd, &arg))
 				__debugbreak();
 		}
-		inline auto get_local_socket_address(void) const noexcept -> socket_address_ipv4 {
+		inline auto get_local_socket_address(void) const noexcept -> std::optional<socket_address_ipv4> {
 			socket_address_ipv4 socket_address;
 			int length = socket_address.get_length();
-			getsockname(_socket, &socket_address.data(), &length);
+			if (SOCKET_ERROR == getsockname(_socket, &socket_address.data(), &length)) {
+				switch (GetLastError()) {
+				default:
+					break;
+#pragma warning(suppress: 4065)
+				}
+				return std::nullopt;
+			}
 			return socket_address;
 		}
-		inline auto get_remote_socket_address(void) const noexcept -> socket_address_ipv4 {
+		inline auto get_remote_socket_address(void) const noexcept -> std::optional<socket_address_ipv4> {
 			socket_address_ipv4 socket_address;
 			int length = socket_address.get_length();
-			getpeername(_socket, &socket_address.data(), &length);
+			if (SOCKET_ERROR == getpeername(_socket, &socket_address.data(), &length)) {
+				switch (GetLastError()) {
+				default:
+					break;
+#pragma warning(suppress: 4065)
+				}
+				return std::nullopt;
+			}
 			return socket_address;
 		}
 		inline auto data(void) noexcept -> SOCKET& {

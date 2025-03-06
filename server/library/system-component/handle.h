@@ -1,5 +1,5 @@
 #pragma once
-#include "input-output/overlapped.h"
+#include "overlapped.h"
 #include <Windows.h>
 #include <concepts>
 
@@ -38,7 +38,7 @@ namespace system_component {
 		inline void cancel_io_ex(void) const noexcept {
 			CancelIoEx(_handle, nullptr);
 		}
-		inline void cancel_io_ex(input_output::overlapped overlapped) const noexcept {
+		inline void cancel_io_ex(overlapped overlapped) const noexcept {
 			CancelIoEx(_handle, &overlapped.data());
 		}
 		inline auto wait_for_single(unsigned long const milli_second) noexcept -> unsigned long {

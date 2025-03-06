@@ -11,15 +11,6 @@
     <ClInclude Include="library\system-component\network\window_socket_api.h">
       <Filter>library\system-component\network</Filter>
     </ClInclude>
-    <ClInclude Include="library\system-component\network\socket.h">
-      <Filter>library\system-component\network</Filter>
-    </ClInclude>
-    <ClInclude Include="library\system-component\input_output\overlapped.h">
-      <Filter>library\system-component\input_output</Filter>
-    </ClInclude>
-    <ClInclude Include="library\system-component\network\socket_address.h">
-      <Filter>library\system-component\network</Filter>
-    </ClInclude>
     <ClInclude Include="library\data-strucutre\pair.h">
       <Filter>library\data-strucutre</Filter>
     </ClInclude>
@@ -156,6 +147,15 @@
       <Filter>library\data-strucutre\intrusive</Filter>
     </ClInclude>
     <ClInclude Include="echo_server.h" />
+    <ClInclude Include="library\system-component\overlapped.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\socket.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\socket_address.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="library">

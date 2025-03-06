@@ -1,7 +1,7 @@
 #pragma once
 #pragma comment(lib,"ws2_32.lib")
 #include <WinSock2.h>
-#include "../network/socket.h"
+#include "../socket.h"
 #include "../handle.h"
 
 namespace system_component::input_output {
@@ -25,7 +25,7 @@ namespace system_component::input_output {
 		inline void create(unsigned long const concurrent_thread) noexcept {
 			_handle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, concurrent_thread);
 		}
-		inline void connect(network::socket& socket, ULONG_PTR key) noexcept {
+		inline void connect(socket& socket, ULONG_PTR key) noexcept {
 			CreateIoCompletionPort(reinterpret_cast<HANDLE>(socket.data()), _handle, key, 0);
 		}
 		struct get_queue_state_result final {
