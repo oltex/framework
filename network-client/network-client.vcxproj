@@ -146,10 +146,15 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="library\data-strcuture\헤더.h" />
+    <ClInclude Include="library\data-strcuture\lockfree\memory_pool.h" />
+    <ClInclude Include="library\data-strcuture\pair.h" />
+    <ClInclude Include="library\data-strcuture\thread-local\memory_pool.h" />
+    <ClInclude Include="library\design-pattern\thread-local\singleton.h" />
+    <ClInclude Include="library\system-component\handle.h" />
     <ClInclude Include="library\system-component\overlapped.h" />
     <ClInclude Include="library\system-component\socket.h" />
     <ClInclude Include="library\system-component\socket_address.h" />
+    <ClInclude Include="library\system-component\thread.h" />
     <ClInclude Include="my_network_client.h" />
     <ClInclude Include="network_client.h" />
   </ItemGroup>

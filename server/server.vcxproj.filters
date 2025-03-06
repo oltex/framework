@@ -11,26 +11,8 @@
     <ClInclude Include="library\system-component\network\window_socket_api.h">
       <Filter>library\system-component\network</Filter>
     </ClInclude>
-    <ClInclude Include="library\data-strucutre\pair.h">
-      <Filter>library\data-strucutre</Filter>
-    </ClInclude>
-    <ClInclude Include="library\data-strucutre\vector.h">
-      <Filter>library\data-strucutre</Filter>
-    </ClInclude>
     <ClInclude Include="library\design-pattern\thread-local\singleton.h">
       <Filter>library\design-pattern\thread-local</Filter>
-    </ClInclude>
-    <ClInclude Include="library\data-strucutre\serialize_buffer.h">
-      <Filter>library\data-strucutre</Filter>
-    </ClInclude>
-    <ClInclude Include="library\data-strucutre\lockfree\queue.h">
-      <Filter>library\data-strucutre\lockfree</Filter>
-    </ClInclude>
-    <ClInclude Include="library\data-strucutre\intrusive\shared_pointer.h">
-      <Filter>library\data-strucutre\intrusive</Filter>
-    </ClInclude>
-    <ClInclude Include="library\data-strucutre\thread-local\memory_pool.h">
-      <Filter>library\data-strucutre\thread-local</Filter>
     </ClInclude>
     <ClInclude Include="library\design-pattern\singleton.h">
       <Filter>library\design-pattern</Filter>
@@ -41,20 +23,11 @@
     <ClInclude Include="library\utility\parser.h">
       <Filter>library\utility</Filter>
     </ClInclude>
-    <ClInclude Include="library\data-strucutre\lockfree\memory_pool.h">
-      <Filter>library\data-strucutre\lockfree</Filter>
-    </ClInclude>
     <ClInclude Include="library\utility\performance_data_helper.h">
       <Filter>library\utility</Filter>
     </ClInclude>
-    <ClInclude Include="library\data-strucutre\unique_pointer.h">
-      <Filter>library\data-strucutre</Filter>
-    </ClInclude>
     <ClInclude Include="library\utility\crash_dump.h">
       <Filter>library\utility</Filter>
-    </ClInclude>
-    <ClInclude Include="library\data-strucutre\priority_queue.h">
-      <Filter>library\data-strucutre</Filter>
     </ClInclude>
     <ClInclude Include="library\utility\command.h">
       <Filter>library\utility</Filter>
@@ -143,9 +116,6 @@
     <ClInclude Include="library\system-component\input-output\completion_port.h">
       <Filter>library\system-component\input_output</Filter>
     </ClInclude>
-    <ClInclude Include="library\data-strucutre\intrusive\list.h">
-      <Filter>library\data-strucutre\intrusive</Filter>
-    </ClInclude>
     <ClInclude Include="echo_server.h" />
     <ClInclude Include="library\system-component\overlapped.h">
       <Filter>library\system-component</Filter>
@@ -155,6 +125,36 @@
     </ClInclude>
     <ClInclude Include="library\system-component\socket_address.h">
       <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\intrusive\list.h">
+      <Filter>library\data-structure\intrusive</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\intrusive\shared_pointer.h">
+      <Filter>library\data-structure\intrusive</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\lockfree\memory_pool.h">
+      <Filter>library\data-structure\lockfree</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\lockfree\queue.h">
+      <Filter>library\data-structure\lockfree</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\thread-local\memory_pool.h">
+      <Filter>library\data-structure\thread-local</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\pair.h">
+      <Filter>library\data-structure</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\priority_queue.h">
+      <Filter>library\data-structure</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\serialize_buffer.h">
+      <Filter>library\data-structure</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\unique_pointer.h">
+      <Filter>library\data-structure</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\vector.h">
+      <Filter>library\data-structure</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -173,23 +173,11 @@
     <Filter Include="library\system-component\input_output">
       <UniqueIdentifier>{602c4aea-b12f-489c-a7ce-475b7f8a17cf}</UniqueIdentifier>
     </Filter>
-    <Filter Include="library\data-strucutre">
-      <UniqueIdentifier>{79f51720-c29c-450a-805f-b8545c0609a1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="library\data-strucutre\thread-local">
-      <UniqueIdentifier>{0401ff85-e7f6-4d35-8705-f3686c0f17c4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="library\data-strucutre\lockfree">
-      <UniqueIdentifier>{8286a71f-8619-4555-a858-cc4c2a45c104}</UniqueIdentifier>
-    </Filter>
     <Filter Include="library\design-pattern">
       <UniqueIdentifier>{a62cd51f-ab8c-46b9-9a7a-eeff412dbb1d}</UniqueIdentifier>
     </Filter>
     <Filter Include="library\design-pattern\thread-local">
       <UniqueIdentifier>{a366f2e2-980b-4b78-884b-3b067fc1d0fc}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="library\data-strucutre\intrusive">
-      <UniqueIdentifier>{e9ac73de-010a-4402-a086-5dfa08238bae}</UniqueIdentifier>
     </Filter>
     <Filter Include="library\utility">
       <UniqueIdentifier>{5af8e7e7-d5ae-4ed0-8ca7-52e16751cae6}</UniqueIdentifier>
@@ -223,6 +211,18 @@
     </Filter>
     <Filter Include="library\database\tacopie">
       <UniqueIdentifier>{f70ac76c-65e5-4a3e-938a-65a11d19565f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\data-structure">
+      <UniqueIdentifier>{79f51720-c29c-450a-805f-b8545c0609a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\data-structure\thread-local">
+      <UniqueIdentifier>{0401ff85-e7f6-4d35-8705-f3686c0f17c4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\data-structure\lockfree">
+      <UniqueIdentifier>{8286a71f-8619-4555-a858-cc4c2a45c104}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\data-structure\intrusive">
+      <UniqueIdentifier>{e9ac73de-010a-4402-a086-5dfa08238bae}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

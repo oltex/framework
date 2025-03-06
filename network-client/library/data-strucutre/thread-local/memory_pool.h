@@ -4,7 +4,7 @@
 #include "../pair.h"
 
 namespace data_structure::_thread_local {
-	template<typename type, size_t bucket_size = 100, bool use_union = true>
+	template<typename type, size_t bucket_size = 128, bool use_union = true>
 	class memory_pool final : public design_pattern::_thread_local::singleton<memory_pool<type, bucket_size, use_union>> {
 	private:
 		friend class design_pattern::_thread_local::singleton<memory_pool<type, bucket_size, use_union>>;

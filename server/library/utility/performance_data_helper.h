@@ -1,7 +1,7 @@
 #pragma once
 #include "../design-pattern/singleton.h"
-#include "../data-strucutre/pair.h"
-#include "../data-strucutre/unique_pointer.h"
+#include "../data-structure/pair.h"
+#include "../data-structure/unique_pointer.h"
 #include <Pdh.h>
 #pragma comment(lib,"pdh.lib")
 #include <string>

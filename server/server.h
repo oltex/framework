@@ -5,12 +5,12 @@
 #include "library/system-component/socket.h"
 #include "library/system-component/multi/wait_on_address.h"
 
-#include "library/data-strucutre/serialize_buffer.h"
-#include "library/data-strucutre/thread-local/memory_pool.h"
-#include "library/data-strucutre/intrusive/shared_pointer.h"
-#include "library/data-strucutre/intrusive/list.h"
-#include "library/data-strucutre/lockfree/queue.h"
-#include "library/data-strucutre/priority_queue.h"
+#include "library/data-structure/serialize_buffer.h"
+#include "library/data-structure/thread-local/memory_pool.h"
+#include "library/data-structure/intrusive/shared_pointer.h"
+#include "library/data-structure/intrusive/list.h"
+#include "library/data-structure/lockfree/queue.h"
+#include "library/data-structure/priority_queue.h"
 
 #include "library/database/mysql.h"
 //#include "library/database/redis.h"

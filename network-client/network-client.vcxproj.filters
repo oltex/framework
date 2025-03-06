@@ -10,8 +10,20 @@
     <Filter Include="library\system-component">
       <UniqueIdentifier>{22d6dc4a-2071-4d19-82f7-adf3c7edd0b0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="library\design-pattern">
+      <UniqueIdentifier>{5477f547-8116-40e3-8723-82f264c7e1e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\design-pattern\thread-local">
+      <UniqueIdentifier>{788fd95f-6565-4395-9728-1e990c3e7bea}</UniqueIdentifier>
+    </Filter>
     <Filter Include="library\data-structure">
       <UniqueIdentifier>{f090f320-b103-4a4c-b312-e03bae5a867e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\data-structure\thread-local">
+      <UniqueIdentifier>{ac9e8f09-59cc-4cda-939d-bd3f8bb27dcb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\data-structure\lockfree">
+      <UniqueIdentifier>{5a5c6002-2aee-4743-a54f-f1cb88c82de5}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -26,8 +38,23 @@
     <ClInclude Include="library\system-component\overlapped.h">
       <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="library\data-strcuture\헤더.h">
+    <ClInclude Include="library\data-strcuture\pair.h">
       <Filter>library\data-structure</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\thread.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\handle.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-strcuture\thread-local\memory_pool.h">
+      <Filter>library\data-structure\thread-local</Filter>
+    </ClInclude>
+    <ClInclude Include="library\design-pattern\thread-local\singleton.h">
+      <Filter>library\design-pattern\thread-local</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-strcuture\lockfree\memory_pool.h">
+      <Filter>library\data-structure\lockfree</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
