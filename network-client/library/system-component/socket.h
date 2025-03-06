@@ -8,6 +8,16 @@
 #include "../data-structure/pair.h"
 
 namespace system_component {
+	inline static void wsa_start_up(void) noexcept {
+		WSAData wsadata;
+		if (0 != WSAStartup(0x0202, &wsadata))
+			__debugbreak();
+	};
+	inline static void wsa_clean_up(void) noexcept {
+		if (SOCKET_ERROR == WSACleanup())
+			__debugbreak();
+	};
+
 	class socket final {
 	public:
 		inline explicit socket(void) noexcept

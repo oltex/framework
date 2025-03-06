@@ -128,6 +128,7 @@ protected:
 	using view_pointer = data_structure::intrusive::shared_pointer<view, 0>;
 public:
 	inline explicit network_client(void) noexcept {
+		system_component::wsa_start_up();
 		auto& memory_pool = data_structure::_thread_local::memory_pool<message>::instance();
 		message_pointer receive_message(&memory_pool.allocate());
 		receive_message->clear();
@@ -137,11 +138,16 @@ public:
 	inline explicit network_client(network_client&&) noexcept = delete;
 	inline auto operator=(network_client const&) noexcept -> network_client & = delete;
 	inline auto operator=(network_client&&) noexcept -> network_client & = delete;
-	inline ~network_client(void) noexcept = default;
+	inline ~network_client(void) noexcept {
+		system_component::wsa_clean_up();
+	};
 private:
 	inline void receive(void) noexcept {
 		for (;;) {
 			int result = _socket.receive(reinterpret_cast<char*>(_receive_message->data() + _receive_message->rear()), message::capacity() - _receive_message->rear(), 0);
+			if (-1 == result) {
+				break;
+			}
 			_receive_message->move_rear(result);
 			for (;;) {
 				if (sizeof(header) > _receive_message->size())
@@ -149,9 +155,11 @@ private:
 				header header_;
 				_receive_message->peek(reinterpret_cast<unsigned char*>(&header_), sizeof(header));
 				if (header_._code != _header_code) {
+					_socket.close();
 					break;
 				}
 				if (header_._length > 256) { //юс╫ц
+					_socket.close();
 					break;
 				}
 				if (sizeof(header) + header_._length > _receive_message->size())
@@ -182,11 +190,13 @@ private:
 				(*view_ptr) >> check_sum_;
 				check_sum -= check_sum_;
 				if (check_sum != check_sum_) {
+					_socket.close();
 					break;
 				}
 				//----------------------------------------------------------
 
 				if (false == on_receive(view_ptr)) {
+					_socket.close();
 					break;
 				}
 			}
@@ -201,8 +211,9 @@ private:
 				}
 				_receive_message = receive_message;
 			}
-			else
-				break;
+			else {
+				_socket.close();
+			}
 		}
 	}
 public:
