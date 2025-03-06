@@ -10,12 +10,24 @@
     <Filter Include="library\system-component">
       <UniqueIdentifier>{22d6dc4a-2071-4d19-82f7-adf3c7edd0b0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="library\data-structure">
+      <UniqueIdentifier>{f090f320-b103-4a4c-b312-e03bae5a867e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="network_client.h" />
     <ClInclude Include="my_network_client.h" />
     <ClInclude Include="library\system-component\socket.h">
       <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\socket_address.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\overlapped.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-strcuture\헤더.h">
+      <Filter>library\data-structure</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

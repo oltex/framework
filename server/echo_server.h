@@ -4,6 +4,8 @@
 class echo_server final : public server {
 public:
 	class my_group : public server::group {
+		inline virtual void on_monit(void) noexcept override {
+		}
 		inline virtual void on_enter_session(unsigned long long key) noexcept override {
 		};
 		inline virtual bool on_receive_session(unsigned long long key, view_pointer& view_ptr) noexcept override {

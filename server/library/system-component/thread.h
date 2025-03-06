@@ -57,13 +57,7 @@ namespace system_component {
 			else
 				__debugbreak();
 		}
-		inline void join(unsigned long milli_second) noexcept {
-			WaitForSingleObject(_handle, milli_second);
-		}
-		inline void detach(void) noexcept {
-			CloseHandle(_handle);
-		}
-		inline unsigned long id(void) noexcept {
+		inline auto get_id(void) noexcept -> unsigned long {
 			GetThreadId(_handle);
 		}
 		inline void set_affinity_mask(DWORD_PTR mask) noexcept {
@@ -91,7 +85,7 @@ namespace system_component {
 		inline static void switch_to(void) noexcept {
 			SwitchToThread();
 		}
-		inline static auto current_id(void) noexcept {
+		inline static auto get_current_id(void) noexcept {
 			return GetCurrentThreadId();
 		}
 	};
