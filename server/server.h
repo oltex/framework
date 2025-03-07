@@ -1169,7 +1169,6 @@ private:
 			else {
 				session& session_ = *_session_array.acquire();
 				session_.initialize(std::move(socket), _timeout_duration);
-
 				_complation_port.connect(session_._socket, reinterpret_cast<ULONG_PTR>(&session_));
 				on_create_session(session_._key);
 
@@ -1418,6 +1417,25 @@ protected:
 	inline virtual void on_create_session(unsigned long long key) noexcept = 0;
 	inline virtual bool on_receive_session(unsigned long long key, session::view_pointer& view_ptr) noexcept = 0;
 	inline virtual void on_destroy_session(unsigned long long key) noexcept = 0;
+	inline auto do_create_session(char const* const address, unsigned short port) noexcept -> unsigned long long {
+		system_component::socket_address_ipv4 socket_address;
+		socket_address.set_address(address);
+		socket_address.set_port(port);
+		system_component::socket socket(AF_INET, SOCK_STREAM, 0);
+		socket.set_linger(1, 0);
+		socket.connect(socket_address);
+
+		session& session_ = *_session_array.acquire();
+		session_.initialize(std::move(socket), _timeout_duration);
+		_complation_port.connect(session_._socket, reinterpret_cast<ULONG_PTR>(&session_));
+
+		if (!session_.receive() && session_.release()) {
+			on_destroy_session(session_._key);
+			_session_array.release(session_);
+			return 0;
+		}
+		return session_._key;
+	}
 	inline void do_send_session(unsigned long long key, session::message_pointer& message_ptr) noexcept {
 		session& session_ = _session_array[key];
 		if (session_.acquire(key)) {
@@ -1442,18 +1460,7 @@ protected:
 		if (session_.release())
 			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
 	}
-	inline static auto create_message(void) noexcept -> session::message_pointer {
-		auto& memory_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
-		session::message_pointer message_(&memory_pool.allocate());
-		message_->clear();
 
-		session::header header_;
-		header_._size = 8;
-		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(session::header));
-		return message_;
-	}
-
-	//inline virtual void on_create_group(unsigned long long key) noexcept = 0;
 	inline virtual void on_destory_group(unsigned long long key) noexcept = 0;
 	template<typename type, typename... argument>
 	inline auto do_create_group(argument&&... arg) noexcept -> unsigned long long {
@@ -1508,6 +1515,17 @@ protected:
 			else
 				_InterlockedDecrement(&_scheduler._size);
 		}
+	}
+
+	inline static auto create_message(void) noexcept -> session::message_pointer {
+		auto& memory_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
+		session::message_pointer message_(&memory_pool.allocate());
+		message_->clear();
+
+		session::header header_;
+		header_._size = 8;
+		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(session::header));
+		return message_;
 	}
 private:
 	system_component::input_output::completion_port _complation_port;

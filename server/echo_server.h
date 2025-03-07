@@ -24,27 +24,6 @@ public:
 			return 20;
 		};
 	};
-	class my_group2 : public server::group {
-	public:
-		inline my_group2(void) noexcept {
-			int a = 10;
-		};
-		inline ~my_group2(void) noexcept {
-			int a = 10;
-		};
-		inline virtual void on_monit(void) noexcept override {
-		}
-		inline virtual void on_enter_session(unsigned long long key) noexcept override {
-		};
-		inline virtual bool on_receive_session(unsigned long long key, view_pointer& view_ptr) noexcept override {
-			return true;
-		};
-		inline virtual void on_leave_session(unsigned long long key) noexcept override {
-		};
-		inline virtual int on_update(void) noexcept override {
-			return 20;
-		};
-	};
 public:
 	inline explicit echo_server(void) noexcept {
 	};
