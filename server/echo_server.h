@@ -35,6 +35,7 @@ public:
 
 	inline virtual void on_start(void) noexcept override {
 		_group_key = do_create_group<my_group>();
+		do_create_session("127.0.0.1", 10403);
 	}
 	inline virtual void on_worker_start(void) noexcept override {
 	}
