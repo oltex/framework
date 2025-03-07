@@ -185,6 +185,9 @@ namespace database {
 		inline void rollback(void) noexcept {
 			query("rollback");
 		}
+		inline void use(char const* const schema) noexcept {
+			query("use %d", schema);
+		}
 		inline void truncate_table(char const* const name) noexcept {
 			query("truncate table %s", name);
 		}
