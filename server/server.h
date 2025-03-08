@@ -766,7 +766,7 @@ private:
 			}
 		private:
 			unsigned long long _key;
-			volatile unsigned int _io_count; // release_flag
+			volatile unsigned int _io_count = 0; // release_flag // temp
 			volatile unsigned int _cancel_flag;
 			std::function<void(void*)> _destructor;
 			server* _server;
