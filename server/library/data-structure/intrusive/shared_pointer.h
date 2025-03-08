@@ -16,7 +16,7 @@ namespace data_structure::intrusive {
 			size_type _weak;
 		};
 	public:
-		inline explicit shared_pointer_hook(void) noexcept =default;
+		inline explicit shared_pointer_hook(void) noexcept = default;
 		inline explicit shared_pointer_hook(shared_pointer_hook const& rhs) noexcept = default;
 		inline explicit shared_pointer_hook(shared_pointer_hook&& rhs) noexcept = default;
 		inline auto operator=(shared_pointer_hook const& rhs) noexcept -> shared_pointer_hook & = default;
@@ -97,11 +97,11 @@ namespace data_structure::intrusive {
 		inline void reset(void) noexcept {
 			_pointer = nullptr;
 		}
-		//template <class type, size_t index>
-		//friend inline bool operator==(shared_pointer<type, index> const& rhs, nullptr_t) noexcept {
-		//	return rhs._pointer == nullptr;
-		//}
 	private:
 		hook* _pointer;
 	};
+	template <class type, size_t index>
+	inline static bool operator==(shared_pointer<type, index> const& rhs, nullptr_t) noexcept {
+		return rhs.get() == nullptr;
+	}
 }

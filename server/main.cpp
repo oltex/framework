@@ -16,5 +16,6 @@ int main(void) noexcept {
 		command::parameter param("server_stop");
 		command::instance().execute("server_stop", &param);
 	}
+	system("pause");
 	//Sleep(INFINITE);
 }

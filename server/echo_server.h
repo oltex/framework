@@ -35,7 +35,6 @@ public:
 
 	inline virtual void on_start(void) noexcept override {
 		_group_key = do_create_group<my_group>();
-		do_create_session("127.0.0.1", 10403);
 	}
 	inline virtual void on_worker_start(void) noexcept override {
 	}
@@ -56,7 +55,7 @@ public:
 	inline virtual bool on_receive_session(unsigned long long key, view_pointer& view_ptr) noexcept override {
 		unsigned long long value;
 		*view_ptr >> value;
-		message_pointer message_ = create_message();
+		view_pointer message_ = create_message(8);
 		*message_ << value;
 		do_set_timeout_session(key, 40000);
 		do_send_session(key, message_);

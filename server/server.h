@@ -81,6 +81,17 @@ private:
 
 			template<typename type>
 				requires std::is_arithmetic_v<type>
+			inline auto operator<<(type const& value) noexcept -> view& {
+				reinterpret_cast<type&>(_message->data()[_rear]) = value;
+				_rear += sizeof(type);
+				return *this;
+			}
+			inline void push(byte* const buffer, size_type const length) noexcept {
+				memcpy(_message->data() + _rear, buffer, length);
+				_rear += length;
+			}
+			template<typename type>
+				requires std::is_arithmetic_v<type>
 			inline auto operator>>(type& value) noexcept -> view& {
 				if (sizeof(type) + _front > _rear) {
 					_fail = true;
@@ -151,9 +162,9 @@ private:
 		};
 		using view_pointer = data_structure::intrusive::shared_pointer<view, 0>;
 	private:
-		class send_queue final : protected data_structure::lockfree::queue<message*> {
+		class queue final : protected data_structure::lockfree::queue<view*> {
 		private:
-			using base = data_structure::lockfree::queue<message*>;
+			using base = data_structure::lockfree::queue<view*>;
 			class iterator final {
 			public:
 				inline explicit iterator(void) noexcept = default;
@@ -166,7 +177,7 @@ private:
 				inline auto operator=(iterator&&) noexcept -> iterator & = delete;
 				inline ~iterator(void) noexcept = default;
 
-				inline auto operator*(void) const noexcept -> message*& {
+				inline auto operator*(void) const noexcept -> view*& {
 					return _node->_value;
 				}
 				inline auto operator++(void) noexcept -> iterator& {
@@ -180,59 +191,12 @@ private:
 				node* _node;
 			};
 		public:
-			inline explicit send_queue(void) noexcept = default;
-			inline explicit send_queue(send_queue const&) noexcept = delete;
-			inline explicit send_queue(send_queue&&) noexcept = delete;
-			inline auto operator=(send_queue const&) noexcept -> send_queue & = delete;
-			inline auto operator=(send_queue&&) noexcept -> send_queue & = delete;
-			inline ~send_queue(void) noexcept = default;
-
-			inline void push(message_pointer message_ptr) noexcept {
-				base::emplace(message_ptr.get());
-				message_ptr.reset();
-			}
-			inline auto pop(void) noexcept -> message_pointer {
-				unsigned long long head = _head;
-				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
-				unsigned long long next = address->_next;
-
-				if (0x10000 > (0x00007FFFFFFFFFFFULL & next))
-					__debugbreak();
-				unsigned long long tail = _tail;
-				if (tail == head)
-					_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
-
-				message_pointer result;
-				result.set(reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value);
-				_head = next;
-				_memory_pool::instance().deallocate(*address);
-				return result;
-			}
-			inline auto begin(void) noexcept -> iterator {
-				return iterator(reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & _head)->_next));
-			}
-			inline auto end(void) noexcept -> iterator {
-				return iterator(reinterpret_cast<node*>(_nullptr));
-			}
-			inline auto empty(void) const noexcept {
-				unsigned long long head = _head;
-				node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
-				unsigned long long next = address->_next;
-				if (_nullptr == (0x00007FFFFFFFFFFFULL & next))
-					return true;
-				return false;
-			}
-		};
-		class receive_queue final : protected data_structure::lockfree::queue<view*> {
-		private:
-			using base = data_structure::lockfree::queue<view*>;
-		public:
-			inline explicit receive_queue(void) noexcept = default;
-			inline explicit receive_queue(receive_queue const&) noexcept = delete;
-			inline explicit receive_queue(receive_queue&&) noexcept = delete;
-			inline auto operator=(receive_queue const&) noexcept -> receive_queue & = delete;
-			inline auto operator=(receive_queue&&) noexcept -> receive_queue & = delete;
-			inline ~receive_queue(void) noexcept = default;
+			inline explicit queue(void) noexcept = default;
+			inline explicit queue(queue const&) noexcept = delete;
+			inline explicit queue(queue&&) noexcept = delete;
+			inline auto operator=(queue const&) noexcept -> queue & = delete;
+			inline auto operator=(queue&&) noexcept -> queue & = delete;
+			inline ~queue(void) noexcept = default;
 
 			inline void push(view_pointer view_ptr) noexcept {
 				base::emplace(view_ptr.get());
@@ -254,6 +218,12 @@ private:
 				_head = next;
 				_memory_pool::instance().deallocate(*address);
 				return result;
+			}
+			inline auto begin(void) noexcept -> iterator {
+				return iterator(reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & _head)->_next));
+			}
+			inline auto end(void) noexcept -> iterator {
+				return iterator(reinterpret_cast<node*>(_nullptr));
 			}
 			inline auto empty(void) const noexcept {
 				unsigned long long head = _head;
@@ -346,8 +316,8 @@ private:
 								cancel();
 								return false;
 							}
-							wsa_buffer[_send_size].buf = reinterpret_cast<char*>(iter->data());
-							wsa_buffer[_send_size].len = iter->rear();
+							wsa_buffer[_send_size].buf = reinterpret_cast<char*>(iter->data()->data() + iter->front());
+							wsa_buffer[_send_size].len = iter->size();
 							_send_size++;
 						}
 						_send_overlapped.clear();
@@ -412,8 +382,8 @@ private:
 		unsigned long long _key;
 		system_component::socket _socket;
 		message_pointer _receive_message;
-		receive_queue _receive_queue;
-		send_queue _send_queue;
+		queue _receive_queue;
+		queue _send_queue;
 		system_component::overlapped _recv_overlapped;
 		system_component::overlapped _send_overlapped;
 		unsigned long _io_count; // release_flag
@@ -785,22 +755,13 @@ private:
 				job_ptr->_group_key = group_key;
 				_job_queue.push(job_ptr);
 			}
-			inline void do_send_session(unsigned long long key, session::message_pointer& message_ptr) noexcept {
-				//auto iter = _session_map.find(key);
-				//if (_session_map.end() == iter)
-				//	return;
-				_server->do_send_session(key, message_ptr);
+			inline void do_send_session(unsigned long long key, session::view_pointer& view_ptr) noexcept {
+				_server->do_send_session(key, view_ptr);
 			}
 			inline void do_destroy_session(unsigned long long key) noexcept {
-				//auto iter = _session_map.find(key);
-				//if (_session_map.end() == iter)
-				//	return;
 				_server->do_destroy_session(key);
 			}
 			inline void do_set_timeout_session(unsigned long long key, unsigned long long duration) noexcept {
-				//auto iter = _session_map.find(key);
-				//if (_session_map.end() == iter)
-				//	return;
 				_server->do_set_timeout_session(key, duration);
 			}
 		private:
@@ -849,6 +810,9 @@ private:
 				current->_index = capacity - 1;
 				current->_value = nullptr;
 				_head = reinterpret_cast<unsigned long long>(_array);
+			}
+			inline void finalize(void) noexcept {
+				free(_array);
 			}
 			template<typename type, typename... argument>
 			inline auto acquire(server& server_, argument&&... arg) noexcept -> group* {
@@ -984,7 +948,7 @@ protected:
 
 #pragma warning(suppress: 26495)
 	inline explicit server(void) noexcept {
-		utility::crash_dump();
+		//utility::crash_dump();
 		database::mysql::initialize();
 		system_component::wsa_start_up();
 		//utility::logger::instance().create("server", L"server.log");
@@ -1022,6 +986,10 @@ protected:
 			});
 		command_.add("iocp_worker", [&](command::parameter* param) noexcept -> int {
 			_worker_thread_count = param->get_int(1);
+			return 0;
+			});
+		command_.add("group_max", [&](command::parameter* param) noexcept -> int {
+			_group_array_max = param->get_int(1);
 			return 0;
 			});
 		command_.add("session_max", [&](command::parameter* param) noexcept -> int {
@@ -1093,7 +1061,7 @@ protected:
 		_scheduler.initialize();
 		_scheduler._thread.begin(&server::schedule, 0, this);
 
-		_group_array.initialize(10000);
+		_group_array.initialize(_group_array_max);
 		_session_array.initialize(_session_array_max);
 		if (0 != _send_frame)
 			do_create_function(&server::send, this);
@@ -1146,6 +1114,8 @@ protected:
 
 		_scheduler.finalize();
 		_session_array.finalize();
+		_group_array.finalize();
+
 
 		for (size_type index = 0; index < _worker_thread.size(); ++index)
 			_complation_port.post_queue_state(0, 0, nullptr);
@@ -1436,7 +1406,7 @@ protected:
 		}
 		return session_._key;
 	}
-	inline void do_send_session(unsigned long long key, session::message_pointer& message_ptr) noexcept {
+	inline void do_send_session(unsigned long long key, session::view_pointer& message_ptr) noexcept {
 		session& session_ = _session_array[key];
 		if (session_.acquire(key)) {
 			session_._send_queue.push(message_ptr);
@@ -1517,15 +1487,22 @@ protected:
 		}
 	}
 
-	inline static auto create_message(void) noexcept -> session::message_pointer {
-		auto& memory_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
-		session::message_pointer message_(&memory_pool.allocate());
-		message_->clear();
+	inline static auto create_message(size_type const size) noexcept -> session::view_pointer {
+		auto& message_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
+		thread_local session::message_pointer message_ptr;
+		if (nullptr == message_ptr || message_ptr->capacity() - message_ptr->rear() - 10 < sizeof(session::header) + size) {
+			session::message_pointer new_message_ptr(&message_pool.allocate());
+			new_message_ptr->clear();
+			message_ptr = new_message_ptr;
+		}
+		auto& view_pool = data_structure::_thread_local::memory_pool<session::view>::instance();
+		session::view_pointer view_ptr(&view_pool.allocate(message_ptr, message_ptr->rear(), message_ptr->rear()));
+		message_ptr->move_rear(sizeof(session::header) + size);
 
 		session::header header_;
 		header_._size = 8;
-		message_->push(reinterpret_cast<unsigned char*>(&header_), sizeof(session::header));
-		return message_;
+		view_ptr->push(reinterpret_cast<unsigned char*>(&header_), sizeof(session::header));
+		return view_ptr;
 	}
 private:
 	system_component::input_output::completion_port _complation_port;
@@ -1538,6 +1515,7 @@ private:
 public:
 	size_type _concurrent_thread_count;
 	size_type _worker_thread_count;
+	size_type _group_array_max;
 	size_type _session_array_max;
 	bool _send_mode;
 	size_type _send_frame;
@@ -1567,4 +1545,5 @@ public:
 	size_type _accept_tps = 0;
 	size_type _receive_tps = 0;
 	size_type _send_tps = 0;
+
 };
