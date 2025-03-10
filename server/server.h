@@ -12,7 +12,7 @@
 #include "library/data-structure/priority_queue.h"
 
 #include "library/database/mysql.h"
-//#include "library/database/redis.h"
+#include "library/database/redis.h"
 
 #include "library/utility/command.h"
 #include "library/utility/performance_data_helper.h"
@@ -1545,5 +1545,4 @@ public:
 	size_type _accept_tps = 0;
 	size_type _receive_tps = 0;
 	size_type _send_tps = 0;
-
 };
