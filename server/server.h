@@ -12,7 +12,7 @@
 #include "library/data-structure/priority_queue.h"
 
 #include "library/database/mysql.h"
-//#include "library/database/redis.h"
+#include "library/database/redis.h"
 
 #include "library/utility/command.h"
 #include "library/utility/performance_data_helper.h"

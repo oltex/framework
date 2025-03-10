@@ -153,6 +153,117 @@
     <ClInclude Include="library\system-component\lock\critical_section.h">
       <Filter>library\system-component\lock</Filter>
     </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\builders\array_builder.hpp">
+      <Filter>library\database\cpp_redis\builders</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\builders\builder_iface.hpp">
+      <Filter>library\database\cpp_redis\builders</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\builders\builders_factory.hpp">
+      <Filter>library\database\cpp_redis\builders</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\builders\bulk_string_builder.hpp">
+      <Filter>library\database\cpp_redis\builders</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\builders\error_builder.hpp">
+      <Filter>library\database\cpp_redis\builders</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\builders\integer_builder.hpp">
+      <Filter>library\database\cpp_redis\builders</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\builders\reply_builder.hpp">
+      <Filter>library\database\cpp_redis\builders</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\builders\simple_string_builder.hpp">
+      <Filter>library\database\cpp_redis\builders</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\core\client.hpp">
+      <Filter>library\database\cpp_redis\core</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\core\consumer.hpp">
+      <Filter>library\database\cpp_redis\core</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\core\reply.hpp">
+      <Filter>library\database\cpp_redis\core</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\core\sentinel.hpp">
+      <Filter>library\database\cpp_redis\core</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\core\subscriber.hpp">
+      <Filter>library\database\cpp_redis\core</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\core\types.hpp">
+      <Filter>library\database\cpp_redis\core</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\helpers\generate_rand.hpp">
+      <Filter>library\database\cpp_redis\helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\helpers\variadic_template.hpp">
+      <Filter>library\database\cpp_redis\helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\impl\client.ipp">
+      <Filter>library\database\cpp_redis\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\impl\types.hpp">
+      <Filter>library\database\cpp_redis\impl</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\misc\convert.hpp">
+      <Filter>library\database\cpp_redis\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\misc\deprecated.hpp">
+      <Filter>library\database\cpp_redis\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\misc\dispatch_queue.hpp">
+      <Filter>library\database\cpp_redis\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\misc\error.hpp">
+      <Filter>library\database\cpp_redis\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\misc\logger.hpp">
+      <Filter>library\database\cpp_redis\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\misc\macro.hpp">
+      <Filter>library\database\cpp_redis\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\misc\optional.hpp">
+      <Filter>library\database\cpp_redis\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\network\redis_connection.hpp">
+      <Filter>library\database\cpp_redis\network</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\network\tcp_client.hpp">
+      <Filter>library\database\cpp_redis\network</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\cpp_redis\network\tcp_client_iface.hpp">
+      <Filter>library\database\cpp_redis\network</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\tacopie\network\io_service.hpp">
+      <Filter>library\database\tacopie\network</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\tacopie\network\self_pipe.hpp">
+      <Filter>library\database\tacopie\network</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\tacopie\network\tcp_client.hpp">
+      <Filter>library\database\tacopie\network</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\tacopie\network\tcp_server.hpp">
+      <Filter>library\database\tacopie\network</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\tacopie\network\tcp_socket.hpp">
+      <Filter>library\database\tacopie\network</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\tacopie\utils\error.hpp">
+      <Filter>library\database\tacopie\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\tacopie\utils\logger.hpp">
+      <Filter>library\database\tacopie\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\tacopie\utils\thread_pool.hpp">
+      <Filter>library\database\tacopie\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="library\database\tacopie\utils\typedefs.hpp">
+      <Filter>library\database\tacopie\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="library">
@@ -215,10 +326,66 @@
     <Filter Include="library\system-component\lock">
       <UniqueIdentifier>{24e3b71e-6555-4515-85bc-f28258cfc254}</UniqueIdentifier>
     </Filter>
+    <Filter Include="library\database\cpp_redis\builders">
+      <UniqueIdentifier>{9cbe2ad5-b9f2-4579-809d-ba65253820f5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\database\cpp_redis\core">
+      <UniqueIdentifier>{6e3153c5-cd29-4b5b-8f29-61b2b4c496ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\database\cpp_redis\helpers">
+      <UniqueIdentifier>{d45cabb5-c65d-4a50-aa66-f72b995174a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\database\cpp_redis\impl">
+      <UniqueIdentifier>{32b37dca-e799-44ec-abe9-8291f2260df1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\database\cpp_redis\misc">
+      <UniqueIdentifier>{3beef5c2-b7a3-4cd7-89e1-21e686eff586}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\database\cpp_redis\network">
+      <UniqueIdentifier>{6f20493c-e631-4a55-8866-b98feeb7b6e1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\database\tacopie\network">
+      <UniqueIdentifier>{27e37b09-31ce-4490-be70-d316e4b55e01}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\database\tacopie\utils">
+      <UniqueIdentifier>{bc5dea25-b716-4039-8443-5dff7802ecbf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Library Include="library\database\library\libmysql.lib">
       <Filter>library\database\library</Filter>
     </Library>
+    <Library Include="library\database\cpp_redis\cpp_redis.lib">
+      <Filter>library\database\cpp_redis</Filter>
+    </Library>
+    <Library Include="library\database\tacopie\tacopie.lib">
+      <Filter>library\database\tacopie</Filter>
+    </Library>
+    <Library Include="library\database\library\mysqlclient.lib">
+      <Filter>library\database\library</Filter>
+    </Library>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="library\database\cpp_redis\cpp_redis">
+      <Filter>library\database\cpp_redis</Filter>
+    </None>
+    <None Include="library\database\cpp_redis\cpp_redis.pdb">
+      <Filter>library\database\cpp_redis</Filter>
+    </None>
+    <None Include="library\database\tacopie\tacopie">
+      <Filter>library\database\tacopie</Filter>
+    </None>
+    <None Include="library\database\tacopie\tacopie.pdb">
+      <Filter>library\database\tacopie</Filter>
+    </None>
+    <None Include="library\database\library\libcrypto-3-x64.dll">
+      <Filter>library\database\library</Filter>
+    </None>
+    <None Include="library\database\library\libmysql.dll">
+      <Filter>library\database\library</Filter>
+    </None>
+    <None Include="library\database\library\libssl-3-x64.dll">
+      <Filter>library\database\library</Filter>
+    </None>
   </ItemGroup>
 </Project>
