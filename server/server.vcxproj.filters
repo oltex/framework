@@ -272,9 +272,6 @@
     <Filter Include="library\system-component">
       <UniqueIdentifier>{bf0e1dbf-00e5-4cc9-b669-0482046b407a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="library\system-component\input_output">
-      <UniqueIdentifier>{602c4aea-b12f-489c-a7ce-475b7f8a17cf}</UniqueIdentifier>
-    </Filter>
     <Filter Include="library\design-pattern">
       <UniqueIdentifier>{a62cd51f-ab8c-46b9-9a7a-eeff412dbb1d}</UniqueIdentifier>
     </Filter>
