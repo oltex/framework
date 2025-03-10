@@ -1,5 +1,5 @@
 #pragma once
-#include "library/system-component/input-output/completion_port.h"
+#include "library/system-component/inputoutput_completion_port.h"
 #include "library/system-component/thread.h"
 #include "library/system-component/socket.h"
 #include "library/system-component/wait_on_address.h"
@@ -1505,7 +1505,7 @@ protected:
 		return view_ptr;
 	}
 private:
-	system_component::input_output::completion_port _complation_port;
+	system_component::inputoutput_completion_port _complation_port;
 	data_structure::vector<system_component::thread> _worker_thread;
 	scheduler _scheduler;
 	scheduler::group_array _group_array;

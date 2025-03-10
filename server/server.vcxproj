@@ -225,7 +225,7 @@
     <ClInclude Include="library\design-pattern\thread-local\singleton.h" />
     <ClInclude Include="library\system-component\file.h" />
     <ClInclude Include="library\system-component\handle.h" />
-    <ClInclude Include="library\system-component\input-output\completion_port.h" />
+    <ClInclude Include="library\system-component\inputoutput_completion_port.h" />
     <ClInclude Include="library\system-component\lock\critical_section.h" />
     <ClInclude Include="library\system-component\overlapped.h" />
     <ClInclude Include="library\system-component\socket.h" />

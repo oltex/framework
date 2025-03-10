@@ -1,26 +1,26 @@
 #pragma once
 #pragma comment(lib,"ws2_32.lib")
 #include <WinSock2.h>
-#include "../socket.h"
-#include "../handle.h"
+#include "socket.h"
+#include "handle.h"
 
-namespace system_component::input_output {
-	class completion_port final : public handle {
+namespace system_component {
+	class inputoutput_completion_port final : public handle {
 	public:
-		inline explicit completion_port(void) noexcept = default;
-		inline explicit completion_port(unsigned long const concurrent_thread) noexcept
+		inline explicit inputoutput_completion_port(void) noexcept = default;
+		inline explicit inputoutput_completion_port(unsigned long const concurrent_thread) noexcept
 			: handle(CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, concurrent_thread)) {
 		};
-		inline explicit completion_port(completion_port const&) noexcept = delete;
-		inline explicit completion_port(completion_port&& rhs) noexcept
+		inline explicit inputoutput_completion_port(inputoutput_completion_port const&) noexcept = delete;
+		inline explicit inputoutput_completion_port(inputoutput_completion_port&& rhs) noexcept
 			: handle(std::move(rhs)) {
 		};
-		inline auto operator=(completion_port const&) noexcept -> completion_port & = delete;
-		inline auto operator=(completion_port&& rhs) noexcept -> completion_port& {
+		inline auto operator=(inputoutput_completion_port const&) noexcept -> inputoutput_completion_port & = delete;
+		inline auto operator=(inputoutput_completion_port&& rhs) noexcept -> inputoutput_completion_port& {
 			handle::operator=(std::move(rhs));
 			return *this;
 		}
-		inline virtual ~completion_port(void) noexcept override = default;
+		inline virtual ~inputoutput_completion_port(void) noexcept override = default;
 	public:
 		inline void create(unsigned long const concurrent_thread) noexcept {
 			_handle = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, concurrent_thread);
