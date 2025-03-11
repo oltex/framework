@@ -1118,7 +1118,6 @@ protected:
 		_session_array.finalize();
 		_group_array.finalize();
 
-
 		for (size_type index = 0; index < _worker_thread.size(); ++index)
 			_complation_port.post_queue_state(0, 0, nullptr);
 		HANDLE handle[128];
@@ -1431,6 +1430,18 @@ protected:
 			session_._timeout_duration = duration;
 		if (session_.release())
 			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
+	}
+	inline auto do_get_session_ip(unsigned long long key) noexcept -> std::optional<std::wstring> {
+		session& session_ = _session_array[key];
+		std::optional<std::wstring> result = std::nullopt;
+		if (session_.acquire(key)) {
+			auto address = session_._socket.get_remote_socket_address();
+			if (address)
+				result = address->get_address();
+		}
+		if (session_.release())
+			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
+		return result;
 	}
 
 	inline virtual void on_destory_group(unsigned long long key) noexcept = 0;
