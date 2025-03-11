@@ -257,8 +257,8 @@ private:
 			_socket = std::move(socket);
 			_timeout_currnet = GetTickCount64();
 			_timeout_duration = timeout_duration;
-			_InterlockedExchange(&_send_flag, 0);
-			_InterlockedExchange(&_cancel_flag, 0);
+			_send_flag = 0;
+			_cancel_flag = 0;
 			_InterlockedIncrement(&_io_count);
 			_InterlockedAnd((long*)&_receive_count, 0x3FFFFFFF);
 			_InterlockedAnd((long*)&_io_count, 0x7FFFFFFF);
@@ -300,7 +300,7 @@ private:
 						_socket.cancel_io_ex();
 					return true;
 				}
-				cancel();
+				_cancel_flag = 1;
 			}
 			return false;
 		}
@@ -330,7 +330,7 @@ private:
 								_socket.cancel_io_ex();
 							return true;
 						}
-						cancel();
+						_cancel_flag = 1;
 						return false;
 					}
 				}
@@ -338,7 +338,7 @@ private:
 			return false;
 		}
 		inline void cancel(void) noexcept {
-			_InterlockedExchange(&_cancel_flag, 1);
+			_cancel_flag = 1;
 			_socket.cancel_io_ex();
 		}
 		inline bool ready_receive(void) noexcept {
@@ -354,7 +354,7 @@ private:
 				return true;
 			}
 			cancel();
-			log_message("server", utility::logger::level::info, L"session(%llu) close / reason : receive buffer full");
+			//log_message("server", utility::logger::level::info, L"session(%llu) close / reason : receive buffer full");
 			return false;
 		}
 		inline void finish_send(void) noexcept {
@@ -604,7 +604,7 @@ private:
 			inline explicit group(void) noexcept
 				: task(type::group) {
 				_key = _interlockedadd64((volatile long long*)&_static_id, 0x10000);
-				_InterlockedExchange(&_cancel_flag, 0);
+				_cancel_flag = 0;
 				_InterlockedIncrement(&_io_count);
 				_InterlockedAnd((long*)&_io_count, 0x7FFFFFFF);
 			};
@@ -720,7 +720,7 @@ private:
 				return false;
 			}
 			inline void cancel(void) noexcept {
-				_InterlockedExchange(&_cancel_flag, 1);
+				_cancel_flag = 1;
 			}
 			inline void do_enter_session(unsigned long long key) noexcept {
 				auto& memory_pool = data_structure::_thread_local::memory_pool<job>::instance();
@@ -1247,7 +1247,7 @@ private:
 					}
 				}
 				else
-					session_.cancel();
+					session_._cancel_flag = 1;
 				if (session_.release()) {
 					on_destroy_session(session_._key);
 					_session_array.release(session_);
