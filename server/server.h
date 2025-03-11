@@ -1408,10 +1408,10 @@ protected:
 		}
 		return session_._key;
 	}
-	inline void do_send_session(unsigned long long key, session::view_pointer& message_ptr) noexcept {
+	inline void do_send_session(unsigned long long key, session::view_pointer& view_ptr) noexcept {
 		session& session_ = _session_array[key];
 		if (session_.acquire(key)) {
-			session_._send_queue.push(message_ptr);
+			session_._send_queue.push(view_ptr);
 			if (0 == _send_frame && session_.send())
 				return;
 		}
