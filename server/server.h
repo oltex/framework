@@ -3,6 +3,7 @@
 #include "library/system-component/thread.h"
 #include "library/system-component/socket.h"
 #include "library/system-component/wait_on_address.h"
+#include "library/system-component/time/multimedia.h"
 
 #include "library/data-structure/serialize_buffer.h"
 #include "library/data-structure/thread-local/memory_pool.h"
@@ -311,13 +312,13 @@ private:
 					else {
 						WSABUF wsa_buffer[512];
 						_send_size = 0;
-						for (auto& iter : _send_queue) {
+						for (auto iter = _send_queue.begin(), end = _send_queue.end(); iter != end; ++iter) {
 							if (512 <= _send_size) {
 								cancel();
 								return false;
 							}
-							wsa_buffer[_send_size].buf = reinterpret_cast<char*>(iter->data()->data() + iter->front());
-							wsa_buffer[_send_size].len = iter->size();
+							wsa_buffer[_send_size].buf = reinterpret_cast<char*>((*iter)->data()->data() + (*iter)->front());
+							wsa_buffer[_send_size].len = (*iter)->size();
 							_send_size++;
 						}
 						_send_overlapped.clear();
@@ -490,7 +491,7 @@ private:
 			};
 #pragma warning(suppress: 26495)
 			inline explicit task(type const type_) noexcept
-				: _type(type_) {
+				: _type(type_), _time(system_component::time::multimedia::get_time()) {
 			};
 			inline explicit task(task const&) noexcept = delete;
 			inline explicit task(task&&) noexcept = delete;
@@ -501,7 +502,7 @@ private:
 			inline virtual bool excute(void) noexcept = 0;
 
 			type _type;
-			unsigned long long _time;
+			unsigned long _time;
 		};
 		class function : public task {
 		public:
@@ -517,14 +518,14 @@ private:
 
 			inline virtual bool excute(void) noexcept override {
 				for (;;) {
-					_time = _function();
-					switch (_time) {
+					int time = _function();
+					switch (time) {
 					case 0:
 						break;
 					case -1:
 						return false;
 					default:
-						_time = _time + GetTickCount64();
+						_time += time;
 						return true;
 					}
 				}
@@ -671,8 +672,7 @@ private:
 						}
 					}
 
-					auto end = _session_map.end();
-					for (auto iter = _session_map.begin(); iter != end;) {
+					for (auto iter = _session_map.begin(), end = _session_map.end(); iter != end;) {
 						session& session_ = *iter->second;
 						if (!session_._cancel_flag) {
 							while (!session_._receive_queue.empty()) {
@@ -695,14 +695,14 @@ private:
 							++iter;
 					}
 
-					_time = on_update();
-					switch (_time) {
+					int time = on_update();
+					switch (time) {
 					case 0:
 						break;
 					case -1:
 						return false;
 					default:
-						_time = _time + GetTickCount64();
+						_time += time;
 						return true;
 					}
 				}
@@ -948,9 +948,10 @@ protected:
 
 #pragma warning(suppress: 26495)
 	inline explicit server(void) noexcept {
-		//utility::crash_dump();
-		database::mysql::initialize();
+		utility::crash_dump();
+		system_component::time::multimedia::begin_period(1);
 		system_component::wsa_start_up();
+		database::mysql::initialize();
 		//utility::logger::instance().create("server", L"server.log");
 
 		auto& command_ = command::instance();
@@ -1050,8 +1051,9 @@ protected:
 	inline auto operator=(server const&) noexcept -> server & = delete;
 	inline auto operator=(server&&) noexcept -> server & = delete;
 	inline ~server(void) noexcept {
-		system_component::wsa_clean_up();
 		database::mysql::end();
+		system_component::time::multimedia::end_period(1);
+		system_component::wsa_clean_up();
 	};
 
 	inline void start(void) noexcept {
@@ -1264,7 +1266,7 @@ private:
 					_ready_queue.push(&_scheduler._task_queue.pop());
 			}
 			wait_time = INFINITE;
-			unsigned long long time = GetTickCount64();
+			unsigned long time = system_component::time::multimedia::get_time();
 			while (!_ready_queue.empty()) {
 				auto task_ = _ready_queue.top();
 				if (time < task_->_time) {
@@ -1277,14 +1279,14 @@ private:
 		}
 	}
 	inline int send(void) noexcept {
-		for (auto& iter : _session_array) {
-			if (iter._value.acquire()) {
-				if (iter._value.send())
+		for (auto iter = _session_array.begin(), end = _session_array.end(); iter != end; ++iter) {
+			if (iter->_value.acquire()) {
+				if (iter->_value.send())
 					continue;
 			}
-			if (iter._value.release()) {
-				on_destroy_session(iter._value._key);
-				_session_array.release(iter._value);
+			if (iter->_value.release()) {
+				on_destroy_session(iter->_value._key);
+				_session_array.release(iter->_value);
 			}
 		}
 		if (-1 == _scheduler._active)
@@ -1292,16 +1294,16 @@ private:
 		return _send_frame;
 	}
 	inline int timeout(void) noexcept {
-		for (auto& iter : _session_array) {
-			if (iter._value.acquire()) {
-				if (iter._value._timeout_currnet + iter._value._timeout_duration < GetTickCount64()) {
-					iter._value.cancel();
+		for (auto iter = _session_array.begin(), end = _session_array.end(); iter != end; ++iter) {
+			if (iter->_value.acquire()) {
+				if (iter->_value._timeout_currnet + iter->_value._timeout_duration < GetTickCount64()) {
+					iter->_value.cancel();
 					++_timeout_total_count;
 				}
 			}
-			if (iter._value.release()) {
-				on_destroy_session(iter._value._key);
-				_session_array.release(iter._value);
+			if (iter->_value.release()) {
+				on_destroy_session(iter->_value._key);
+				_session_array.release(iter->_value);
 			}
 		}
 		if (-1 == _scheduler._active)
