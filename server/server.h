@@ -1138,14 +1138,18 @@ private:
 			if (false == on_accept_socket(socket_address))
 				socket.close();
 			else {
-				session& session_ = *_session_array.acquire();
-				session_.initialize(std::move(socket), _timeout_duration);
-				_complation_port.connect(session_._socket, reinterpret_cast<ULONG_PTR>(&session_));
-				on_create_session(session_._key);
+				session* session_ = _session_array.acquire();
+				if (nullptr == session_)
+					socket.close();
+				else {
+					session_->initialize(std::move(socket), _timeout_duration);
+					_complation_port.connect(session_->_socket, reinterpret_cast<ULONG_PTR>(session_));
+					on_create_session(session_->_key);
 
-				if (!session_.receive() && session_.release()) {
-					on_destroy_session(session_._key);
-					_session_array.release(session_);
+					if (!session_->receive() && session_->release()) {
+						on_destroy_session(session_->_key);
+						_session_array.release(*session_);
+					}
 				}
 			}
 		}
