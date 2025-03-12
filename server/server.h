@@ -954,6 +954,10 @@ protected:
 		database::mysql::initialize();
 		//utility::logger::instance().create("server", L"server.log");
 
+		SYSTEM_INFO info;
+		GetSystemInfo(&info);
+		_number_of_processor = info.dwNumberOfProcessors;
+
 		auto& command_ = command::instance();
 		command_.add("log_output", [&](command::parameter* param) noexcept -> int {
 			unsigned char output = 0;
@@ -1314,12 +1318,9 @@ private:
 		return _timeout_frame;
 	}
 	inline int monit(void) noexcept {
-		system("cls");
 		auto& query = utility::performance_data_helper::query::instance();
 		query.collect_query_data();
 
-		SYSTEM_INFO info;
-		GetSystemInfo(&info);
 		printf("--------------------------------------\n"\
 			"[ System Monitor ]\n"\
 			"CPU Usage\n"\
@@ -1341,9 +1342,9 @@ private:
 			_processor_total_time.get_formatted_value(PDH_FMT_DOUBLE).doubleValue,
 			_processor_user_time.get_formatted_value(PDH_FMT_DOUBLE).doubleValue,
 			_processor_kernel_time.get_formatted_value(PDH_FMT_DOUBLE).doubleValue,
-			_process_total_time.get_formatted_value(PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors,
-			_process_user_time.get_formatted_value(PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors,
-			_process_kernel_time.get_formatted_value(PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / info.dwNumberOfProcessors,
+			_process_total_time.get_formatted_value(PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / _number_of_processor,
+			_process_user_time.get_formatted_value(PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / _number_of_processor,
+			_process_kernel_time.get_formatted_value(PDH_FMT_DOUBLE | PDH_FMT_NOCAP100).doubleValue / _number_of_processor,
 			_memory_available_byte.get_formatted_value(PDH_FMT_DOUBLE).doubleValue / 0x40000000,
 			_memory_pool_nonpaged_byte.get_formatted_value(PDH_FMT_DOUBLE).doubleValue / 0x100000,
 			_process_private_byte.get_formatted_value(PDH_FMT_DOUBLE).doubleValue / 0x100000,
@@ -1372,11 +1373,12 @@ private:
 			"            Use Count  :   %u\n",
 			_accept_total_count, _timeout_total_count, _session_array._size, _group_array._size, _accept_tps, _receive_tps, _send_tps,
 			message_pool._stack._capacity, message_pool._use_count, view_pool._stack._capacity, view_pool._use_count);
+
+		on_monit();
+
 		_accept_tps = 0;
 		_receive_tps = 0;
 		_send_tps = 0;
-
-		on_monit();
 
 		if (-1 == _scheduler._active)
 			return -1;
@@ -1562,4 +1564,6 @@ public:
 	size_type _accept_tps = 0;
 	size_type _receive_tps = 0;
 	size_type _send_tps = 0;
+
+	unsigned long _number_of_processor;
 };
