@@ -240,6 +240,7 @@ private:
 			inline auto size(void) const noexcept {
 				return _size;
 			}
+		private:
 			size_type _size = 0;
 		};
 		inline static unsigned long long _static_id = 0x10000;
