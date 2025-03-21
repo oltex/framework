@@ -202,6 +202,7 @@ private:
 			inline void push(view_pointer view_ptr) noexcept {
 				base::emplace(view_ptr.get());
 				view_ptr.reset();
+				_InterlockedIncrement(&_size);
 			}
 			inline auto pop(void) noexcept -> view_pointer {
 				unsigned long long head = _head;
@@ -218,6 +219,8 @@ private:
 				result.set(reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value);
 				_head = next;
 				_memory_pool::instance().deallocate(*address);
+
+				_InterlockedDecrement(&_size);
 				return result;
 			}
 			inline auto begin(void) noexcept -> iterator {
@@ -234,6 +237,10 @@ private:
 					return true;
 				return false;
 			}
+			inline auto size(void) const noexcept {
+				return _size;
+			}
+			size_type _size = 0;
 		};
 		inline static unsigned long long _static_id = 0x10000;
 	public:
@@ -1416,9 +1423,13 @@ protected:
 	inline void do_send_session(unsigned long long key, session::view_pointer& view_ptr) noexcept {
 		session& session_ = _session_array[key];
 		if (session_.acquire(key)) {
-			session_._send_queue.push(view_ptr);
-			if (0 == _send_frame && session_.send())
-				return;
+			if (512 > session_._send_queue.size()) {
+				session_._send_queue.push(view_ptr);
+				if (0 == _send_frame && session_.send())
+					return;
+			}
+			else
+				session_.cancel();
 		}
 		if (session_.release())
 			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
