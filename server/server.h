@@ -311,16 +311,6 @@ private:
 						_cancel_flag = 1;
 					}
 				}
-				//int result = _socket.wsa_receive(&wsa_buffer, 1, &flag, _recv_overlapped);
-				//if (result != SOCKET_ERROR)
-				//	return;
-				//else if (WSA_IO_PENDING == GetLastError()) {
-				//	if (1 == _cancel_flag)
-				//		_socket.cancel_io_ex();
-				//	return;
-				//}
-				//_InterlockedDecrement(&_io_count);
-				//_cancel_flag = 1;
 			}
 		}
 		inline void send(void) noexcept {
@@ -353,18 +343,6 @@ private:
 							}
 						}
 						return;
-
-						//int result = _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped);
-						//if (result != SOCKET_ERROR)
-						//	return;
-						//else if (GetLastError() == WSA_IO_PENDING) {
-						//	if (1 == _cancel_flag)
-						//		_socket.cancel_io_ex();
-						//	return;
-						//}
-						//_InterlockedDecrement(&_io_count);
-						//_cancel_flag = 1;
-						//return;
 					}
 				}
 			}
