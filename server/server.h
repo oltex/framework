@@ -295,24 +295,35 @@ private:
 			}
 			return false;
 		}
-		inline bool receive(void) noexcept {
+		inline void receive(void) noexcept {
 			if (0 == _cancel_flag) {
 				WSABUF wsa_buffer{ message::capacity() - _receive_message->rear(),  reinterpret_cast<char*>(_receive_message->data() + _receive_message->rear()) };
 				unsigned long flag = 0;
 				_recv_overlapped.clear();
-				int result = _socket.wsa_receive(&wsa_buffer, 1, &flag, _recv_overlapped);
-				if (result != SOCKET_ERROR)
-					return true;
-				else if (GetLastError() == WSA_IO_PENDING) {
-					if (1 == _cancel_flag)
-						_socket.cancel_io_ex();
-					return true;
+				_InterlockedIncrement(&_io_count);
+				if (SOCKET_ERROR == _socket.wsa_receive(&wsa_buffer, 1, &flag, _recv_overlapped)) {
+					if (WSA_IO_PENDING == GetLastError()) {
+						if (1 == _cancel_flag)
+							_socket.cancel_io_ex();
+					}
+					else {
+						_InterlockedDecrement(&_io_count);
+						_cancel_flag = 1;
+					}
 				}
-				_cancel_flag = 1;
+				//int result = _socket.wsa_receive(&wsa_buffer, 1, &flag, _recv_overlapped);
+				//if (result != SOCKET_ERROR)
+				//	return;
+				//else if (WSA_IO_PENDING == GetLastError()) {
+				//	if (1 == _cancel_flag)
+				//		_socket.cancel_io_ex();
+				//	return;
+				//}
+				//_InterlockedDecrement(&_io_count);
+				//_cancel_flag = 1;
 			}
-			return false;
 		}
-		inline bool send(void) noexcept {
+		inline void send(void) noexcept {
 			if (0 == _cancel_flag) {
 				while (!_send_queue.empty() && 0 == _InterlockedExchange(&_send_flag, 1)) {
 					if (_send_queue.empty())
@@ -323,27 +334,40 @@ private:
 						for (auto iter = _send_queue.begin(), end = _send_queue.end(); iter != end; ++iter) {
 							if (512 <= _send_size) {
 								cancel();
-								return false;
+								return;
 							}
 							wsa_buffer[_send_size].buf = reinterpret_cast<char*>((*iter)->data()->data() + (*iter)->front());
 							wsa_buffer[_send_size].len = (*iter)->size();
 							_send_size++;
 						}
 						_send_overlapped.clear();
-						int result = _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped);
-						if (result != SOCKET_ERROR)
-							return true;
-						else if (GetLastError() == WSA_IO_PENDING) {
-							if (1 == _cancel_flag)
-								_socket.cancel_io_ex();
-							return true;
+						_InterlockedIncrement(&_io_count);
+						if (SOCKET_ERROR == _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped)) {
+							if (GetLastError() == WSA_IO_PENDING) {
+								if (1 == _cancel_flag)
+									_socket.cancel_io_ex();
+							}
+							else {
+								_InterlockedDecrement(&_io_count);
+								_cancel_flag = 1;
+							}
 						}
-						_cancel_flag = 1;
-						return false;
+						return;
+
+						//int result = _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped);
+						//if (result != SOCKET_ERROR)
+						//	return;
+						//else if (GetLastError() == WSA_IO_PENDING) {
+						//	if (1 == _cancel_flag)
+						//		_socket.cancel_io_ex();
+						//	return;
+						//}
+						//_InterlockedDecrement(&_io_count);
+						//_cancel_flag = 1;
+						//return;
 					}
 				}
 			}
-			return false;
 		}
 		inline void cancel(void) noexcept {
 			_cancel_flag = 1;
@@ -1157,8 +1181,8 @@ private:
 					session_->initialize(std::move(socket), _timeout_duration);
 					_complation_port.connect(session_->_socket, reinterpret_cast<ULONG_PTR>(session_));
 					on_create_session(session_->_key);
-
-					if (!session_->receive() && session_->release()) {
+					session_->receive();
+					if (session_->release()) {
 						on_destroy_session(session_->_key);
 						_session_array.release(*session_);
 					}
@@ -1251,14 +1275,14 @@ private:
 								_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(&group_));
 						}
 
-						if (session_.ready_receive() && session_.receive())
-							continue;
+						if (session_.ready_receive())
+							session_.receive();
 					}
 					else {
 						_interlockedadd((volatile long*)&_send_tps, session_._send_size);
 						session_.finish_send();
-						if (0 == _send_frame && session_.send())
-							continue;
+						if (0 == _send_frame)
+							session_.send();
 					}
 				}
 				else
@@ -1296,8 +1320,7 @@ private:
 	inline int send(void) noexcept {
 		for (auto iter = _session_array.begin(), end = _session_array.end(); iter != end; ++iter) {
 			if (iter->_value.acquire()) {
-				if (iter->_value.send())
-					continue;
+				iter->_value.send();
 			}
 			if (iter->_value.release()) {
 				on_destroy_session(iter->_value._key);
@@ -1413,8 +1436,8 @@ protected:
 		session& session_ = *_session_array.acquire();
 		session_.initialize(std::move(socket), _timeout_duration);
 		_complation_port.connect(session_._socket, reinterpret_cast<ULONG_PTR>(&session_));
-
-		if (!session_.receive() && session_.release()) {
+		session_.receive();
+		if (session_.release()) {
 			on_destroy_session(session_._key);
 			_session_array.release(session_);
 			return 0;
@@ -1426,8 +1449,8 @@ protected:
 		if (session_.acquire(key)) {
 			if (512 > session_._send_queue.size()) {
 				session_._send_queue.push(view_ptr);
-				if (0 == _send_frame && session_.send())
-					return;
+				if (0 == _send_frame)
+					session_.send();
 			}
 			else
 				session_.cancel();
