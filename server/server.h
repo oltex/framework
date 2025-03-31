@@ -200,9 +200,9 @@ private:
 			inline ~queue(void) noexcept = default;
 
 			inline void push(view_pointer view_ptr) noexcept {
+				_InterlockedIncrement(&_size);
 				base::emplace(view_ptr.get());
 				view_ptr.reset();
-				_InterlockedIncrement(&_size);
 			}
 			inline auto pop(void) noexcept -> view_pointer {
 				unsigned long long head = _head;
@@ -1252,7 +1252,9 @@ private:
 					}
 					else {
 						_interlockedadd((volatile long*)&_send_tps, session_._send_size);
+
 						session_.finish_send();
+
 						if (0 == _send_frame && session_.send())
 							continue;
 					}
