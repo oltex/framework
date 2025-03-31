@@ -283,6 +283,13 @@ private:
 				return false;
 			return true;
 		}
+		inline auto acquire(unsigned long long key, unsigned long size) noexcept -> bool {
+			auto io_count = _InterlockedIncrement(&_io_count);
+			if ((0x80000000 & io_count) || _key != key)
+				return false;
+			return true;
+		}
+
 		inline bool release(void) noexcept {
 			if (0 == _InterlockedDecrement(&_io_count) && 0 == _InterlockedCompareExchange(&_io_count, 0x80000000, 0)) {
 				_receive_message->clear();
@@ -392,9 +399,9 @@ private:
 		queue _send_queue;
 		system_component::overlapped _recv_overlapped;
 		system_component::overlapped _send_overlapped;
-		unsigned long _io_count; // release_flag
+		unsigned long _io_count; // release_flag : 1 group_io : ? : io_count : ?
 		unsigned long _cancel_flag;
-		unsigned long _receive_count; // group_flag, cancel_flag
+		unsigned long _receive_count; // release_flag : 2
 		unsigned long _send_flag;
 		unsigned long _send_size;
 		unsigned long long _timeout_currnet;
