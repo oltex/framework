@@ -904,7 +904,7 @@ private:
 			inline void wake(void) noexcept {
 				system_component::wait_on_address::wake_single(&_size);
 			}
-			inline bool wait(void* compare, unsigned long wait_time) noexcept {
+			inline bool wait(void* compare, unsigned long const wait_time) noexcept {
 				return system_component::wait_on_address::wait(&_size, compare, sizeof(size_type), wait_time);
 			}
 		private:
@@ -936,7 +936,7 @@ private:
 		inline void push(task& task_) noexcept {
 			_task_queue.push(task_);
 		}
-		inline bool wait(unsigned long wait_time) noexcept {
+		inline bool wait(unsigned long const wait_time) noexcept {
 			return _task_queue.wait(&_active, wait_time);
 		}
 
@@ -997,12 +997,12 @@ protected:
 			_worker_thread_count = param->get_int(1);
 			return 0;
 			});
-		command_.add("group_max", [&](command::parameter* param) noexcept -> int {
-			_group_array_max = param->get_int(1);
-			return 0;
-			});
 		command_.add("session_max", [&](command::parameter* param) noexcept -> int {
 			_session_array_max = param->get_int(1);
+			return 0;
+			});
+		command_.add("group_max", [&](command::parameter* param) noexcept -> int {
+			_group_array_max = param->get_int(1);
 			return 0;
 			});
 		command_.add("send_mode", [&](command::parameter* param) noexcept -> int {
