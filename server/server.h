@@ -302,8 +302,9 @@ private:
 			unsigned long long key = _key;
 			if (SOCKET_ERROR == _socket.wsa_receive(&wsa_buffer, 1, &flag, _recv_overlapped)) {
 				if (WSA_IO_PENDING == GetLastError()) {
-					if (1 == _cancel_flag && acquire(key)) {
-						_socket.cancel_io_ex();
+					if (1 == _cancel_flag) {
+						if (acquire(key))
+							_socket.cancel_io_ex();
 						return false;
 					}
 					return true;
@@ -319,21 +320,17 @@ private:
 				else {
 					WSABUF wsa_buffer[512];
 					_send_size = 0;
-					for (auto iter = _send_queue.begin(), end = _send_queue.end(); iter != end; ++iter) {
-						if (512 <= _send_size) {
-							cancel();
-							return false;
-						}
+					for (auto iter = _send_queue.begin(), end = _send_queue.end(); iter != end || 512 <= _send_size; ++iter, ++_send_size) {
 						wsa_buffer[_send_size].buf = reinterpret_cast<char*>((*iter)->data()->data() + (*iter)->front());
 						wsa_buffer[_send_size].len = (*iter)->size();
-						_send_size++;
 					}
 					_send_overlapped.clear();
 					unsigned long long key = _key;
 					if (SOCKET_ERROR == _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped)) {
 						if (GetLastError() == WSA_IO_PENDING) {
-							if (1 == _cancel_flag && acquire(key)) {
-								_socket.cancel_io_ex();
+							if (1 == _cancel_flag) {
+								if (acquire(key))
+									_socket.cancel_io_ex();
 								return false;
 							}
 							return true;
@@ -1156,7 +1153,7 @@ private:
 					session_->initialize(std::move(socket), _timeout_duration);
 					_complation_port.connect(session_->_socket, reinterpret_cast<ULONG_PTR>(session_));
 					on_create_session(session_->_key);
-					
+
 					if (!session_->receive() && session_->release()) {
 						on_destroy_session(session_->_key);
 						_session_array.release(*session_);
@@ -1412,7 +1409,7 @@ protected:
 		session& session_ = *_session_array.acquire();
 		session_.initialize(std::move(socket), _timeout_duration);
 		_complation_port.connect(session_._socket, reinterpret_cast<ULONG_PTR>(&session_));
-		
+
 		if (!session_.receive() && session_.release()) {
 			on_destroy_session(session_._key);
 			_session_array.release(session_);
@@ -1575,6 +1572,12 @@ public:
 	size_type _accept_tps = 0;
 	size_type _receive_tps = 0;
 	size_type _send_tps = 0;
+
+	size_type _recv_cancel = 0;
+	size_type _send_cancel = 0;
+
+	inline static size_type _recv_cancel_false = 0;
+	inline static size_type _send_cancel_false = 0;
 
 	unsigned long _number_of_processor;
 };
