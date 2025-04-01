@@ -283,13 +283,6 @@ private:
 				return false;
 			return true;
 		}
-		inline auto acquire(unsigned long long key, unsigned long size) noexcept -> bool {
-			auto io_count = _InterlockedIncrement(&_io_count);
-			if ((0x80000000 & io_count) || _key != key)
-				return false;
-			return true;
-		}
-
 		inline bool release(void) noexcept {
 			if (0 == _InterlockedDecrement(&_io_count) && 0 == _InterlockedCompareExchange(&_io_count, 0x80000000, 0)) {
 				_receive_message->clear();
@@ -316,6 +309,7 @@ private:
 					}
 					return true;
 				}
+				_cancel_flag = 1;
 				return false;
 			}
 			return true;
@@ -342,6 +336,7 @@ private:
 							}
 							return true;
 						}
+						_cancel_flag = 1;
 						return false;
 					}
 					return true;
