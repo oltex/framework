@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="network.h" />
+    <ClInclude Include="library\data-structure\thread-local\memory_pool.h">
+      <Filter>library\data-structure\thread-local</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\intrusive\shared_pointer.h">
+      <Filter>library\data-structure\intrusive</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\lockfree\queue.h">
+      <Filter>library\data-structure\lockfree</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\socket.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\interlocked.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="library">
+      <UniqueIdentifier>{8c6e8632-3d9e-41c5-b6c9-cd64be96942d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\data-structure">
+      <UniqueIdentifier>{8082085a-a3cb-4285-b07f-69a8e58510cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\data-structure\thread-local">
+      <UniqueIdentifier>{62ef6395-0e58-42b9-86b4-93b5bb87265c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\data-structure\intrusive">
+      <UniqueIdentifier>{50fdd8ca-75d5-433f-984e-31506f685ca0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\data-structure\lockfree">
+      <UniqueIdentifier>{9f187249-ec8e-4f93-9ebb-f72439bbd3d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\system-component">
+      <UniqueIdentifier>{ce719a60-323c-480b-b45e-3507f5663f4c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
