@@ -235,12 +235,12 @@ private:
 			//_InterlockedAnd((long*)&_receive_count, 0x3FFFFFFF);
 			_InterlockedAnd((long*)&_io_count, 0x7FFFFFFF);
 		}
-		inline auto acquire(void) noexcept -> bool {
+		inline bool acquire(void) noexcept {
 			if (0x80000000 & _InterlockedIncrement(&_io_count))
 				return false;
 			return true;
 		}
-		inline auto acquire(unsigned long long key) noexcept -> bool {
+		inline bool acquire(unsigned long long key) noexcept {
 			if ((0x80000000 & _InterlockedIncrement(&_io_count)) || _key != key)
 				return false;
 			return true;
@@ -257,14 +257,71 @@ private:
 			}
 			return false;
 		}
+		inline bool receive(void) noexcept {
+			WSABUF wsa_buffer{ message::capacity() - _receive_message->rear(),  reinterpret_cast<char*>(_receive_message->data() + _receive_message->rear()) };
+			unsigned long flag = 0;
+			_recv_overlapped.clear();
+			unsigned long long key = _key;
+			if (SOCKET_ERROR == _socket.wsa_receive(&wsa_buffer, 1, &flag, _recv_overlapped)) {
+				if (WSA_IO_PENDING == GetLastError()) {
+					if (true == _cancel_flag) {
+						if (acquire(key))
+							_socket.cancel_io_ex();
+						return false;
+					}
+					return true;
+				}
+				return false;
+			}
+			return true;
+		}
+		inline bool send(void) noexcept {
+			while (!_send_queue.empty() && 0 == _InterlockedExchange(&_send_flag, 1)) {
+				if (_send_queue.empty())
+					_InterlockedExchange(&_send_flag, 0);
+				else {
+					WSABUF wsa_buffer[512];
+					_send_size = 0;
+					for (auto iter = _send_queue.begin(), end = _send_queue.end(); iter != end || 512 <= _send_size; ++iter, ++_send_size) {
+						wsa_buffer[_send_size].buf = reinterpret_cast<char*>((*iter)->data()->data() + (*iter)->front());
+						wsa_buffer[_send_size].len = (*iter)->size();
+					}
+					_send_overlapped.clear();
+					unsigned long long key = _key;
+					if (SOCKET_ERROR == _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped)) {
+						if (GetLastError() == WSA_IO_PENDING) {
+							if (true == _cancel_flag) {
+								if (acquire(key))
+									_socket.cancel_io_ex();
+								return false;
+							}
+							return true;
+						}
+						return false;
+					}
+					return true;
+				}
+			}
+			return false;
+		}
+		inline void cancel(void) noexcept {
+			_cancel_flag = 1;
+			_socket.cancel_io_ex();
+		}
 
-		system_component::socket _socket;
-
+		
 		unsigned long long _key;
 		unsigned long _io_count;
+		bool _cancel_flag;
+		unsigned long _send_flag;
+		unsigned long _send_size;
+
+		system_component::socket _socket;
 		message_pointer _receive_message;
 		queue _receive_queue;
 		queue _send_queue;
+		system_component::overlapped _recv_overlapped;
+		system_component::overlapped _send_overlapped;
 
 	}
 };
