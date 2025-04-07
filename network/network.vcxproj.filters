@@ -4,7 +4,6 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="network.h" />
     <ClInclude Include="library\data-structure\thread-local\memory_pool.h">
       <Filter>library\data-structure\thread-local</Filter>
     </ClInclude>
@@ -19,6 +18,36 @@
     </ClInclude>
     <ClInclude Include="library\system-component\interlocked.h">
       <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\inputoutput_completion_port.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\vector.h">
+      <Filter>library\data-structure</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\serialize_buffer.h">
+      <Filter>library\data-structure</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\thread.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="network.h">
+      <Filter>network</Filter>
+    </ClInclude>
+    <ClInclude Include="session.h">
+      <Filter>network</Filter>
+    </ClInclude>
+    <ClInclude Include="scheduler.h">
+      <Filter>network\scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\time\multimedia.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="task.h">
+      <Filter>network\scheduler\task</Filter>
+    </ClInclude>
+    <ClInclude Include="listen.h">
+      <Filter>network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -39,6 +68,15 @@
     </Filter>
     <Filter Include="library\system-component">
       <UniqueIdentifier>{ce719a60-323c-480b-b45e-3507f5663f4c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="network">
+      <UniqueIdentifier>{82c191f7-e840-4d5c-ad6f-195bf96bee63}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="network\scheduler">
+      <UniqueIdentifier>{8486ae35-2f74-4db4-aa2c-1e619d4fae82}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="network\scheduler\task">
+      <UniqueIdentifier>{861097dc-53ac-49cd-ade6-32c0e1ed6604}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

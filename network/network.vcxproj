@@ -152,10 +152,19 @@
   <ItemGroup>
     <ClInclude Include="library\data-structure\intrusive\shared_pointer.h" />
     <ClInclude Include="library\data-structure\lockfree\queue.h" />
+    <ClInclude Include="library\data-structure\serialize_buffer.h" />
     <ClInclude Include="library\data-structure\thread-local\memory_pool.h" />
+    <ClInclude Include="library\data-structure\vector.h" />
+    <ClInclude Include="library\system-component\inputoutput_completion_port.h" />
     <ClInclude Include="library\system-component\socket.h" />
     <ClInclude Include="library\system-component\interlocked.h" />
+    <ClInclude Include="library\system-component\thread.h" />
+    <ClInclude Include="library\system-component\time\multimedia.h" />
+    <ClInclude Include="listen.h" />
     <ClInclude Include="network.h" />
+    <ClInclude Include="scheduler.h" />
+    <ClInclude Include="session.h" />
+    <ClInclude Include="task.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
