@@ -1,103 +1,124 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="network">
-      <UniqueIdentifier>{82c191f7-e840-4d5c-ad6f-195bf96bee63}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="network\framework">
-      <UniqueIdentifier>{f949d797-ca36-4444-a752-2f7e0d96474b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="network\library">
+    <Filter Include="library">
       <UniqueIdentifier>{8c6e8632-3d9e-41c5-b6c9-cd64be96942d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="network\library\data-structure">
+    <Filter Include="library\data-structure">
       <UniqueIdentifier>{8082085a-a3cb-4285-b07f-69a8e58510cb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="network\library\system-component">
-      <UniqueIdentifier>{ce719a60-323c-480b-b45e-3507f5663f4c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="network\library\design-pattern">
-      <UniqueIdentifier>{555f0415-0f9e-4bdd-b632-ba22ab166b3f}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="network\library\data-structure\thread-local">
+    <Filter Include="library\data-structure\thread-local">
       <UniqueIdentifier>{67db25bd-af56-477e-b3ea-b12f92e1ad18}</UniqueIdentifier>
     </Filter>
-    <Filter Include="network\library\data-structure\lockfree">
+    <Filter Include="library\data-structure\lockfree">
       <UniqueIdentifier>{14dc3200-ff1c-4956-8364-e30c9da71a3f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="network\library\data-structure\intrusive">
+    <Filter Include="library\data-structure\intrusive">
       <UniqueIdentifier>{7902f7f1-ab62-4996-b3f0-5c484ae1f391}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\system-component">
+      <UniqueIdentifier>{ce719a60-323c-480b-b45e-3507f5663f4c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\design-pattern">
+      <UniqueIdentifier>{555f0415-0f9e-4bdd-b632-ba22ab166b3f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framework">
+      <UniqueIdentifier>{f949d797-ca36-4444-a752-2f7e0d96474b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framework\scheduler">
+      <UniqueIdentifier>{63bd0915-ab01-46b4-901e-9fc7156d2ac2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\system-component\time">
+      <UniqueIdentifier>{12df706c-d427-4b7a-882f-889ced7810a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framework\server">
+      <UniqueIdentifier>{fa606cf3-8292-485f-b491-fb94dd40d105}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="framework\server\session">
+      <UniqueIdentifier>{e8740957-a750-4174-adeb-c3d61384bb46}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="network\library\data-structure\pair.h">
-      <Filter>network\library\data-structure</Filter>
+    <ClInclude Include="library\data-structure\pair.h">
+      <Filter>library\data-structure</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\data-structure\priority_queue.h">
-      <Filter>network\library\data-structure</Filter>
+    <ClInclude Include="library\data-structure\priority_queue.h">
+      <Filter>library\data-structure</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\data-structure\serialize_buffer.h">
-      <Filter>network\library\data-structure</Filter>
+    <ClInclude Include="library\data-structure\serialize_buffer.h">
+      <Filter>library\data-structure</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\data-structure\unique_pointer.h">
-      <Filter>network\library\data-structure</Filter>
+    <ClInclude Include="library\data-structure\unique_pointer.h">
+      <Filter>library\data-structure</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\data-structure\vector.h">
-      <Filter>network\library\data-structure</Filter>
+    <ClInclude Include="library\data-structure\vector.h">
+      <Filter>library\data-structure</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\data-structure\intrusive\list.h">
-      <Filter>network\library\data-structure\intrusive</Filter>
+    <ClInclude Include="library\data-structure\thread-local\memory_pool.h">
+      <Filter>library\data-structure\thread-local</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\data-structure\intrusive\shared_pointer.h">
-      <Filter>network\library\data-structure\intrusive</Filter>
+    <ClInclude Include="library\data-structure\lockfree\memory_pool.h">
+      <Filter>library\data-structure\lockfree</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\data-structure\thread-local\memory_pool.h">
-      <Filter>network\library\data-structure\thread-local</Filter>
+    <ClInclude Include="library\data-structure\lockfree\queue.h">
+      <Filter>library\data-structure\lockfree</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\data-structure\lockfree\memory_pool.h">
-      <Filter>network\library\data-structure\lockfree</Filter>
+    <ClInclude Include="library\data-structure\intrusive\list.h">
+      <Filter>library\data-structure\intrusive</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\data-structure\lockfree\queue.h">
-      <Filter>network\library\data-structure\lockfree</Filter>
+    <ClInclude Include="library\data-structure\intrusive\shared_pointer.h">
+      <Filter>library\data-structure\intrusive</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\system-component\file.h">
-      <Filter>network\library\system-component</Filter>
+    <ClInclude Include="library\system-component\file.h">
+      <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\system-component\handle.h">
-      <Filter>network\library\system-component</Filter>
+    <ClInclude Include="library\system-component\handle.h">
+      <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\system-component\inputoutput_completion_port.h">
-      <Filter>network\library\system-component</Filter>
+    <ClInclude Include="library\system-component\inputoutput_completion_port.h">
+      <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\system-component\interlocked.h">
-      <Filter>network\library\system-component</Filter>
+    <ClInclude Include="library\system-component\interlocked.h">
+      <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\system-component\overlapped.h">
-      <Filter>network\library\system-component</Filter>
+    <ClInclude Include="library\system-component\overlapped.h">
+      <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\system-component\socket.h">
-      <Filter>network\library\system-component</Filter>
+    <ClInclude Include="library\system-component\socket.h">
+      <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\system-component\socket_address.h">
-      <Filter>network\library\system-component</Filter>
+    <ClInclude Include="library\system-component\socket_address.h">
+      <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\system-component\thread.h">
-      <Filter>network\library\system-component</Filter>
+    <ClInclude Include="library\system-component\thread.h">
+      <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="network\library\system-component\wait_on_address.h">
-      <Filter>network\library\system-component</Filter>
+    <ClInclude Include="library\system-component\wait_on_address.h">
+      <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="network\framework\network.h">
-      <Filter>network\framework</Filter>
+    <ClInclude Include="framework\network.h">
+      <Filter>framework</Filter>
     </ClInclude>
-    <ClInclude Include="network\framework\network.hpp">
-      <Filter>network\framework</Filter>
+    <ClInclude Include="framework\network.hpp">
+      <Filter>framework</Filter>
     </ClInclude>
-    <ClInclude Include="network\framework\scheduler.h">
-      <Filter>network\framework</Filter>
+    <ClInclude Include="framework\scheduler\scheduler.h">
+      <Filter>framework\scheduler</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\time\date.h">
+      <Filter>library\system-component\time</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\time\multimedia.h">
+      <Filter>library\system-component\time</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\time\unix.h">
+      <Filter>library\system-component\time</Filter>
+    </ClInclude>
+    <ClInclude Include="framework\server\server.h">
+      <Filter>framework\server</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,10 +1,15 @@
 #pragma once
+#include "../../library/system-component/time/multimedia.h"
+#include "../../library/system-component/thread.h"
+#include "../../library/system-component/wait_on_address.h"
+#include "../../library/data-structure/lockfree/queue.h"
+#include "../../library/data-structure/priority_queue.h"
 
 class scheduler final {
 public:
 	class task {
 	public:
-		inline explicit task(type const type_) noexcept
+		inline explicit task(void) noexcept
 			: _time(system_component::time::multimedia::get_time()) {
 		};
 		inline explicit task(task const&) noexcept = delete;
