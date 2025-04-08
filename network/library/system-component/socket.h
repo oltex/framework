@@ -106,8 +106,14 @@ namespace system_component {
 			return data_structure::pair<socket, socket_address_ipv4>(socket(sock), socket_address);
 		}
 		inline auto accept_ex(socket& socket_, void* output_buffer, unsigned long address_length, unsigned long remote_address_length, overlapped& overlapeed_) noexcept {
-			if (SOCKET_ERROR == _accept_ex(_socket, socket_.data(), output_buffer, 0, address_length, remote_address_length, nullptr, &overlapeed_.data()))
-				__debugbreak();
+			if (FALSE == _accept_ex(_socket, socket_.data(), output_buffer, 0, address_length, remote_address_length, nullptr, &overlapeed_.data())) {
+				switch (WSAGetLastError()) {
+				case ERROR_IO_PENDING:
+					break;
+				default:
+					__debugbreak();
+				}
+			}
 		}
 		inline auto connect(socket_address& socket_address) noexcept -> int {
 			int result = ::connect(_socket, &socket_address.data(), socket_address.get_length());

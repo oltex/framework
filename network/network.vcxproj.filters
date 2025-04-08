@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="library\data-structure\thread-local\memory_pool.h">
       <Filter>library\data-structure\thread-local</Filter>
     </ClInclude>
@@ -31,23 +28,35 @@
     <ClInclude Include="library\system-component\thread.h">
       <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="network.h">
-      <Filter>network</Filter>
-    </ClInclude>
-    <ClInclude Include="session.h">
-      <Filter>network</Filter>
-    </ClInclude>
-    <ClInclude Include="scheduler.h">
-      <Filter>network\scheduler</Filter>
-    </ClInclude>
     <ClInclude Include="library\system-component\time\multimedia.h">
       <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="task.h">
-      <Filter>network\scheduler\task</Filter>
+    <ClInclude Include="library\design-pattern\singleton.h">
+      <Filter>library\design-pattern</Filter>
     </ClInclude>
-    <ClInclude Include="listen.h">
+    <ClInclude Include="network.h">
       <Filter>network</Filter>
+    </ClInclude>
+    <ClInclude Include="network.hpp">
+      <Filter>network</Filter>
+    </ClInclude>
+    <ClInclude Include="server.h">
+      <Filter>network\server</Filter>
+    </ClInclude>
+    <ClInclude Include="session.h">
+      <Filter>network\server\session</Filter>
+    </ClInclude>
+    <ClInclude Include="library\system-component\wait_on_address.h">
+      <Filter>library\system-component</Filter>
+    </ClInclude>
+    <ClInclude Include="library\data-structure\priority_queue.h">
+      <Filter>library\design-pattern</Filter>
+    </ClInclude>
+    <ClInclude Include="message.h">
+      <Filter>network\server\session</Filter>
+    </ClInclude>
+    <ClInclude Include="view.h">
+      <Filter>network\server\session</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -72,11 +81,20 @@
     <Filter Include="network">
       <UniqueIdentifier>{82c191f7-e840-4d5c-ad6f-195bf96bee63}</UniqueIdentifier>
     </Filter>
+    <Filter Include="library\design-pattern">
+      <UniqueIdentifier>{555f0415-0f9e-4bdd-b632-ba22ab166b3f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="network\server">
+      <UniqueIdentifier>{579e6933-528f-44ad-9c94-d35f6502ecf8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="network\server\session">
+      <UniqueIdentifier>{c68c094e-22e6-4270-b2e8-29655fcadaea}</UniqueIdentifier>
+    </Filter>
     <Filter Include="network\scheduler">
-      <UniqueIdentifier>{8486ae35-2f74-4db4-aa2c-1e619d4fae82}</UniqueIdentifier>
+      <UniqueIdentifier>{40b2222b-36ea-4caa-a64b-9d3cf9e5d58e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="network\scheduler\task">
-      <UniqueIdentifier>{861097dc-53ac-49cd-ade6-32c0e1ed6604}</UniqueIdentifier>
-    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
 </Project>

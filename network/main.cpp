@@ -2,11 +2,14 @@
 #include <stdlib.h>
 #include <crtdbg.h>
 
-#include "network.h"
+#include "network.hpp"
+#include "server.h"
 
 int main(void) noexcept {
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-
-	network network;
-	//Sleep(INFINITE);
+	network& network_ = network::instance();
+	server server_;
+	network_.start();
+	server_.accept("127.0.0.1", 6000, 0, 65535);
+	Sleep(INFINITE);
 }
