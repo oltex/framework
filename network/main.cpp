@@ -1,12 +1,12 @@
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
 #include <crtdbg.h>
-#include "framework/network.hpp"
+#include "network.h"
 
 int main(void) noexcept {
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
-	network& network_ = network::instance();
+	framework::network& network_ = framework::network::instance();
 
 	network_.start();
 	server_.accept("127.0.0.1", 6000, 0, 65535);

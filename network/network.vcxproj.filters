@@ -266,7 +266,7 @@
     <ClInclude Include="network.hpp" />
     <ClInclude Include="scheduler.h" />
     <ClInclude Include="server.h" />
-    <ClInclude Include="service.h" />
+    <ClInclude Include="network.h" />
     <ClInclude Include="session.h" />
     <ClInclude Include="view.h" />
   </ItemGroup>
