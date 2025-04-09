@@ -5,7 +5,7 @@
 #include "include/errmsg.h"
 #include <iostream>
 
-namespace database {
+namespace library::database {
 	class mysql final {
 	public:
 		class result final {
@@ -176,19 +176,19 @@ namespace database {
 				}
 			}
 		}
-		inline void begin(void) noexcept {
+		inline void query_begin(void) noexcept {
 			query("begin");
 		}
-		inline void commit(void) noexcept {
+		inline void query_commit(void) noexcept {
 			query("commit");
 		}
-		inline void rollback(void) noexcept {
+		inline void query_rollback(void) noexcept {
 			query("rollback");
 		}
-		inline void use(char const* const schema) noexcept {
+		inline void query_use(char const* const schema) noexcept {
 			query("use %d", schema);
 		}
-		inline void truncate_table(char const* const name) noexcept {
+		inline void query_truncate_table(char const* const name) noexcept {
 			query("truncate table %s", name);
 		}
 		inline void query(char const* const format, ...) noexcept {

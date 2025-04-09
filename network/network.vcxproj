@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{050e5e4d-9484-452f-8294-aa7ec22b979a}</ProjectGuid>
+    <ProjectGuid>{797C8243-6E1E-484F-A6E7-DBFC998C5093}</ProjectGuid>
     <RootNamespace>server</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -240,8 +240,13 @@
     <ClInclude Include="library\utility\logger.h" />
     <ClInclude Include="library\utility\parser.h" />
     <ClInclude Include="library\utility\performance_data_helper.h" />
-    <ClInclude Include="echo_server.h" />
+    <ClInclude Include="message.h" />
+    <ClInclude Include="network.hpp" />
+    <ClInclude Include="scheduler.h" />
     <ClInclude Include="server.h" />
+    <ClInclude Include="service.h" />
+    <ClInclude Include="session.h" />
+    <ClInclude Include="view.h" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="library\database\cpp_redis\cpp_redis.lib" />

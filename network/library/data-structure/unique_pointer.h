@@ -3,7 +3,7 @@
 #include <utility>
 #include <type_traits>
 
-namespace data_structure {
+namespace library::data_structure {
 	template<typename type>
 	class unique_pointer final {
 	public:

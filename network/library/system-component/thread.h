@@ -6,7 +6,7 @@
 #include <type_traits>
 #include <memory>
 
-namespace system_component {
+namespace library::system_component {
 	class thread final : public handle {
 	private:
 		template <typename tuple, size_t... index>

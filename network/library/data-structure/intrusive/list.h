@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <malloc.h>
 
-namespace data_structure::intrusive {
+namespace library::data_structure::intrusive {
 	template<size_t index>
 	class list_hook {
 	private:

@@ -1,7 +1,7 @@
 #pragma once
 #include <type_traits>
 
-namespace design_pattern {
+namespace library::design_pattern {
 	template<typename type>
 	class singleton {
 	protected:

@@ -2,7 +2,7 @@
 //#include "../multi/event.h"
 #include <Windows.h>
 
-namespace system_component {
+namespace library::system_component {
 	class overlapped final {
 	public:
 		inline explicit overlapped(void) noexcept = default;

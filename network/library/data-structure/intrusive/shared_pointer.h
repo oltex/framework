@@ -3,7 +3,7 @@
 #include <utility>
 #include <type_traits>
 
-namespace data_structure::intrusive {
+namespace library::data_structure::intrusive {
 	template<size_t index>
 	class shared_pointer_hook {
 	private:
@@ -72,14 +72,14 @@ namespace data_structure::intrusive {
 			if (nullptr != _pointer && 0 == _InterlockedDecrement(&_pointer->_reference._use))
 				static_cast<type*>(_pointer)->destructor();
 		}
-	public:
+
 		inline auto operator*(void) noexcept -> type& {
 			return static_cast<type&>(*_pointer);
 		}
 		inline auto operator->(void) noexcept -> type* {
 			return static_cast<type*>(_pointer);
 		}
-	public:
+
 		inline void swap(shared_pointer& rhs) noexcept {
 			auto temp = _pointer;
 			_pointer = rhs._pointer;

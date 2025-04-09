@@ -2,20 +2,16 @@
 #include "vector.h"
 #include "../algorithm/predicate.h"
 
-namespace data_structure {
+namespace library::data_structure {
 	template<typename type, auto _predicate = algorithm::predicate::less<type>>
 	class priority_queue {
 	private:
 		using size_type = unsigned int;
 	public:
 		inline explicit priority_queue(void) noexcept = default;
-		//not implemented
 		inline explicit priority_queue(priority_queue const& rhs) noexcept;
-		//not implemented
 		inline explicit priority_queue(priority_queue&& rhs) noexcept;
-		//not implemented
 		inline auto operator=(priority_queue const& rhs) noexcept -> priority_queue&;
-		//not implemented
 		inline auto operator=(priority_queue&& rhs) noexcept -> priority_queue&;
 		inline ~priority_queue(void) noexcept = default;
 	public:

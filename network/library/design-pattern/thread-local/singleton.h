@@ -1,7 +1,7 @@
 #pragma once
 #include <type_traits>
 
-namespace design_pattern::_thread_local {
+namespace library::design_pattern::_thread_local {
 	template<typename type>
 	class singleton {
 	protected:

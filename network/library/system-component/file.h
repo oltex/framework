@@ -3,8 +3,8 @@
 #include <string_view>
 #include <Windows.h>
 
-namespace system_component {
-	class file final : public handle {
+namespace library::system_component {
+	class file : public handle {
 	public:
 		inline explicit file(void) noexcept = default;
 		inline explicit file(std::wstring_view path, unsigned long desired_access, unsigned long share_mode, unsigned long creation_disposition, unsigned long flags_and_attributes) noexcept
@@ -46,6 +46,9 @@ namespace system_component {
 			LARGE_INTEGER size;
 			GetFileSizeEx(_handle, &size);
 			return size;
+		}
+		inline bool set_file_completion_notification_mode(unsigned char flag) noexcept {
+			return SetFileCompletionNotificationModes(_handle, flag);
 		}
 
 		inline static auto get_attribute(std::wstring_view const path) noexcept -> unsigned long {

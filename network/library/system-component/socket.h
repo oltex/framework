@@ -1,13 +1,15 @@
 #pragma once
 #pragma comment(lib,"ws2_32.lib")
 #include <WinSock2.h>
+#pragma comment(lib, "mswsock.lib")
+#include <MSWSock.h>
 #include <intrin.h>
 #include <optional>
 #include "socket_address.h"
 #include "overlapped.h"
 #include "../data-structure/pair.h"
 
-namespace system_component {
+namespace library::system_component {
 	inline static void wsa_start_up(void) noexcept {
 		WSAData wsadata;
 		if (0 != WSAStartup(0x0202, &wsadata))
@@ -102,6 +104,16 @@ namespace system_component {
 				}
 			}
 			return data_structure::pair<socket, socket_address_ipv4>(socket(sock), socket_address);
+		}
+		inline auto accept_ex(socket& socket_, void* output_buffer, unsigned long address_length, unsigned long remote_address_length, overlapped& overlapeed_) noexcept {
+			if (FALSE == _accept_ex(_socket, socket_.data(), output_buffer, 0, address_length, remote_address_length, nullptr, &overlapeed_.data())) {
+				switch (WSAGetLastError()) {
+				case ERROR_IO_PENDING:
+					break;
+				default:
+					__debugbreak();
+				}
+			}
 		}
 		inline auto connect(socket_address& socket_address) noexcept -> int {
 			int result = ::connect(_socket, &socket_address.data(), socket_address.get_length());
@@ -243,31 +255,48 @@ namespace system_component {
 		inline bool wsa_get_overlapped_result(overlapped& overlapped, unsigned long* transfer, bool const wait, unsigned long* flag) noexcept {
 			return WSAGetOverlappedResult(_socket, &overlapped.data(), transfer, wait, flag);
 		}
-		inline void set_tcp_nodelay(int const enable) const noexcept {
+		inline void set_option_tcp_nodelay(int const enable) const noexcept {
 			set_option(IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char const*>(&enable), sizeof(int));
 		}
-		inline void set_linger(unsigned short const onoff, unsigned short const time) const noexcept {
+		inline void set_option_linger(unsigned short const onoff, unsigned short const time) const noexcept {
 			LINGER linger{ onoff , time };
 			set_option(SOL_SOCKET, SO_LINGER, reinterpret_cast<char const*>(&linger), sizeof(LINGER));
 		}
-		inline void set_broadcast(unsigned long const enable) const noexcept {
+		inline void set_option_broadcast(unsigned long const enable) const noexcept {
 			set_option(SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char const*>(&enable), sizeof(unsigned long));
 		}
-		inline void set_send_buffer(int const size) const noexcept {
+		inline void set_option_send_buffer(int const size) const noexcept {
 			set_option(SOL_SOCKET, SO_SNDBUF, reinterpret_cast<char const*>(&size), sizeof(size));
 		}
-		inline void set_receive_buffer(int const size) const noexcept {
+		inline void set_option_receive_buffer(int const size) const noexcept {
 			set_option(SOL_SOCKET, SO_RCVBUF, reinterpret_cast<char const*>(&size), sizeof(size));
+		}
+		inline void set_option_update_accept_context(socket& socket_) const noexcept {
+			set_option(SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, reinterpret_cast<char*>(&socket_.data()), sizeof(SOCKET));
 		}
 		inline void set_option(int const level, int const name, char const* value, int const length) const noexcept {
 			if (SOCKET_ERROR == setsockopt(_socket, level, name, value, length))
 				__debugbreak();
 		}
-		inline void set_nonblocking(unsigned long const enable) const noexcept {
-			set_io_control(FIONBIO, enable);
+		inline void io_control_nonblocking(unsigned long const enable) const noexcept {
+			io_control(FIONBIO, enable);
 		}
-		inline void set_io_control(long const cmd, unsigned long arg) const noexcept {
+		inline void io_control(long const cmd, unsigned long arg) const noexcept {
 			if (SOCKET_ERROR == ioctlsocket(_socket, cmd, &arg))
+				__debugbreak();
+		}
+		inline void wsa_io_control_acccept_ex(void) noexcept {
+			GUID guid = WSAID_ACCEPTEX;
+			unsigned long byte_returned;
+			wsa_io_control(SIO_GET_EXTENSION_FUNCTION_POINTER, reinterpret_cast<void*>(&guid), sizeof(GUID), reinterpret_cast<void*>(&_accept_ex), sizeof(LPFN_ACCEPTEX), byte_returned);
+		}
+		inline void wsa_io_control_disconnect_ex(void) noexcept {
+			GUID guid = WSAID_DISCONNECTEX;
+			unsigned long byte_returned;
+			wsa_io_control(SIO_GET_EXTENSION_FUNCTION_POINTER, reinterpret_cast<void*>(&guid), sizeof(GUID), reinterpret_cast<void*>(&_disconnect_ex), sizeof(LPFN_DISCONNECTEX), byte_returned);
+		}
+		inline void wsa_io_control(unsigned long control_code, void* in_buffer, unsigned long in_buffer_size, void* out_buffer, unsigned long out_buffer_size, unsigned long& byte_returned) noexcept {
+			if (SOCKET_ERROR == ::WSAIoctl(_socket, control_code, in_buffer, in_buffer_size, out_buffer, out_buffer_size, &byte_returned, nullptr, nullptr))
 				__debugbreak();
 		}
 		inline auto get_local_socket_address(void) const noexcept -> std::optional<socket_address_ipv4> {
@@ -301,5 +330,7 @@ namespace system_component {
 		}
 	private:
 		SOCKET _socket;
+		inline static LPFN_ACCEPTEX _accept_ex;
+		inline static LPFN_DISCONNECTEX _disconnect_ex;
 	};
 }

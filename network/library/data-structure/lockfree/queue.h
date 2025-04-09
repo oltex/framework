@@ -2,7 +2,7 @@
 #include "../thread-local/memory_pool.h"
 #include <optional>
 
-namespace data_structure::lockfree {
+namespace library::data_structure::lockfree {
 	template <typename type>
 		requires std::is_trivially_copy_constructible_v<type>&& std::is_trivially_destructible_v<type>
 	class queue {
@@ -18,7 +18,7 @@ namespace data_structure::lockfree {
 			unsigned long long _next;
 			type _value;
 		};
-		using _memory_pool = data_structure::_thread_local::memory_pool<node>;
+		using _memory_pool = _thread_local::memory_pool<node>;
 	public:
 		inline explicit queue(void) noexcept {
 			node* current = &_memory_pool::instance().allocate();

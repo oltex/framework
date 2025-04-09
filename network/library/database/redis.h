@@ -4,7 +4,7 @@
 #pragma comment (lib, "tacopie.lib")
 #pragma comment (lib, "ws2_32.lib")
 
-namespace database {
+namespace library::database {
 	class redis final : public cpp_redis::client {
 	public:
 		inline explicit redis(void) noexcept = default;

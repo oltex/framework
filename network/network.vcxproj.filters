@@ -7,7 +7,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="server.h" />
     <ClInclude Include="library\design-pattern\thread-local\singleton.h">
       <Filter>library\design-pattern\thread-local</Filter>
     </ClInclude>
@@ -104,7 +103,6 @@
     <ClInclude Include="library\database\include\mysql\udf_registration_types.h">
       <Filter>library\database\include\mysql</Filter>
     </ClInclude>
-    <ClInclude Include="echo_server.h" />
     <ClInclude Include="library\system-component\overlapped.h">
       <Filter>library\system-component</Filter>
     </ClInclude>
@@ -264,6 +262,13 @@
     <ClInclude Include="library\system-component\inputoutput_completion_port.h">
       <Filter>library\system-component</Filter>
     </ClInclude>
+    <ClInclude Include="message.h" />
+    <ClInclude Include="network.hpp" />
+    <ClInclude Include="scheduler.h" />
+    <ClInclude Include="server.h" />
+    <ClInclude Include="service.h" />
+    <ClInclude Include="session.h" />
+    <ClInclude Include="view.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="library">

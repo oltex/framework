@@ -4,7 +4,7 @@
 #include "socket.h"
 #include "handle.h"
 
-namespace system_component {
+namespace library::system_component {
 	class inputoutput_completion_port final : public handle {
 	public:
 		inline explicit inputoutput_completion_port(void) noexcept = default;

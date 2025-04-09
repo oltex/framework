@@ -3,7 +3,7 @@
 #include <utility>
 #include <stdlib.h>
 
-namespace data_structure {
+namespace library::data_structure {
 	template<typename type>
 	class vector {
 	public:
@@ -31,9 +31,7 @@ namespace data_structure {
 			rhs._size = 0;
 			rhs._capacity = 0;
 		}
-		//not implemented
 		inline auto operator=(vector const& rhs) noexcept -> vector&;
-		//not implemented
 		inline auto operator=(vector&& rhs) noexcept -> vector&;
 		inline ~vector(void) noexcept {
 			clear();

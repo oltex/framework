@@ -4,10 +4,7 @@
 #include <string>
 #include <string_view>
 
-namespace data_structure {
-	template<typename type>
-	concept string_size = std::_Is_any_of_v<type, unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long>;
-
+namespace library::data_structure {
 	template<size_t _capacity = 2048>
 	class serialize_buffer {
 	private:
@@ -23,7 +20,8 @@ namespace data_structure {
 		inline ~serialize_buffer(void) noexcept = default;
 	public:
 		template<typename type>
-		inline auto operator<<(type const& value) noexcept -> serialize_buffer& requires std::is_arithmetic_v<type> {
+			requires std::is_arithmetic_v<type>
+		inline auto operator<<(type const& value) noexcept -> serialize_buffer& {
 #ifdef debug
 			if (sizeof(type) + _rear > _capacity) {
 				_fail = true;
@@ -45,7 +43,8 @@ namespace data_structure {
 			_rear += length;
 		}
 		template<typename type>
-		inline auto operator>>(type& value) noexcept -> serialize_buffer& requires std::is_arithmetic_v<type> {
+			requires std::is_arithmetic_v<type>
+		inline auto operator>>(type& value) noexcept -> serialize_buffer& {
 #ifdef debug
 			if (sizeof(type) + _front > _rear) {
 				_fail = true;
