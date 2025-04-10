@@ -52,8 +52,8 @@ namespace framework::network {
 			for (unsigned short index = 0; index < worker_thread; ++index)
 				_worker_thread.emplace_back(&server::worker, 0, this);
 
-			_scheduler.initialize();
-			_scheduler._thread.begin(&server::schedule, 0, this);
+			//_scheduler.initialize();
+			//_scheduler._thread.begin(&server::schedule, 0, this);
 		}
 		inline void stop(void) noexcept {
 			for (unsigned short index = 0; index < _worker_thread.size(); ++index)

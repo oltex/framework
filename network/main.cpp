@@ -12,5 +12,5 @@ int main(void) noexcept {
 	//server_.accept("127.0.0.1", 6000, 0, 65535);
 	system("pause");
 	_service.stop();
-	Sleep(INFINITE);
+	//Sleep(INFINITE);
 }
