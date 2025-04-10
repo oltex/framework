@@ -67,6 +67,8 @@ namespace framework::network {
 				auto [result, transferred, key, overlapped] = _complation_port.get_queue_state(INFINITE);
 				switch (static_cast<type>(key)) {
 					using enum type;
+				case stop:
+					return;
 				case task:
 					break;
 				default:
