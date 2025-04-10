@@ -3,7 +3,7 @@
 #include <optional>
 
 namespace library::data_structure::lockfree {
-	template <typename type, bool multi_pop = false>
+	template <typename type, bool multi_pop = true>
 		requires std::is_trivially_copy_constructible_v<type>&& std::is_trivially_destructible_v<type>
 	class queue {
 	protected:

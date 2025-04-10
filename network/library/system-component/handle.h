@@ -1,4 +1,5 @@
 #pragma once
+#include "../data-structure/vector.h"
 #include "overlapped.h"
 #include <Windows.h>
 #include <concepts>
@@ -58,6 +59,13 @@ namespace library::system_component {
 		inline static auto wait_for_multiple(bool const wait_all, unsigned long const milli_second, handle_type&... handle_) noexcept -> unsigned long {
 			HANDLE handle_array[] = { handle_.data()... };
 			return WaitForMultipleObjects(sizeof...(handle_), handle_array, wait_all, milli_second);
+		}
+		template<std::derived_from<handle> handle_type>
+		inline static auto wait_for_multiple(data_structure::vector<handle_type>& handle, bool const wait_all, unsigned long const milli_second) noexcept -> unsigned long {
+			HANDLE handle_array[128];
+			for (unsigned int index = 0; index < handle.size(); ++index)
+				handle_array[index] = handle[index].data();
+			return WaitForMultipleObjects(handle.size(), handle_array, wait_all, milli_second);
 		}
 		inline static auto wait_for_multiple_ex(unsigned long const count, HANDLE* handle, bool const wait_all, unsigned long const milli_second, bool alertable) noexcept {
 			return WaitForMultipleObjectsEx(count, handle, wait_all, milli_second, alertable);

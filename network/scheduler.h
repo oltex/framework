@@ -22,9 +22,9 @@ public:
 
 		unsigned long _time;
 	};
-	class queue final : protected library::data_structure::lockfree::queue<task*, false> {
+	class queue final : public library::data_structure::lockfree::queue<task*, false> {
 	private:
-		using base = library::data_structure::lockfree::queue<task*>;
+		using base = library::data_structure::lockfree::queue<task*, false>;
 	public:
 		inline explicit queue(void) noexcept = default;
 		inline explicit queue(queue const&) noexcept = delete;
@@ -39,29 +39,9 @@ public:
 			library::system_component::wait_on_address::wake_single(&_size);
 		}
 		inline auto pop(void) noexcept -> task& {
-			unsigned long long head = _head;
-			node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
-			unsigned long long next = address->_next;
-
-			if (0x10000 > (0x00007FFFFFFFFFFFULL & next))
-				__debugbreak();
-			unsigned long long tail = _tail;
-			if (tail == head)
-				_InterlockedCompareExchange(reinterpret_cast<unsigned long long volatile*>(&_tail), next, tail);
-
-			task& result = *reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & next)->_value;
-			_head = next;
-			_memory_pool::instance().deallocate(*address);
+			auto result = base::pop();
 			_InterlockedDecrement(&_size);
-			return result;
-		}
-		inline auto empty(void) const noexcept {
-			unsigned long long head = _head;
-			node* address = reinterpret_cast<node*>(0x00007FFFFFFFFFFFULL & head);
-			unsigned long long next = address->_next;
-			if (_nullptr == (0x00007FFFFFFFFFFFULL & next))
-				return true;
-			return false;
+			return *result;
 		}
 		inline void wake(void) noexcept {
 			library::system_component::wait_on_address::wake_single(&_size);
@@ -90,19 +70,19 @@ public:
 	}
 	inline void finalize(void) noexcept {
 		_InterlockedExchange(&_active, -1);
-		_task_queue.wake();
+		_queue.wake();
 		_thread.wait_for_single(INFINITE);
 		_thread.close();
 	}
 	inline void push(task& task_) noexcept {
-		_task_queue.push(task_);
+		_queue.push(task_);
 	}
 	inline bool wait(unsigned long const wait_time) noexcept {
-		return _task_queue.wait(&_active, wait_time);
+		return _queue.wait(&_active, wait_time);
 	}
 
 	library::system_component::thread _thread;
-	queue _task_queue;
+	queue _queue;
 	unsigned int _active;
 	unsigned int _size;
 };

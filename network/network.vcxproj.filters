@@ -262,13 +262,21 @@
     <ClInclude Include="library\system-component\inputoutput_completion_port.h">
       <Filter>library\system-component</Filter>
     </ClInclude>
-    <ClInclude Include="message.h" />
-    <ClInclude Include="network.hpp" />
     <ClInclude Include="scheduler.h" />
+    <ClInclude Include="service.h" />
+    <ClInclude Include="view.h">
+      <Filter>etc</Filter>
+    </ClInclude>
+    <ClInclude Include="session.h">
+      <Filter>etc</Filter>
+    </ClInclude>
+    <ClInclude Include="network.hpp">
+      <Filter>etc</Filter>
+    </ClInclude>
+    <ClInclude Include="message.h">
+      <Filter>etc</Filter>
+    </ClInclude>
     <ClInclude Include="server.h" />
-    <ClInclude Include="network.h" />
-    <ClInclude Include="session.h" />
-    <ClInclude Include="view.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="library">
@@ -351,6 +359,9 @@
     </Filter>
     <Filter Include="library\database\tacopie\utils">
       <UniqueIdentifier>{bc5dea25-b716-4039-8443-5dff7802ecbf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="etc">
+      <UniqueIdentifier>{9d659021-b8a5-4301-b1e9-fffefbd09b00}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
