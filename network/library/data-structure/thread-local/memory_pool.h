@@ -163,14 +163,9 @@ namespace library::data_structure::_thread_local {
 		inline void deallocate(type& value) noexcept {
 			if constexpr (std::is_destructible_v<type> && !std::is_trivially_destructible_v<type>)
 				value.~type();
-			if constexpr (true == use_union) {
-				reinterpret_cast<node*>(&value)->_next = _head;
-				_head = reinterpret_cast<node*>(&value);
-			}
-			else {
-				reinterpret_cast<node*>(reinterpret_cast<uintptr_t*>(&value) - 1)->_next = _head;
-				_head = reinterpret_cast<node*>(reinterpret_cast<uintptr_t*>(&value) - 1);
-			}
+			node* current = reinterpret_cast<node*>(reinterpret_cast<unsigned char*>(&value) - offsetof(node, _value));
+			current->_next = _head;
+			_head = current;
 			++_size;
 			_InterlockedDecrement(&_use_count);
 
