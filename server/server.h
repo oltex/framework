@@ -1275,11 +1275,9 @@ private:
 		scheduler::ready_queue _ready_queue;
 		unsigned long wait_time = INFINITE;
 		while (0 == _scheduler._active || 0 != _scheduler._size) {
-			bool result = _scheduler.wait(wait_time);
-			if (result) {
+			if (true == _scheduler.wait(wait_time))
 				while (!_scheduler._task_queue.empty())
 					_ready_queue.push(&_scheduler._task_queue.pop());
-			}
 			wait_time = INFINITE;
 			unsigned long time = system_component::time::multimedia::get_time();
 			while (!_ready_queue.empty()) {
