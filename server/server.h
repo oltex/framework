@@ -29,6 +29,7 @@
 
 template<typename type>
 concept string_size = std::_Is_any_of_v<type, unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long>;
+using namespace data_structure;
 
 class server {
 private:
@@ -626,9 +627,9 @@ private:
 			inline virtual bool excute(void) noexcept override {
 				while (!_cancel_flag) {
 					while (!_job_queue.empty()) {
-						scheduler::group::job_pointer job_ptr = _job_queue.pop();
+						job_pointer job_ptr = _job_queue.pop();
 						switch (job_ptr->_type) {
-						case scheduler::group::job::type::enter_session: {
+						case job::type::enter_session: {
 							auto& session_ = _server->_session_array[job_ptr->_session_key];
 							if (session_.acquire(job_ptr->_session_key)) {
 								_session_map.emplace(job_ptr->_session_key, &session_);
@@ -640,7 +641,7 @@ private:
 								_server->_session_array.release(session_);
 							}
 						} break;
-						case scheduler::group::job::type::leave_session: {
+						case job::type::leave_session: {
 							auto iter = _session_map.find(job_ptr->_session_key);
 							if (iter == _session_map.end())
 								break;
@@ -653,7 +654,7 @@ private:
 								_server->_session_array.release(session_);
 							}
 						} break;
-						case scheduler::group::job::type::move_session: {
+						case job::type::move_session: {
 							auto iter = _session_map.find(job_ptr->_session_key);
 							if (iter == _session_map.end())
 								break;
@@ -678,7 +679,8 @@ private:
 						}
 					}
 
-					for (auto iter = _session_map.begin(), end = _session_map.end(); iter != end;) {
+					for (auto iter = _session_map.begin(), 
+						end = _session_map.end(); iter != end;) {
 						session& session_ = *iter->second;
 						if (!session_._cancel_flag) {
 							while (!session_._receive_queue.empty()) {
@@ -1183,7 +1185,8 @@ private:
 				_group_array.release(group_);
 			} break;
 			case excute_task: {
-				scheduler::task& task = *reinterpret_cast<scheduler::task*>(overlapped);
+				scheduler::task& task =
+					*reinterpret_cast<scheduler::task*>(overlapped);
 				if (task.excute()) {
 					_scheduler.push(task);
 					continue;
@@ -1253,10 +1256,7 @@ private:
 							continue;
 					}
 					else {
-						_interlockedadd((volatile long*)&_send_tps, session_._send_size);
-
 						session_.finish_send();
-
 						if (0 == _send_frame && session_.send())
 							continue;
 					}
@@ -1292,7 +1292,8 @@ private:
 		}
 	}
 	inline int send(void) noexcept {
-		for (auto iter = _session_array.begin(), end = _session_array.end(); iter != end; ++iter) {
+		for (auto iter = _session_array.begin(), 
+			end = _session_array.end(); iter != end; ++iter) {
 			if (iter->_value.acquire()) {
 				if (iter->_value.send())
 					continue;
@@ -1307,9 +1308,11 @@ private:
 		return _send_frame;
 	}
 	inline int timeout(void) noexcept {
-		for (auto iter = _session_array.begin(), end = _session_array.end(); iter != end; ++iter) {
+		for (auto iter = _session_array.begin(), 
+			end = _session_array.end(); iter != end; ++iter) {
 			if (iter->_value.acquire()) {
-				if (iter->_value._timeout_currnet + iter->_value._timeout_duration < GetTickCount64()) {
+				if (iter->_value._timeout_currnet + 
+					iter->_value._timeout_duration < GetTickCount64()) {
 					iter->_value.cancel();
 					++_timeout_total_count;
 				}
@@ -1440,7 +1443,8 @@ protected:
 		if (session_.release())
 			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
 	}
-	inline void do_set_timeout_session(unsigned long long key, unsigned long long duration) noexcept {
+	inline void do_set_timeout_session(
+		unsigned long long key, unsigned long long duration) noexcept {
 		session& session_ = _session_array[key];
 		if (session_.acquire(key))
 			session_._timeout_duration = duration;
@@ -1507,9 +1511,14 @@ protected:
 		if (0 == _scheduler._active) {
 			_InterlockedIncrement(&_scheduler._size);
 			if (0 == _scheduler._active) {
-				auto& memory_pool = data_structure::_thread_local::memory_pool<scheduler::function>::instance();
-				scheduler::task* task_(&memory_pool.allocate(std::forward<function>(func), std::forward<argument>(arg)...));
-				_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(task_));
+				auto& memory_pool = 
+					_thread_local::memory_pool<scheduler::function>::instance();
+				scheduler::task* task_(
+					&memory_pool.allocate(
+						std::forward<function>(func), std::forward<argument>(arg)...));
+				_complation_port.post_queue_state(0, 
+					static_cast<uintptr_t>(post_queue_state::excute_task), 
+					reinterpret_cast<OVERLAPPED*>(task_));
 			}
 			else
 				_InterlockedDecrement(&_scheduler._size);
