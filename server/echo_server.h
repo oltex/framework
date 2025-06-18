@@ -34,12 +34,12 @@ public:
 	inline ~echo_server(void) noexcept = default;
 
 	inline virtual void on_start(void) noexcept override {
-		_group_key = do_create_group<my_group>();
+		//_group_key = do_create_group<my_group>();
 	}
 	inline virtual void on_worker_start(void) noexcept override {
 	}
 	inline virtual void on_stop(void) noexcept override {
-		do_destroy_group(_group_key);
+		//do_destroy_group(_group_key);
 	}
 	inline virtual void on_monit(void) noexcept override {
 	}

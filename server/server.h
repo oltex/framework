@@ -321,7 +321,7 @@ private:
 				else {
 					WSABUF wsa_buffer[512];
 					_send_size = 0;
-					for (auto iter = _send_queue.begin(), end = _send_queue.end(); iter != end || 512 <= _send_size; ++iter, ++_send_size) {
+					for (auto iter = _send_queue.begin(), end = _send_queue.end(); iter != end && 512 <= _send_size; ++iter, ++_send_size) {
 						wsa_buffer[_send_size].buf = reinterpret_cast<char*>((*iter)->data()->data() + (*iter)->front());
 						wsa_buffer[_send_size].len = (*iter)->size();
 					}
