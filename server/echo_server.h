@@ -55,9 +55,9 @@ public:
 	inline virtual bool on_receive_session(unsigned long long key, view_pointer& view_ptr) noexcept override {
 		unsigned long long value;
 		*view_ptr >> value;
-		view_pointer message_ = create_message(value);
-		message_->move_rear(value);
-		//*message_ << value;
+		view_pointer message_ = create_message(8);
+		//message_->move_rear(value);
+		*message_ << value;
 		do_set_timeout_session(key, 40000);
 		do_send_session(key, message_);
 		return true;
