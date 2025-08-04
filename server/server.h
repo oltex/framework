@@ -29,7 +29,6 @@
 
 template<typename type>
 concept string_size = std::_Is_any_of_v<type, unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long>;
-using namespace data_structure;
 
 class server {
 private:
@@ -40,6 +39,7 @@ private:
 	};
 	class session final {
 	public:
+#pragma pack(push, 1)
 		struct header final {
 			inline explicit header(void) noexcept = default;
 			inline explicit header(header const&) noexcept = delete;
@@ -47,8 +47,12 @@ private:
 			inline auto operator=(header const&) noexcept -> header & = delete;
 			inline auto operator=(header&&) noexcept -> header & = delete;
 			inline ~header(void) noexcept = default;
-			unsigned short _size;
+			unsigned char _code;
+			unsigned short _length;
+			unsigned char _random_key;
+			unsigned char _check_sum;
 		};
+#pragma pack(pop)
 		class message final : public data_structure::intrusive::shared_pointer_hook<0>, public data_structure::serialize_buffer<> {
 		public:
 			inline explicit message(void) noexcept = delete;
@@ -201,9 +205,9 @@ private:
 			inline ~queue(void) noexcept = default;
 
 			inline void push(view_pointer view_ptr) noexcept {
-				_InterlockedIncrement(&_size);
 				base::emplace(view_ptr.get());
 				view_ptr.reset();
+				_InterlockedIncrement(&_size);
 			}
 			inline auto pop(void) noexcept -> view_pointer {
 				unsigned long long head = _head;
@@ -296,54 +300,57 @@ private:
 			}
 			return false;
 		}
-		inline bool receive(void) noexcept {
-			WSABUF wsa_buffer{ message::capacity() - _receive_message->rear(),  reinterpret_cast<char*>(_receive_message->data() + _receive_message->rear()) };
-			unsigned long flag = 0;
-			_recv_overlapped.clear();
-			unsigned long long key = _key;
-			if (SOCKET_ERROR == _socket.wsa_receive(&wsa_buffer, 1, &flag, _recv_overlapped)) {
-				if (WSA_IO_PENDING == GetLastError()) {
-					if (1 == _cancel_flag) {
-						if (acquire(key))
+		inline void receive(void) noexcept {
+			if (0 == _cancel_flag) {
+				WSABUF wsa_buffer{ message::capacity() - _receive_message->rear(),  reinterpret_cast<char*>(_receive_message->data() + _receive_message->rear()) };
+				unsigned long flag = 0;
+				_recv_overlapped.clear();
+				_InterlockedIncrement(&_io_count);
+				if (SOCKET_ERROR == _socket.wsa_receive(&wsa_buffer, 1, &flag, _recv_overlapped)) {
+					if (WSA_IO_PENDING == GetLastError()) {
+						if (1 == _cancel_flag)
 							_socket.cancel_io_ex();
-						return false;
 					}
-					return true;
-				}
-				_cancel_flag = 1;
-				return false;
-			}
-			return true;
-		}
-		inline bool send(void) noexcept {
-			while (!_send_queue.empty() && 0 == _InterlockedExchange(&_send_flag, 1)) {
-				if (_send_queue.empty())
-					_InterlockedExchange(&_send_flag, 0);
-				else {
-					WSABUF wsa_buffer[512];
-					_send_size = 0;
-					for (auto iter = _send_queue.begin(), end = _send_queue.end(); iter != end || 512 < _send_size; ++iter, ++_send_size) {
-						wsa_buffer[_send_size].buf = reinterpret_cast<char*>((*iter)->data()->data() + (*iter)->front());
-						wsa_buffer[_send_size].len = (*iter)->size();
-					}
-					_send_overlapped.clear();
-					unsigned long long key = _key;
-					if (SOCKET_ERROR == _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped)) {
-						if (GetLastError() == WSA_IO_PENDING) {
-							if (1 == _cancel_flag) {
-								if (acquire(key))
-									_socket.cancel_io_ex();
-								return false;
-							}
-							return true;
-						}
+					else {
+						_InterlockedDecrement(&_io_count);
 						_cancel_flag = 1;
-						return false;
 					}
-					return true;
 				}
 			}
-			return false;
+		}
+		inline void send(void) noexcept {
+			if (0 == _cancel_flag) {
+				while (!_send_queue.empty() && 0 == _InterlockedExchange(&_send_flag, 1)) {
+					if (_send_queue.empty())
+						_InterlockedExchange(&_send_flag, 0);
+					else {
+						WSABUF wsa_buffer[512];
+						_send_size = 0;
+						for (auto iter = _send_queue.begin(), end = _send_queue.end(); iter != end; ++iter) {
+							if (512 <= _send_size) {
+								cancel();
+								return;
+							}
+							wsa_buffer[_send_size].buf = reinterpret_cast<char*>((*iter)->data()->data() + (*iter)->front());
+							wsa_buffer[_send_size].len = (*iter)->size();
+							_send_size++;
+						}
+						_send_overlapped.clear();
+						_InterlockedIncrement(&_io_count);
+						if (SOCKET_ERROR == _socket.wsa_send(wsa_buffer, _send_size, 0, _send_overlapped)) {
+							if (GetLastError() == WSA_IO_PENDING) {
+								if (1 == _cancel_flag)
+									_socket.cancel_io_ex();
+							}
+							else {
+								_InterlockedDecrement(&_io_count);
+								_cancel_flag = 1;
+							}
+						}
+						return;
+					}
+				}
+			}
 		}
 		inline void cancel(void) noexcept {
 			_cancel_flag = 1;
@@ -395,9 +402,9 @@ private:
 		queue _send_queue;
 		system_component::overlapped _recv_overlapped;
 		system_component::overlapped _send_overlapped;
-		unsigned long _io_count; // release_flag : 1 group_io : ? : io_count : ?
+		unsigned long _io_count; // release_flag
 		unsigned long _cancel_flag;
-		unsigned long _receive_count; // release_flag : 2
+		unsigned long _receive_count; // group_flag, cancel_flag
 		unsigned long _send_flag;
 		unsigned long _send_size;
 		unsigned long long _timeout_currnet;
@@ -484,6 +491,7 @@ private:
 			while (_size != 0) {
 			}
 		}
+
 		unsigned long long _head;
 		node* _array;
 		size_type _size;
@@ -627,9 +635,9 @@ private:
 			inline virtual bool excute(void) noexcept override {
 				while (!_cancel_flag) {
 					while (!_job_queue.empty()) {
-						job_pointer job_ptr = _job_queue.pop();
+						scheduler::group::job_pointer job_ptr = _job_queue.pop();
 						switch (job_ptr->_type) {
-						case job::type::enter_session: {
+						case scheduler::group::job::type::enter_session: {
 							auto& session_ = _server->_session_array[job_ptr->_session_key];
 							if (session_.acquire(job_ptr->_session_key)) {
 								_session_map.emplace(job_ptr->_session_key, &session_);
@@ -641,7 +649,7 @@ private:
 								_server->_session_array.release(session_);
 							}
 						} break;
-						case job::type::leave_session: {
+						case scheduler::group::job::type::leave_session: {
 							auto iter = _session_map.find(job_ptr->_session_key);
 							if (iter == _session_map.end())
 								break;
@@ -654,7 +662,7 @@ private:
 								_server->_session_array.release(session_);
 							}
 						} break;
-						case job::type::move_session: {
+						case scheduler::group::job::type::move_session: {
 							auto iter = _session_map.find(job_ptr->_session_key);
 							if (iter == _session_map.end())
 								break;
@@ -679,8 +687,7 @@ private:
 						}
 					}
 
-					for (auto iter = _session_map.begin(), 
-						end = _session_map.end(); iter != end;) {
+					for (auto iter = _session_map.begin(), end = _session_map.end(); iter != end;) {
 						session& session_ = *iter->second;
 						if (!session_._cancel_flag) {
 							while (!session_._receive_queue.empty()) {
@@ -908,7 +915,7 @@ private:
 			inline void wake(void) noexcept {
 				system_component::wait_on_address::wake_single(&_size);
 			}
-			inline bool wait(void* compare, unsigned long const wait_time) noexcept {
+			inline bool wait(void* compare, unsigned long wait_time) noexcept {
 				return system_component::wait_on_address::wait(&_size, compare, sizeof(size_type), wait_time);
 			}
 		private:
@@ -940,7 +947,7 @@ private:
 		inline void push(task& task_) noexcept {
 			_task_queue.push(task_);
 		}
-		inline bool wait(unsigned long const wait_time) noexcept {
+		inline bool wait(unsigned long wait_time) noexcept {
 			return _task_queue.wait(&_active, wait_time);
 		}
 
@@ -1001,12 +1008,12 @@ protected:
 			_worker_thread_count = param->get_int(1);
 			return 0;
 			});
-		command_.add("session_max", [&](command::parameter* param) noexcept -> int {
-			_session_array_max = param->get_int(1);
-			return 0;
-			});
 		command_.add("group_max", [&](command::parameter* param) noexcept -> int {
 			_group_array_max = param->get_int(1);
+			return 0;
+			});
+		command_.add("session_max", [&](command::parameter* param) noexcept -> int {
+			_session_array_max = param->get_int(1);
 			return 0;
 			});
 		command_.add("send_mode", [&](command::parameter* param) noexcept -> int {
@@ -1085,13 +1092,13 @@ protected:
 		_processor_total_time = query.add_counter(L"\\Processor(_Total)\\% Processor Time");
 		_processor_user_time = query.add_counter(L"\\Processor(_Total)\\% User Time");
 		_processor_kernel_time = query.add_counter(L"\\Processor(_Total)\\% Privileged Time");
-		_process_total_time = query.add_counter(L"\\Process(server)\\% Processor Time");
-		_process_user_time = query.add_counter(L"\\Process(server)\\% User Time");
-		_process_kernel_time = query.add_counter(L"\\Process(server)\\% Privileged Time");
+		_process_total_time = query.add_counter(L"\\Process(monitor-server)\\% Processor Time");
+		_process_user_time = query.add_counter(L"\\Process(monitor-server)\\% User Time");
+		_process_kernel_time = query.add_counter(L"\\Process(monitor-server)\\% Privileged Time");
 		_memory_available_byte = query.add_counter(L"\\Memory\\Available Bytes");
 		_memory_pool_nonpaged_byte = query.add_counter(L"\\Memory\\Pool Nonpaged Bytes");
-		_process_private_byte = query.add_counter(L"\\Process(server)\\Private Bytes");
-		_process_pool_nonpaged_byte = query.add_counter(L"\\Process(server)\\Pool Nonpaged Bytes");
+		_process_private_byte = query.add_counter(L"\\Process(monitor-server)\\Private Bytes");
+		_process_pool_nonpaged_byte = query.add_counter(L"\\Process(monitor-server)\\Pool Nonpaged Bytes");
 		_tcpv4_segments_received_sec = query.add_counter(L"\\TCPv4\\Segments Received/sec");
 		_tcpv4_segments_sent_sec = query.add_counter(L"\\TCPv4\\Segments Sent/sec");
 		_tcpv4_segments_retransmitted_sec = query.add_counter(L"\\TCPv4\\Segments Retransmitted/sec");
@@ -1130,6 +1137,7 @@ protected:
 		_session_array.finalize();
 		_group_array.finalize();
 
+
 		for (size_type index = 0; index < _worker_thread.size(); ++index)
 			_complation_port.post_queue_state(0, 0, nullptr);
 		HANDLE handle[128];
@@ -1157,8 +1165,8 @@ private:
 					session_->initialize(std::move(socket), _timeout_duration);
 					_complation_port.connect(session_->_socket, reinterpret_cast<ULONG_PTR>(session_));
 					on_create_session(session_->_key);
-
-					if (!session_->receive() && session_->release()) {
+					session_->receive();
+					if (session_->release()) {
 						on_destroy_session(session_->_key);
 						_session_array.release(*session_);
 					}
@@ -1185,8 +1193,7 @@ private:
 				_group_array.release(group_);
 			} break;
 			case excute_task: {
-				scheduler::task& task =
-					*reinterpret_cast<scheduler::task*>(overlapped);
+				scheduler::task& task = *reinterpret_cast<scheduler::task*>(overlapped);
 				if (task.excute()) {
 					_scheduler.push(task);
 					continue;
@@ -1222,13 +1229,47 @@ private:
 								break;
 							session::header header_;
 							session_._receive_message->peek(reinterpret_cast<unsigned char*>(&header_), sizeof(session::header));
-							if (sizeof(session::header) + header_._size > session_._receive_message->size())
+							if (header_._code != _header_code) {
+								session_.cancel();
+								break;
+							}
+							if (header_._length > 256) { //юс╫ц
+								session_.cancel();
+								break;
+							}
+							if (sizeof(session::header) + header_._length > session_._receive_message->size())
 								break;
 							session_._receive_message->pop(sizeof(session::header));
 
 							auto& memory_pool = data_structure::_thread_local::memory_pool<session::view>::instance();
-							session::view_pointer view_ptr(&memory_pool.allocate(session_._receive_message, session_._receive_message->front(), session_._receive_message->front() + header_._size));
-							session_._receive_message->pop(header_._size);
+							session::view_pointer view_ptr(&memory_pool.allocate(session_._receive_message, session_._receive_message->front() - 1, session_._receive_message->front() + header_._length));
+							session_._receive_message->pop(header_._length);
+
+							//----------------------------------------------------------
+							unsigned char p = 0;
+							unsigned char e = 0;
+							unsigned char temp = 0;
+							size_type index = 0;
+							unsigned char check_sum = 0;
+
+							for (auto iter = view_ptr->begin(), end = view_ptr->end(); iter != end; ++iter) {
+								temp = (*iter) ^ (e + _header_fixed_key + index + 1);
+								e = (*iter);
+								(*iter) = temp ^ (p + header_._random_key + index + 1);
+								p = temp;
+								check_sum += (*iter);
+								index++;
+							}
+
+							unsigned char check_sum_;
+							(*view_ptr) >> check_sum_;
+							check_sum -= check_sum_;
+							if (check_sum != check_sum_) {
+								session_.cancel();
+								break;
+							}
+							//----------------------------------------------------------
+
 							session_._receive_queue.push(view_ptr);
 							_InterlockedIncrement(&_receive_tps);
 						}
@@ -1252,13 +1293,14 @@ private:
 								_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_group), reinterpret_cast<OVERLAPPED*>(&group_));
 						}
 
-						if (session_.ready_receive() && session_.receive())
-							continue;
+						if (session_.ready_receive())
+							session_.receive();
 					}
 					else {
+						_interlockedadd((volatile long*)&_send_tps, session_._send_size);
 						session_.finish_send();
-						if (0 == _send_frame && session_.send())
-							continue;
+						if (0 == _send_frame)
+							session_.send();
 					}
 				}
 				else
@@ -1275,9 +1317,11 @@ private:
 		scheduler::ready_queue _ready_queue;
 		unsigned long wait_time = INFINITE;
 		while (0 == _scheduler._active || 0 != _scheduler._size) {
-			if (true == _scheduler.wait(wait_time))
+			bool result = _scheduler.wait(wait_time);
+			if (result) {
 				while (!_scheduler._task_queue.empty())
 					_ready_queue.push(&_scheduler._task_queue.pop());
+			}
 			wait_time = INFINITE;
 			unsigned long time = system_component::time::multimedia::get_time();
 			while (!_ready_queue.empty()) {
@@ -1292,11 +1336,9 @@ private:
 		}
 	}
 	inline int send(void) noexcept {
-		for (auto iter = _session_array.begin(), 
-			end = _session_array.end(); iter != end; ++iter) {
+		for (auto iter = _session_array.begin(), end = _session_array.end(); iter != end; ++iter) {
 			if (iter->_value.acquire()) {
-				if (iter->_value.send())
-					continue;
+				iter->_value.send();
 			}
 			if (iter->_value.release()) {
 				on_destroy_session(iter->_value._key);
@@ -1308,11 +1350,9 @@ private:
 		return _send_frame;
 	}
 	inline int timeout(void) noexcept {
-		for (auto iter = _session_array.begin(), 
-			end = _session_array.end(); iter != end; ++iter) {
+		for (auto iter = _session_array.begin(), end = _session_array.end(); iter != end; ++iter) {
 			if (iter->_value.acquire()) {
-				if (iter->_value._timeout_currnet + 
-					iter->_value._timeout_duration < GetTickCount64()) {
+				if (iter->_value._timeout_currnet + iter->_value._timeout_duration < GetTickCount64()) {
 					iter->_value.cancel();
 					++_timeout_total_count;
 				}
@@ -1414,8 +1454,8 @@ protected:
 		session& session_ = *_session_array.acquire();
 		session_.initialize(std::move(socket), _timeout_duration);
 		_complation_port.connect(session_._socket, reinterpret_cast<ULONG_PTR>(&session_));
-
-		if (!session_.receive() && session_.release()) {
+		session_.receive();
+		if (session_.release()) {
 			on_destroy_session(session_._key);
 			_session_array.release(session_);
 			return 0;
@@ -1426,12 +1466,37 @@ protected:
 		session& session_ = _session_array[key];
 		if (session_.acquire(key)) {
 			if (512 > session_._send_queue.size()) {
+				session::header* header_ = reinterpret_cast<session::header*>(view_ptr->data()->data() + view_ptr->front());
+				if (0 == header_->_code) {
+					header_->_code = _header_code;
+					header_->_length = view_ptr->size() - 5;
+					auto random_key = header_->_random_key = rand() % 256;
+					auto header_fixed_key = _header_fixed_key;
+					unsigned char check_sum = 0;
+
+					auto end = view_ptr->end();
+					for (auto iter = view_ptr->begin() + sizeof(session::header); iter != end; ++iter) {
+						check_sum += *iter;
+					}
+					header_->_check_sum = check_sum;
+
+					unsigned char p = 0;
+					unsigned char e = 0;
+					size_type index = 0;
+					for (auto iter = view_ptr->begin() + sizeof(session::header) - 1; iter != end; ++iter) {
+						p = *iter ^ (p + random_key + index + 1);
+						e = p ^ (e + header_fixed_key + index + 1);
+						*iter = e;
+						index++;
+					}
+				}
 				session_._send_queue.push(view_ptr);
-				if (0 == _send_frame && session_.send())
-					return;
+				if (0 == _send_frame)
+					session_.send();
 			}
-			else
+			else {
 				session_.cancel();
+			}
 		}
 		if (session_.release())
 			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
@@ -1443,8 +1508,7 @@ protected:
 		if (session_.release())
 			_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::destory_session), reinterpret_cast<OVERLAPPED*>(&session_));
 	}
-	inline void do_set_timeout_session(
-		unsigned long long key, unsigned long long duration) noexcept {
+	inline void do_set_timeout_session(unsigned long long key, unsigned long long duration) noexcept {
 		session& session_ = _session_array[key];
 		if (session_.acquire(key))
 			session_._timeout_duration = duration;
@@ -1511,14 +1575,9 @@ protected:
 		if (0 == _scheduler._active) {
 			_InterlockedIncrement(&_scheduler._size);
 			if (0 == _scheduler._active) {
-				auto& memory_pool = 
-					_thread_local::memory_pool<scheduler::function>::instance();
-				scheduler::task* task_(
-					&memory_pool.allocate(
-						std::forward<function>(func), std::forward<argument>(arg)...));
-				_complation_port.post_queue_state(0, 
-					static_cast<uintptr_t>(post_queue_state::excute_task), 
-					reinterpret_cast<OVERLAPPED*>(task_));
+				auto& memory_pool = data_structure::_thread_local::memory_pool<scheduler::function>::instance();
+				scheduler::task* task_(&memory_pool.allocate(std::forward<function>(func), std::forward<argument>(arg)...));
+				_complation_port.post_queue_state(0, static_cast<uintptr_t>(post_queue_state::excute_task), reinterpret_cast<OVERLAPPED*>(task_));
 			}
 			else
 				_InterlockedDecrement(&_scheduler._size);
@@ -1528,7 +1587,7 @@ protected:
 	inline static auto create_message(size_type const size) noexcept -> session::view_pointer {
 		auto& message_pool = data_structure::_thread_local::memory_pool<session::message>::instance();
 		thread_local session::message_pointer message_ptr;
-		if (nullptr == message_ptr || message_ptr->capacity() - message_ptr->rear() - 10 < sizeof(session::header) + size) {
+		if (nullptr == message_ptr || message_ptr->capacity() - message_ptr->rear() < sizeof(session::header) + size) {
 			session::message_pointer new_message_ptr(&message_pool.allocate());
 			new_message_ptr->clear();
 			message_ptr = new_message_ptr;
@@ -1537,8 +1596,7 @@ protected:
 		session::view_pointer view_ptr(&view_pool.allocate(message_ptr, message_ptr->rear(), message_ptr->rear()));
 		message_ptr->move_rear(sizeof(session::header) + size);
 
-		session::header header_;
-		header_._size = 8;
+		session::header header_{};
 		view_ptr->push(reinterpret_cast<unsigned char*>(&header_), sizeof(session::header));
 		return view_ptr;
 	}
@@ -1583,12 +1641,6 @@ public:
 	size_type _accept_tps = 0;
 	size_type _receive_tps = 0;
 	size_type _send_tps = 0;
-
-	size_type _recv_cancel = 0;
-	size_type _send_cancel = 0;
-
-	inline static size_type _recv_cancel_false = 0;
-	inline static size_type _send_cancel_false = 0;
 
 	unsigned long _number_of_processor;
 };
