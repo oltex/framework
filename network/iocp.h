@@ -31,11 +31,11 @@ namespace framework {
 			_worker_thread.clear();
 			_complet_port.close();
 		}
-		inline void connect(library::socket& socket, uintptr_t key) noexcept {
-			_complet_port.connect(socket, key);
+		inline void connect(object& object, library::socket& socket, uintptr_t key) noexcept {
+			_complet_port.connect(socket, (key << 47) | reinterpret_cast<uintptr_t>(&object));
 		}
-		inline void post(unsigned long transferred, uintptr_t key, OVERLAPPED* overlapped) noexcept {
-			_complet_port.post_queue_state(transferred, key, overlapped);
+		inline void post(object& object, unsigned long transferred, uintptr_t key, OVERLAPPED* overlapped) noexcept {
+			_complet_port.post_queue_state(transferred, (key << 47) | reinterpret_cast<uintptr_t>(&object), overlapped);
 		}
 	private:
 		inline void worker(void) noexcept {
@@ -45,7 +45,7 @@ namespace framework {
 				case 0:
 					return;
 				default:
-					reinterpret_cast<object*>(key)->worker(result, transferred, key, overlapped);
+					reinterpret_cast<object*>(0x00007FFFFFFFFFFF & key)->worker(result, transferred, (key >> 47), overlapped);
 					break;
 				}
 			}

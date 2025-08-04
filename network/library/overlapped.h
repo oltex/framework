@@ -1,5 +1,6 @@
 #pragma once
 #include <Windows.h>
+#include "memory.h"
 
 namespace library {
 	class overlapped final {
@@ -21,12 +22,12 @@ namespace library {
 			return HasOverlappedIoCompleted(&_overlapped);
 		}
 		inline void clear(void) noexcept {
-			memset(&_overlapped, 0, sizeof(_OVERLAPPED));
+			library::memory_set(&_overlapped, 0, sizeof(_OVERLAPPED));
 		}
 		inline auto data(void) noexcept -> _OVERLAPPED& {
 			return _overlapped;
 		}
-	private:
+	//private:
 		_OVERLAPPED _overlapped;
 	};
 }

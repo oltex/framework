@@ -324,6 +324,11 @@ namespace library {
 			unsigned long byte_returned;
 			wsa_io_control(SIO_GET_EXTENSION_FUNCTION_POINTER, reinterpret_cast<void*>(&guid), sizeof(GUID), reinterpret_cast<void*>(&_disconnect_ex), sizeof(LPFN_DISCONNECTEX), byte_returned);
 		}
+		inline void wsa_io_control_get_accept_ex_sockaddr(void) noexcept {
+			GUID guid = WSAID_GETACCEPTEXSOCKADDRS;
+			unsigned long byte_returned;
+			wsa_io_control(SIO_GET_EXTENSION_FUNCTION_POINTER, reinterpret_cast<void*>(&guid), sizeof(GUID), reinterpret_cast<void*>(&_get_accept_ex_sockaddr), sizeof(LPFN_GETACCEPTEXSOCKADDRS), byte_returned);
+		}
 		inline void wsa_io_control(unsigned long control_code, void* in_buffer, unsigned long in_buffer_size, void* out_buffer, unsigned long out_buffer_size, unsigned long& byte_returned) noexcept {
 			if (SOCKET_ERROR == ::WSAIoctl(_socket, control_code, in_buffer, in_buffer_size, out_buffer, out_buffer_size, &byte_returned, nullptr, nullptr))
 				__debugbreak();
@@ -354,6 +359,16 @@ namespace library {
 			}
 			return socket_address;
 		}
+		inline auto get_accept_ex_socket_address(void* buffer) noexcept -> library::pair<socket_address_ipv4, socket_address_ipv4> {
+			std::call_once(_get_accept_ex_sockaddr_once, &socket::wsa_io_control_get_accept_ex_sockaddr, this);
+			library::pair<socket_address_ipv4, socket_address_ipv4> result;
+			sockaddr* local_sockaddr = nullptr;
+			int local_sockaddr_length = 0;
+			sockaddr* remote_sockaddr = nullptr;
+			int remote_sockaddr_length = 0;
+			_get_accept_ex_sockaddr(buffer, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &local_sockaddr, &local_sockaddr_length, &remote_sockaddr, &remote_sockaddr_length);
+			return result;
+		}
 		inline auto data(void) noexcept -> SOCKET& {
 			return _socket;
 		}
@@ -361,6 +376,8 @@ namespace library {
 		SOCKET _socket;
 		inline static LPFN_ACCEPTEX _accept_ex;
 		inline static std::once_flag _accept_ex_once;
+		inline static LPFN_GETACCEPTEXSOCKADDRS _get_accept_ex_sockaddr;
+		inline static std::once_flag _get_accept_ex_sockaddr_once;
 		inline static LPFN_DISCONNECTEX _disconnect_ex;
 	};
 }

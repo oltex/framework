@@ -80,6 +80,9 @@ namespace library {
 	inline auto memory_compare(type const* const buffer_1, type const* const buffer_2, size_t count) noexcept -> int {
 		return ::memcmp(buffer_1, buffer_2, sizeof(type) * count);
 	}
+	inline auto memory_set(void* const destine, int value, size_t size) noexcept -> void* {
+		return ::memset(destine, value, size);
+	}
 
 	template<typename type, typename... argument>
 	inline auto construct(type& instance, argument&&... arg) noexcept {
