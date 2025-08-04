@@ -4,7 +4,6 @@
 int main(void) noexcept {
 	library::wsa_start_up();
 
-
 	auto& iocp = framework::iocp::instance();
 	iocp.create(4, 1);
 

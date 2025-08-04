@@ -4,6 +4,9 @@
     <Filter Include="library">
       <UniqueIdentifier>{b5c7e2df-846e-47e2-bb55-83986ed1a187}</UniqueIdentifier>
     </Filter>
+    <Filter Include="iocp">
+      <UniqueIdentifier>{318625e9-6a19-48fe-9d9f-a7df7caffe42}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -42,7 +45,6 @@
     <ClInclude Include="library\template.h">
       <Filter>library</Filter>
     </ClInclude>
-    <ClInclude Include="iocp.h" />
     <ClInclude Include="library\vector.h">
       <Filter>library</Filter>
     </ClInclude>
@@ -52,6 +54,13 @@
     <ClInclude Include="server.h" />
     <ClInclude Include="session.h" />
     <ClInclude Include="library\singleton.h">
+      <Filter>library</Filter>
+    </ClInclude>
+    <ClInclude Include="message.h" />
+    <ClInclude Include="iocp.h">
+      <Filter>iocp</Filter>
+    </ClInclude>
+    <ClInclude Include="library\serialize_buffer.h">
       <Filter>library</Filter>
     </ClInclude>
   </ItemGroup>

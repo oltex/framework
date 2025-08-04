@@ -38,6 +38,10 @@ namespace framework {
 			}
 		}
 		inline void worker(bool result, unsigned long transferred, uintptr_t key, OVERLAPPED* overlapped) noexcept override {
+			switch (key) {
+			default:
+				break;
+			}
 			auto current = reinterpret_cast<library::overlapped*>(reinterpret_cast<unsigned char*>(overlapped) - offsetof(library::overlapped, _overlapped));
 			auto current2 = reinterpret_cast<accept_socket*>(reinterpret_cast<unsigned char*>(current) - offsetof(accept_socket, _overlapped));
 			current2->_socket.get_accept_ex_socket_address(current2->_buffer);
