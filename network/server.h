@@ -37,6 +37,9 @@ namespace framework {
 				_listen.accept_ex(accept_._socket, accept_._buffer, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, accept_._overlapped);
 			}
 		}
+		inline void connect(void) noexcept {
+
+		}
 		inline void worker(bool result, unsigned long transferred, uintptr_t key, OVERLAPPED* overlapped) noexcept override {
 			switch (key) {
 			default:
