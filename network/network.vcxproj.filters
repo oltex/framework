@@ -50,5 +50,9 @@
       <Filter>library</Filter>
     </ClInclude>
     <ClInclude Include="server.h" />
+    <ClInclude Include="session.h" />
+    <ClInclude Include="library\singleton.h">
+      <Filter>library</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -153,6 +153,7 @@
     <ClInclude Include="library\memory.h" />
     <ClInclude Include="library\overlapped.h" />
     <ClInclude Include="library\pair.h" />
+    <ClInclude Include="library\singleton.h" />
     <ClInclude Include="library\socket.h" />
     <ClInclude Include="library\socket_address.h" />
     <ClInclude Include="library\string.h" />
@@ -161,6 +162,7 @@
     <ClInclude Include="library\tuple.h" />
     <ClInclude Include="library\vector.h" />
     <ClInclude Include="server.h" />
+    <ClInclude Include="session.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -6,11 +6,28 @@
 #include <MSWSock.h>
 #include <intrin.h>
 #include <optional>
+#include <mutex>
 #include "overlapped.h"
 #include "pair.h"
 #include "socket_address.h"
 
 namespace library {
+	inline static void wsa_start_up(void) noexcept {
+		WSAData wsadata;
+		if (0 != WSAStartup(0x0202, &wsadata))
+			__debugbreak();
+	};
+	inline static void wsa_clean_up(void) noexcept {
+		if (SOCKET_ERROR == WSACleanup())
+			__debugbreak();
+	};
+	inline static auto select(fd_set* read, fd_set* write, fd_set* exception, timeval* time) noexcept -> int {
+		int result = ::select(0, read, write, exception, time);
+		if (SOCKET_ERROR == result)
+			__debugbreak();
+		return result;
+	}
+
 	class socket final {
 	public:
 		inline explicit socket(void) noexcept
@@ -20,6 +37,16 @@ namespace library {
 			: _socket(::socket(address_family, type, protocol)) {
 			if (INVALID_SOCKET == _socket) {
 				switch (GetLastError()) {
+				case WSANOTINITIALISED:
+				default:
+					__debugbreak();
+				}
+			}
+		}
+		inline explicit socket(ADDRESS_FAMILY const address_family, int const type, int const protocol, unsigned long const flag) noexcept
+			: _socket(::WSASocket(address_family, type, protocol, nullptr, 0, flag)) {
+			if (_socket == INVALID_SOCKET) {
+				switch (::WSAGetLastError()) {
 				case WSANOTINITIALISED:
 				default:
 					__debugbreak();
@@ -49,6 +76,16 @@ namespace library {
 			_socket = ::socket(address_family, type, protocol);
 			if (INVALID_SOCKET == _socket) {
 				switch (GetLastError()) {
+				case WSANOTINITIALISED:
+				default:
+					__debugbreak();
+				}
+			}
+		}
+		inline void create(ADDRESS_FAMILY const address_family, int const type, int const protocol, unsigned long const flag) noexcept {
+			_socket = ::WSASocket(address_family, type, protocol, nullptr, 0, flag);
+			if (_socket == INVALID_SOCKET) {
+				switch (::WSAGetLastError()) {
 				case WSANOTINITIALISED:
 				default:
 					__debugbreak();
@@ -96,16 +133,17 @@ namespace library {
 			}
 			return library::pair<socket, socket_address_ipv4>(sock, socket_address);
 		}
-//		inline auto accept_ex(socket& socket_, void* output_buffer, unsigned long address_length, unsigned long remote_address_length, overlapped& overlapeed_) noexcept {
-//			if (FALSE == _accept_ex(_socket, socket_.data(), output_buffer, 0, address_length, remote_address_length, nullptr, &overlapeed_.data())) {
-//				switch (WSAGetLastError()) {
-//				case ERROR_IO_PENDING:
-//					break;
-//				default:
-//					__debugbreak();
-//				}
-//			}
-//		}
+		inline auto accept_ex(socket& socket_, void* output_buffer, unsigned long address_length, unsigned long remote_address_length, overlapped& overlapeed_) noexcept {
+			std::call_once(_accept_ex_once, &socket::wsa_io_control_acccept_ex, this);
+			if (FALSE == _accept_ex(_socket, socket_.data(), output_buffer, 0, address_length, remote_address_length, nullptr, &overlapeed_.data())) {
+				switch (WSAGetLastError()) {
+				case ERROR_IO_PENDING:
+					break;
+				default:
+					__debugbreak();
+				}
+			}
+		}
 		inline auto connect(socket_address& socket_address) noexcept -> int {
 			int result = ::connect(_socket, &socket_address.data(), socket_address.get_length());
 			if (SOCKET_ERROR == result) {
@@ -322,6 +360,7 @@ namespace library {
 	private:
 		SOCKET _socket;
 		inline static LPFN_ACCEPTEX _accept_ex;
+		inline static std::once_flag _accept_ex_once;
 		inline static LPFN_DISCONNECTEX _disconnect_ex;
 	};
 }
