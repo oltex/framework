@@ -7,6 +7,12 @@
     <Filter Include="library\intrusive">
       <UniqueIdentifier>{7d33e764-42a7-4286-a2ad-dc6743a188bb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="library\thread-local">
+      <UniqueIdentifier>{4340850c-faa2-4d09-94d5-a08c503bbbd0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="library\lockfree">
+      <UniqueIdentifier>{079ec623-e855-4066-89b0-081bc1e9ebb8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
@@ -66,6 +72,21 @@
     </ClInclude>
     <ClInclude Include="library\intrusive\share_pointer.h">
       <Filter>library\intrusive</Filter>
+    </ClInclude>
+    <ClInclude Include="library\thread-local\pool.h">
+      <Filter>library\thread-local</Filter>
+    </ClInclude>
+    <ClInclude Include="library\thread-local\singleton.h">
+      <Filter>library\thread-local</Filter>
+    </ClInclude>
+    <ClInclude Include="library\lockfree\pool.h">
+      <Filter>library\lockfree</Filter>
+    </ClInclude>
+    <ClInclude Include="library\lockfree\free_array.h">
+      <Filter>library\lockfree</Filter>
+    </ClInclude>
+    <ClInclude Include="library\interlock.h">
+      <Filter>library</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

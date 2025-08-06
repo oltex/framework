@@ -150,8 +150,11 @@
     <ClInclude Include="library\function.h" />
     <ClInclude Include="library\handle.h" />
     <ClInclude Include="library\inputoutput_complet_port.h" />
+    <ClInclude Include="library\interlock.h" />
     <ClInclude Include="library\intrusive\list.h" />
     <ClInclude Include="library\intrusive\share_pointer.h" />
+    <ClInclude Include="library\lockfree\pool.h" />
+    <ClInclude Include="library\lockfree\free_array.h" />
     <ClInclude Include="library\memory.h" />
     <ClInclude Include="library\overlapped.h" />
     <ClInclude Include="library\pair.h" />
@@ -161,6 +164,8 @@
     <ClInclude Include="library\socket_address.h" />
     <ClInclude Include="library\string.h" />
     <ClInclude Include="library\template.h" />
+    <ClInclude Include="library\thread-local\pool.h" />
+    <ClInclude Include="library\thread-local\singleton.h" />
     <ClInclude Include="library\thread.h" />
     <ClInclude Include="library\tuple.h" />
     <ClInclude Include="library\vector.h" />

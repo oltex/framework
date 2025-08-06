@@ -12,7 +12,7 @@ namespace library {
 		return reinterpret_cast<void*>(::_aligned_malloc(size, align));
 	}
 	template<typename type>
-		requires (!std::is_void_v<type>)
+		requires (!library::void_type<type>)
 	inline auto allocate(void) noexcept -> type* {
 		if constexpr (16 >= alignof(type))
 			return reinterpret_cast<type*>(::malloc(sizeof(type)));
@@ -20,7 +20,7 @@ namespace library {
 			return reinterpret_cast<type*>(::_aligned_malloc(sizeof(type), alignof(type)));
 	}
 	template<typename type>
-		requires (!std::is_void_v<type>)
+		requires (!library::void_type<type>)
 	inline auto allocate(size_t const count) noexcept -> type* {
 		if constexpr (16 >= alignof(type))
 			return reinterpret_cast<type*>(::malloc(sizeof(type) * count));
@@ -34,7 +34,7 @@ namespace library {
 		return reinterpret_cast<void*>(::_aligned_realloc(pointer, size, align));
 	}
 	template<typename type>
-		requires (!std::is_void_v<type>)
+		requires (!library::void_type<type>)
 	inline auto reallocate(type* pointer, size_t const count) noexcept -> type* {
 		if constexpr (16 >= alignof(type))
 			return reinterpret_cast<type*>(::realloc(pointer, sizeof(type) * count));
@@ -48,7 +48,7 @@ namespace library {
 		::_aligned_free(pointer);
 	}
 	template<typename type>
-		requires (!std::is_void_v<type>)
+		requires (!library::void_type<type>)
 	inline void deallocate(type* const pointer) noexcept {
 		if constexpr (16 >= alignof(type))
 			::free(pointer);
@@ -60,7 +60,7 @@ namespace library {
 		return ::memcpy(destine, source, size);
 	}
 	template<typename type>
-		requires (!std::is_void_v<type>)
+		requires (!library::void_type<type>)
 	inline auto memory_copy(type* const destine, type const* const source, size_t const count) noexcept -> type* {
 		return reinterpret_cast<type*>(::memcpy(destine, source, sizeof(type) * count));
 	}
@@ -68,7 +68,7 @@ namespace library {
 		return ::memmove(destine, source, size);
 	}
 	template<typename type>
-		requires (!std::is_void_v<type>)
+		requires (!library::void_type<type>)
 	inline auto memory_move(type* const destine, type const* const source, size_t const count) noexcept -> type* {
 		return reinterpret_cast<type*>(::memmove(destine, source, sizeof(type) * count));
 	}
@@ -76,7 +76,7 @@ namespace library {
 		return ::memcmp(buffer_1, buffer_2, size);
 	}
 	template<typename type>
-		requires (!std::is_void_v<type>)
+		requires (!library::void_type<type>)
 	inline auto memory_compare(type const* const buffer_1, type const* const buffer_2, size_t count) noexcept -> int {
 		return ::memcmp(buffer_1, buffer_2, sizeof(type) * count);
 	}
@@ -88,8 +88,11 @@ namespace library {
 	inline auto construct(type& instance, argument&&... arg) noexcept {
 		if constexpr (std::is_constructible_v<type, argument...>)
 			if constexpr (std::is_class_v<type>)
-				::new(reinterpret_cast<void*>(&instance)) type(std::forward<argument>(arg)...);
-			else if constexpr (0 < sizeof...(arg))
+				if constexpr (sizeof...(argument) == 0)
+					::new(reinterpret_cast<void*>(&instance)) type;
+				else
+					::new(reinterpret_cast<void*>(&instance)) type(std::forward<argument>(arg)...);
+			else if constexpr (0 < sizeof...(argument))
 #pragma warning(suppress: 6011)
 				instance = type(std::forward<argument>(arg)...);
 	}
@@ -109,3 +112,14 @@ namespace library {
 		VirtualFree(address, size, type);
 	}
 }
+
+//if constexpr (!std::is_trivially_constructible_v<type, argument...>)
+
+//template<typename type>
+//inline auto allocate(size_t const number) noexcept -> type* {
+//	if constexpr (16 >= alignof(type))
+//		return reinterpret_cast<type*>(::calloc(number, sizeof(type)));
+//	else
+//		return reinterpret_cast<type*>(::_aligned_ca(sizeof(type), alignof(type)));
+//	reinterpret_cast<node*>(::calloc(1, sizeof(node*) * 2)
+//}

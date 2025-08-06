@@ -9,7 +9,7 @@ namespace library::intrusive {
 	class share_pointer_hook {
 		using size_type = unsigned int;
 		template<typename type, size_t>
-		friend class shared_pointer;
+		friend class share_pointer;
 		size_type _use;
 	public:
 		inline explicit share_pointer_hook(void) noexcept = default;
