@@ -63,15 +63,21 @@ namespace library {
 	using remove_reference = typename detail::remove_reference<type>::type;
 	template <typename type>
 	using remove_pointer = typename detail::remove_pointer<type>::type;
-
 	template <typename type>
 	using remove_cp = typename detail::remove_const<typename detail::remove_pointer<type>::type>::type;
+	template <typename type>
+	using remove_cv = typename detail::remove_const<typename detail::remove_volatile<type>::type>::type;
 
 	template <typename, typename>
 	inline constexpr bool same_type = false;
 	template <typename type>
 	inline constexpr bool same_type<type, type> = true;
-
 	template <typename type, typename... rest>
 	inline constexpr bool any_of_type = (same_type<type, rest> || ...);
+	template <typename type>
+	inline constexpr bool integral_type = any_of_type<remove_cv<type>, bool, char, signed char, unsigned char, wchar_t, char8_t, char16_t, char32_t, short, unsigned short, int, unsigned int, long, unsigned long, long long, unsigned long long>;
+	template <typename type>
+	inline constexpr bool floating_point_type = any_of_type<remove_cv<type>, float, double, long double>;
+	template <typename type>
+	inline constexpr bool arithmetic_type = integral_type<type> || floating_point_type<type>;
 }

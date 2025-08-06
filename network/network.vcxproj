@@ -150,6 +150,8 @@
     <ClInclude Include="library\function.h" />
     <ClInclude Include="library\handle.h" />
     <ClInclude Include="library\inputoutput_complet_port.h" />
+    <ClInclude Include="library\intrusive\list.h" />
+    <ClInclude Include="library\intrusive\share_pointer.h" />
     <ClInclude Include="library\memory.h" />
     <ClInclude Include="library\overlapped.h" />
     <ClInclude Include="library\pair.h" />

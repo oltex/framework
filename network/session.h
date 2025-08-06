@@ -1,5 +1,6 @@
 #pragma once
 #include "library/socket.h"
+#include "message.h"
 
 namespace framework {
 	class session final {

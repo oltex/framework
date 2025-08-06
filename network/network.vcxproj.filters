@@ -4,8 +4,8 @@
     <Filter Include="library">
       <UniqueIdentifier>{b5c7e2df-846e-47e2-bb55-83986ed1a187}</UniqueIdentifier>
     </Filter>
-    <Filter Include="iocp">
-      <UniqueIdentifier>{318625e9-6a19-48fe-9d9f-a7df7caffe42}</UniqueIdentifier>
+    <Filter Include="library\intrusive">
+      <UniqueIdentifier>{7d33e764-42a7-4286-a2ad-dc6743a188bb}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -57,11 +57,15 @@
       <Filter>library</Filter>
     </ClInclude>
     <ClInclude Include="message.h" />
-    <ClInclude Include="iocp.h">
-      <Filter>iocp</Filter>
-    </ClInclude>
     <ClInclude Include="library\serialize_buffer.h">
       <Filter>library</Filter>
+    </ClInclude>
+    <ClInclude Include="iocp.h" />
+    <ClInclude Include="library\intrusive\list.h">
+      <Filter>library\intrusive</Filter>
+    </ClInclude>
+    <ClInclude Include="library\intrusive\share_pointer.h">
+      <Filter>library\intrusive</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

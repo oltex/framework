@@ -15,6 +15,11 @@ namespace framework {
 	public:
 		inline explicit server(void) noexcept
 			: _iocp(framework::iocp::instance()) {
+			library::wsa_start_up();
+
+		}
+		inline ~server(void) noexcept {
+			library::wsa_clean_up();
 		}
 
 		inline void accept(char const* const ip, unsigned short port) noexcept {

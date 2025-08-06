@@ -188,7 +188,7 @@ namespace library {
 		inline auto send_to(char const* const buffer, int const length, int const flag, socket_address& socket_address) const noexcept -> int {
 			return ::sendto(_socket, buffer, length, flag, &socket_address.data(), socket_address.get_length());
 		}
-		inline auto wsa_send(WSABUF* buffer, unsigned long count, unsigned long* byte, unsigned long flag) noexcept -> int {
+		inline auto send(WSABUF* buffer, unsigned long count, unsigned long* byte, unsigned long flag) noexcept -> int {
 			int result = WSASend(_socket, buffer, count, byte, flag, nullptr, nullptr);
 			if (SOCKET_ERROR == result) {
 				switch (GetLastError()) {
@@ -203,7 +203,7 @@ namespace library {
 			}
 			return result;
 		}
-		inline auto wsa_send(WSABUF* buffer, unsigned long count, unsigned long flag, overlapped& overlapped) noexcept -> int {
+		inline auto send(WSABUF* buffer, unsigned long count, unsigned long flag, overlapped& overlapped) noexcept -> int {
 			int result = WSASend(_socket, buffer, count, nullptr, flag, &overlapped.data(), nullptr);
 			if (SOCKET_ERROR == result) {
 				switch (GetLastError()) {
@@ -242,7 +242,7 @@ namespace library {
 		inline auto receive_from(char* const buffer, int const length, int const flag, socket_address& socket_address, int& from_length) noexcept -> int {
 			return ::recvfrom(_socket, buffer, length, flag, &socket_address.data(), &from_length);
 		}
-		inline auto wsa_receive(WSABUF* buffer, unsigned long count, unsigned long* byte, unsigned long* flag) noexcept -> int {
+		inline auto receive(WSABUF* buffer, unsigned long count, unsigned long* byte, unsigned long* flag) noexcept -> int {
 			int result = WSARecv(_socket, buffer, count, byte, flag, nullptr, nullptr);
 			if (SOCKET_ERROR == result) {
 				switch (GetLastError()) {
@@ -257,7 +257,7 @@ namespace library {
 			}
 			return result;
 		}
-		inline auto wsa_receive(WSABUF* buffer, unsigned long count, unsigned long* flag, overlapped& overlapped) noexcept -> int {
+		inline auto receive(WSABUF* buffer, unsigned long count, unsigned long* flag, overlapped& overlapped) noexcept -> int {
 			int result = WSARecv(_socket, buffer, count, nullptr, flag, &overlapped.data(), nullptr);
 			if (SOCKET_ERROR == result) {
 				switch (GetLastError()) {
