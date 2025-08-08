@@ -1,5 +1,5 @@
 #pragma once
-#include "../../template/template.h"
+#include "template.h"
 #include <Windows.h>
 
 namespace library {

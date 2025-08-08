@@ -162,6 +162,7 @@
     <ClInclude Include="library\singleton.h" />
     <ClInclude Include="library\socket.h" />
     <ClInclude Include="library\socket_address.h" />
+    <ClInclude Include="library\storage.h" />
     <ClInclude Include="library\string.h" />
     <ClInclude Include="library\template.h" />
     <ClInclude Include="library\thread-local\pool.h" />

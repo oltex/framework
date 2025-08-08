@@ -3,6 +3,7 @@
 #include <malloc.h>
 #include <utility>
 #include <Windows.h>
+#include "template.h"
 
 namespace library {
 	inline auto allocate(size_t const size) noexcept -> void* {

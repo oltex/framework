@@ -88,5 +88,8 @@
     <ClInclude Include="library\interlock.h">
       <Filter>library</Filter>
     </ClInclude>
+    <ClInclude Include="library\storage.h">
+      <Filter>library</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

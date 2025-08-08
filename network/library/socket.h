@@ -6,7 +6,6 @@
 #include <MSWSock.h>
 #include <intrin.h>
 #include <optional>
-#include <mutex>
 #include "overlapped.h"
 #include "pair.h"
 #include "socket_address.h"
@@ -134,7 +133,6 @@ namespace library {
 			return library::pair<socket, socket_address_ipv4>(sock, socket_address);
 		}
 		inline auto accept_ex(socket& socket_, void* output_buffer, unsigned long address_length, unsigned long remote_address_length, overlapped& overlapeed_) noexcept {
-			std::call_once(_accept_ex_once, &socket::wsa_io_control_acccept_ex, this);
 			if (FALSE == _accept_ex(_socket, socket_.data(), output_buffer, 0, address_length, remote_address_length, nullptr, &overlapeed_.data())) {
 				switch (WSAGetLastError()) {
 				case ERROR_IO_PENDING:
@@ -307,6 +305,14 @@ namespace library {
 			if (SOCKET_ERROR == setsockopt(_socket, level, name, value, length))
 				__debugbreak();
 		}
+
+		//inline void get_option_connect_time(unsigned short const onoff, unsigned short const time) const noexcept {
+		//}
+		//inline void get_option(int const level, int const name, char* value, int* length) const noexcept {
+		//	if (SOCKET_ERROR == getsockopt(_socket, level, name, value, length))
+		//		__debugbreak(); /*SOL_SOCKET*/
+		//}
+
 		inline void io_control_nonblocking(unsigned long const enable) const noexcept {
 			io_control(FIONBIO, enable);
 		}
@@ -314,20 +320,23 @@ namespace library {
 			if (SOCKET_ERROR == ioctlsocket(_socket, cmd, &arg))
 				__debugbreak();
 		}
-		inline void wsa_io_control_acccept_ex(void) noexcept {
+		inline static void wsa_io_control_acccept_ex(void) noexcept {
+			socket sock(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 			GUID guid = WSAID_ACCEPTEX;
 			unsigned long byte_returned;
-			wsa_io_control(SIO_GET_EXTENSION_FUNCTION_POINTER, reinterpret_cast<void*>(&guid), sizeof(GUID), reinterpret_cast<void*>(&_accept_ex), sizeof(LPFN_ACCEPTEX), byte_returned);
+			sock.wsa_io_control(SIO_GET_EXTENSION_FUNCTION_POINTER, reinterpret_cast<void*>(&guid), sizeof(GUID), reinterpret_cast<void*>(&_accept_ex), sizeof(LPFN_ACCEPTEX), byte_returned);
 		}
-		inline void wsa_io_control_disconnect_ex(void) noexcept {
+		inline static void wsa_io_control_disconnect_ex(void) noexcept {
+			socket sock(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 			GUID guid = WSAID_DISCONNECTEX;
 			unsigned long byte_returned;
-			wsa_io_control(SIO_GET_EXTENSION_FUNCTION_POINTER, reinterpret_cast<void*>(&guid), sizeof(GUID), reinterpret_cast<void*>(&_disconnect_ex), sizeof(LPFN_DISCONNECTEX), byte_returned);
+			sock.wsa_io_control(SIO_GET_EXTENSION_FUNCTION_POINTER, reinterpret_cast<void*>(&guid), sizeof(GUID), reinterpret_cast<void*>(&_disconnect_ex), sizeof(LPFN_DISCONNECTEX), byte_returned);
 		}
-		inline void wsa_io_control_get_accept_ex_sockaddr(void) noexcept {
+		inline static void wsa_io_control_get_accept_ex_sockaddr(void) noexcept {
+			socket sock(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 			GUID guid = WSAID_GETACCEPTEXSOCKADDRS;
 			unsigned long byte_returned;
-			wsa_io_control(SIO_GET_EXTENSION_FUNCTION_POINTER, reinterpret_cast<void*>(&guid), sizeof(GUID), reinterpret_cast<void*>(&_get_accept_ex_sockaddr), sizeof(LPFN_GETACCEPTEXSOCKADDRS), byte_returned);
+			sock.wsa_io_control(SIO_GET_EXTENSION_FUNCTION_POINTER, reinterpret_cast<void*>(&guid), sizeof(GUID), reinterpret_cast<void*>(&_get_accept_ex_sockaddr), sizeof(LPFN_GETACCEPTEXSOCKADDRS), byte_returned);
 		}
 		inline void wsa_io_control(unsigned long control_code, void* in_buffer, unsigned long in_buffer_size, void* out_buffer, unsigned long out_buffer_size, unsigned long& byte_returned) noexcept {
 			if (SOCKET_ERROR == ::WSAIoctl(_socket, control_code, in_buffer, in_buffer_size, out_buffer, out_buffer_size, &byte_returned, nullptr, nullptr))
@@ -359,15 +368,14 @@ namespace library {
 			}
 			return socket_address;
 		}
-		inline auto get_accept_ex_socket_address(void* buffer) noexcept -> library::pair<socket_address_ipv4, socket_address_ipv4> {
-			std::call_once(_get_accept_ex_sockaddr_once, &socket::wsa_io_control_get_accept_ex_sockaddr, this);
-			library::pair<socket_address_ipv4, socket_address_ipv4> result;
+
+		inline static auto get_accept_ex_socket_address(void* buffer) noexcept -> library::pair<socket_address_ipv4, socket_address_ipv4> {
 			sockaddr* local_sockaddr = nullptr;
 			int local_sockaddr_length = 0;
 			sockaddr* remote_sockaddr = nullptr;
 			int remote_sockaddr_length = 0;
 			_get_accept_ex_sockaddr(buffer, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &local_sockaddr, &local_sockaddr_length, &remote_sockaddr, &remote_sockaddr_length);
-			return result;
+			return library::pair<socket_address_ipv4, socket_address_ipv4>(*reinterpret_cast<sockaddr_in*>(local_sockaddr), *reinterpret_cast<sockaddr_in*>(remote_sockaddr));
 		}
 		inline auto data(void) noexcept -> SOCKET& {
 			return _socket;
@@ -375,9 +383,7 @@ namespace library {
 	private:
 		SOCKET _socket;
 		inline static LPFN_ACCEPTEX _accept_ex;
-		inline static std::once_flag _accept_ex_once;
 		inline static LPFN_GETACCEPTEXSOCKADDRS _get_accept_ex_sockaddr;
-		inline static std::once_flag _get_accept_ex_sockaddr_once;
 		inline static LPFN_DISCONNECTEX _disconnect_ex;
 	};
 }
