@@ -6,7 +6,7 @@
 #include <MSWSock.h>
 #include <intrin.h>
 #include <optional>
-#include "overlapped.h"
+#include "overlap.h"
 #include "pair.h"
 #include "socket_address.h"
 
@@ -132,8 +132,8 @@ namespace library {
 			}
 			return library::pair<socket, socket_address_ipv4>(sock, socket_address);
 		}
-		inline auto accept_ex(socket& socket_, void* output_buffer, unsigned long address_length, unsigned long remote_address_length, overlapped& overlapeed_) noexcept {
-			if (FALSE == _accept_ex(_socket, socket_.data(), output_buffer, 0, address_length, remote_address_length, nullptr, &overlapeed_.data())) {
+		inline auto accept_ex(socket& socket_, void* output_buffer, unsigned long address_length, unsigned long remote_address_length, overlap& overlap_) noexcept {
+			if (FALSE == _accept_ex(_socket, socket_.data(), output_buffer, 0, address_length, remote_address_length, nullptr, &overlap_.data())) {
 				switch (WSAGetLastError()) {
 				case ERROR_IO_PENDING:
 					break;
@@ -201,8 +201,8 @@ namespace library {
 			}
 			return result;
 		}
-		inline auto send(WSABUF* buffer, unsigned long count, unsigned long flag, overlapped& overlapped) noexcept -> int {
-			int result = WSASend(_socket, buffer, count, nullptr, flag, &overlapped.data(), nullptr);
+		inline auto send(WSABUF* buffer, unsigned long count, unsigned long flag, overlap& overlap) noexcept -> int {
+			int result = WSASend(_socket, buffer, count, nullptr, flag, &overlap.data(), nullptr);
 			if (SOCKET_ERROR == result) {
 				switch (GetLastError()) {
 				case WSA_IO_PENDING:
@@ -255,8 +255,8 @@ namespace library {
 			}
 			return result;
 		}
-		inline auto receive(WSABUF* buffer, unsigned long count, unsigned long* flag, overlapped& overlapped) noexcept -> int {
-			int result = WSARecv(_socket, buffer, count, nullptr, flag, &overlapped.data(), nullptr);
+		inline auto receive(WSABUF* buffer, unsigned long count, unsigned long* flag, overlap& overlap) noexcept -> int {
+			int result = WSARecv(_socket, buffer, count, nullptr, flag, &overlap.data(), nullptr);
 			if (SOCKET_ERROR == result) {
 				switch (GetLastError()) {
 				case WSA_IO_PENDING:
@@ -276,11 +276,11 @@ namespace library {
 		inline void cancel_io_ex(void) const noexcept {
 			CancelIoEx(reinterpret_cast<HANDLE>(_socket), nullptr);
 		}
-		inline void cancel_io_ex(overlapped overlapped) const noexcept {
-			CancelIoEx(reinterpret_cast<HANDLE>(_socket), &overlapped.data());
+		inline void cancel_io_ex(overlap overlap) const noexcept {
+			CancelIoEx(reinterpret_cast<HANDLE>(_socket), &overlap.data());
 		}
-		inline bool wsa_get_overlapped_result(overlapped& overlapped, unsigned long* transfer, bool const wait, unsigned long* flag) noexcept {
-			return WSAGetOverlappedResult(_socket, &overlapped.data(), transfer, wait, flag);
+		inline bool wsa_get_overlapped_result(overlap& overlap, unsigned long* transfer, bool const wait, unsigned long* flag) noexcept {
+			return WSAGetOverlappedResult(_socket, &overlap.data(), transfer, wait, flag);
 		}
 		inline void set_option_tcp_nodelay(int const enable) const noexcept {
 			set_option(IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char const*>(&enable), sizeof(int));

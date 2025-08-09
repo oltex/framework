@@ -3,14 +3,14 @@
 #include "memory.h"
 
 namespace library {
-	class overlapped final {
+	class overlap final {
 	public:
-		inline explicit overlapped(void) noexcept = default;
-		inline explicit overlapped(overlapped const&) noexcept = delete;
-		inline explicit overlapped(overlapped&&) noexcept = delete;
-		inline auto operator=(overlapped const&) noexcept -> overlapped & = delete;
-		inline auto operator=(overlapped&&) noexcept -> overlapped & = delete;
-		inline ~overlapped(void) noexcept = default;
+		inline explicit overlap(void) noexcept = default;
+		inline explicit overlap(overlap const&) noexcept = delete;
+		inline explicit overlap(overlap&&) noexcept = delete;
+		inline auto operator=(overlap const&) noexcept -> overlap & = delete;
+		inline auto operator=(overlap&&) noexcept -> overlap & = delete;
+		inline ~overlap(void) noexcept = default;
 
 		//inline void set_event(multi::event& event) noexcept {
 		//	_overlapped.hEvent = event.data();

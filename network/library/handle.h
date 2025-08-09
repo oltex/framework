@@ -1,5 +1,5 @@
 #pragma once
-#include "overlapped.h"
+#include "overlap.h"
 #include <Windows.h>
 #include <concepts>
 
@@ -38,8 +38,8 @@ namespace library {
 		inline void cancel_io_ex(void) const noexcept {
 			CancelIoEx(_handle, nullptr);
 		}
-		inline void cancel_io_ex(overlapped overlapped) const noexcept {
-			CancelIoEx(_handle, &overlapped.data());
+		inline void cancel_io_ex(overlap overlap) const noexcept {
+			CancelIoEx(_handle, &overlap.data());
 		}
 		inline auto wait_for_single(unsigned long const milli_second) noexcept -> unsigned long {
 			return WaitForSingleObject(_handle, milli_second);

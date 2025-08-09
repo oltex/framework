@@ -156,7 +156,7 @@
     <ClInclude Include="library\lockfree\pool.h" />
     <ClInclude Include="library\lockfree\free_array.h" />
     <ClInclude Include="library\memory.h" />
-    <ClInclude Include="library\overlapped.h" />
+    <ClInclude Include="library\overlap.h" />
     <ClInclude Include="library\pair.h" />
     <ClInclude Include="library\serialize_buffer.h" />
     <ClInclude Include="library\singleton.h" />

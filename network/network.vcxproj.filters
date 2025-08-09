@@ -21,7 +21,7 @@
     <ClInclude Include="library\handle.h">
       <Filter>library</Filter>
     </ClInclude>
-    <ClInclude Include="library\overlapped.h">
+    <ClInclude Include="library\overlap.h">
       <Filter>library</Filter>
     </ClInclude>
     <ClInclude Include="library\inputoutput_complet_port.h">
