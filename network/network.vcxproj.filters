@@ -82,7 +82,7 @@
     <ClInclude Include="library\lockfree\pool.h">
       <Filter>library\lockfree</Filter>
     </ClInclude>
-    <ClInclude Include="library\lockfree\free_array.h">
+    <ClInclude Include="library\lockfree\free_list.h">
       <Filter>library\lockfree</Filter>
     </ClInclude>
     <ClInclude Include="library\interlock.h">

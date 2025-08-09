@@ -154,7 +154,7 @@
     <ClInclude Include="library\intrusive\list.h" />
     <ClInclude Include="library\intrusive\share_pointer.h" />
     <ClInclude Include="library\lockfree\pool.h" />
-    <ClInclude Include="library\lockfree\free_array.h" />
+    <ClInclude Include="library\lockfree\free_list.h" />
     <ClInclude Include="library\memory.h" />
     <ClInclude Include="library\overlap.h" />
     <ClInclude Include="library\pair.h" />
